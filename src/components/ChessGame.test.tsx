@@ -143,15 +143,17 @@ describe("ChessGame Component", () => {
     });
 
     it("restores a PGN game and persists save data without apiKey", async () => {
-        render(
-            <ChessGame
-                gameId="restore-game"
-                initialPersonality={mockPersonality}
-                initialColor="white"
-                initialPgn="1. e4 e5 2. Nf3 Nc6"
-                onBack={() => {}}
-            />
-        );
+        await act(async () => {
+            render(
+                <ChessGame
+                    gameId="restore-game"
+                    initialPersonality={mockPersonality}
+                    initialColor="white"
+                    initialPgn="1. e4 e5 2. Nf3 Nc6"
+                    onBack={() => {}}
+                />
+            );
+        });
 
         await waitFor(() => {
             const saved = JSON.parse(localStorage.getItem("chess_tutor_save") || "{}");
@@ -196,6 +198,16 @@ describe("ChessGame Component", () => {
             />
         );
 
+        await waitFor(() => {
+            expect(stockfishMock.evaluate).toHaveBeenCalled();
+        });
+
+        await waitFor(() => {
+            expect(screen.getByTestId("tutor")).toHaveTextContent("Eval P0: 0.5");
+        });
+
+        stockfishMock.evaluate.mockClear();
+
         await act(async () => {
             fireEvent.click(screen.getByTestId("chessboard"));
             fireEvent.click(screen.getByTestId("chessboard"));
@@ -203,10 +215,10 @@ describe("ChessGame Component", () => {
         });
 
         await waitFor(() => {
-            expect(stockfishMock.evaluate.mock.calls.length).toBeGreaterThanOrEqual(2);
+            expect(stockfishMock.evaluate.mock.calls.length).toBeGreaterThanOrEqual(1);
         });
 
         const playerTriggeredEvaluations = stockfishMock.evaluate.mock.calls.filter(([fen]: [string]) => typeof fen === "string");
-        expect(playerTriggeredEvaluations.length).toBeLessThanOrEqual(3);
+        expect(playerTriggeredEvaluations.length).toBeLessThanOrEqual(2);
     });
 });

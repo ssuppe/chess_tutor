@@ -5,6 +5,7 @@ if (typeof window !== 'undefined') {
   // Mock scrollIntoView for JSDOM
   window.HTMLElement.prototype.scrollIntoView = jest.fn();
   window.HTMLMediaElement.prototype.play = () => Promise.resolve();
+  window.HTMLMediaElement.prototype.pause = jest.fn();
 }
 
 // Mock react-markdown to avoid ESM issues in Jest

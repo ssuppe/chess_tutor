@@ -289,7 +289,6 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
             fen,
             language,
             selectedPersonality,
-            apiKey,
             playerColor, // Save player color too
             pgn: gameRef.current.pgn(),
             updatedAt: Date.now(),
@@ -302,7 +301,7 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
 
         upsertSavedGame(saveData);
         localStorage.setItem("chess_tutor_save", JSON.stringify(saveData));
-    }, [fen, language, selectedPersonality, apiKey, playerColor, gameId, evalP0]);
+    }, [fen, language, selectedPersonality, playerColor, gameId, evalP0]);
 
     // Game Over Detection
     useEffect(() => {
