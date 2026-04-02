@@ -1,18 +1,20 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import ChessGame from "@/components/ChessGame";
 import StartScreen from "@/components/StartScreen";
 import { Personality, PERSONALITIES } from "@/lib/personalities";
 import { SavedGame, deleteSavedGame, loadSavedGames } from "@/lib/savedGames";
+import { useHasHydrated } from "@/lib/useHasHydrated";
 
 type ViewState = 'start' | 'game';
 
 export default function Home() {
     const router = useRouter();
     const [view, setView] = useState<ViewState>('start');
-    const [mounted, setMounted] = useState(false);
+    const hasHydrated = useHasHydrated();
+    const hasInitializedRef = useRef(false);
 
     // Game Initialization State
     const [gameProps, setGameProps] = useState<{
@@ -34,6 +36,12 @@ export default function Home() {
     const [savedGames, setSavedGames] = useState<SavedGame[]>([]);
 
     useEffect(() => {
+        if (!hasHydrated || hasInitializedRef.current) {
+            return;
+        }
+
+        hasInitializedRef.current = true;
+
         // Check for API Key
         const apiKey = localStorage.getItem("gemini_api_key");
         if (!apiKey) {
@@ -82,9 +90,7 @@ export default function Home() {
                 localStorage.removeItem("chess_tutor_opening_context");
             }
         }
-
-        setMounted(true);
-    }, [router]);
+    }, [hasHydrated, router]);
 
     const handleStartGame = (options: {
         personality: Personality;
@@ -127,7 +133,7 @@ export default function Home() {
         setSavedGames(loadSavedGames());
     };
 
-    if (!mounted) return null;
+    if (!hasHydrated) return null;
 
     return (
         <main className="flex-grow flex flex-col">

@@ -6,14 +6,10 @@ export type StockfishEvaluation = {
   depth: number;
 };
 
-const EVALUATION_TIMEOUT_MS = 30000; // 30 seconds timeout for evaluation
-
 export class Stockfish {
   private worker: Worker | null = null;
   private isReady: boolean = false;
-  private lastScore: number = 0;
-  private lastMate: number | null = null;
-  private lastDepth: number = 0;
+  private evaluationQueue: Promise<void> = Promise.resolve();
 
   constructor() {
     if (typeof window !== "undefined") {
@@ -28,86 +24,104 @@ export class Stockfish {
     }
   }
 
-  async evaluate(fen: string, depth: number = 15, multiPV: number = 1): Promise<StockfishEvaluation> {
-    return new Promise<StockfishEvaluation>((resolve, reject) => {
+  private waitUntilReady(): Promise<void> {
+    if (this.isReady) {
+      return Promise.resolve();
+    }
+
+    return new Promise<void>((resolve, reject) => {
       if (!this.worker) {
         reject(new Error("Stockfish worker not initialized"));
         return;
       }
 
-      // Reset last known evaluation values for this new evaluation
-      this.lastScore = 0;
-      this.lastMate = null;
-      this.lastDepth = 0;
+      const timeoutId = window.setTimeout(() => {
+        this.worker?.removeEventListener("message", handleReady);
+        reject(new Error("Stockfish worker readiness timed out"));
+      }, 5000);
 
-      let timeoutId: ReturnType<typeof setTimeout> | null = null;
-      let isResolved = false;
-
-      const cleanup = () => {
-        if (timeoutId) {
-          clearTimeout(timeoutId);
-          timeoutId = null;
-        }
-        this.worker?.removeEventListener("message", handler);
-      };
-
-      const handler = (event: MessageEvent) => {
-        if (isResolved) return;
-
-        const message = event.data;
-        // console.log("Stockfish:", message);
-
-        if (message.startsWith("info depth")) {
-          const depthMatch = message.match(/depth (\d+)/);
-          const scoreMatch = message.match(/score cp (-?\d+)/);
-          const mateMatch = message.match(/score mate (-?\d+)/);
-
-          if (depthMatch) this.lastDepth = parseInt(depthMatch[1]);
-          if (scoreMatch) {
-            this.lastScore = parseInt(scoreMatch[1]);
-            this.lastMate = null;
-          }
-          if (mateMatch) {
-            this.lastMate = parseInt(mateMatch[1]);
-            this.lastScore = 0; // or some indicator
-          }
-        }
-
-        if (message.startsWith("bestmove")) {
-          const parts = message.split(" ");
-          const bestMove = parts[1];
-          let ponder: string | null = null;
-          if (parts.length > 3 && parts[2] === "ponder") {
-            ponder = parts[3];
-          }
-
-          isResolved = true;
-          cleanup();
-          resolve({
-            bestMove,
-            ponder,
-            score: this.lastScore,
-            mate: this.lastMate,
-            depth: this.lastDepth
-          });
+      const handleReady = (event: MessageEvent) => {
+        if (event.data === "uciok") {
+          window.clearTimeout(timeoutId);
+          this.worker?.removeEventListener("message", handleReady);
+          this.isReady = true;
+          resolve();
         }
       };
 
-      // Set timeout to prevent hanging promises
-      timeoutId = setTimeout(() => {
-        if (!isResolved) {
-          isResolved = true;
-          cleanup();
-          // Stop any ongoing analysis
-          this.worker?.postMessage("stop");
-          reject(new Error(`Stockfish evaluation timed out after ${EVALUATION_TIMEOUT_MS / 1000} seconds`));
-        }
-      }, EVALUATION_TIMEOUT_MS);
+      this.worker.addEventListener("message", handleReady);
+    });
+  }
 
-      this.worker.addEventListener("message", handler);
-      this.worker.postMessage(`position fen ${fen}`);
-      this.worker.postMessage(`go depth ${depth}`);
-    }).then((evalResult: StockfishEvaluation) => {
+  async evaluate(fen: string, depth: number = 15, multiPV: number = 1): Promise<StockfishEvaluation> {
+    const runEvaluation = async () => {
+      await this.waitUntilReady();
+
+      return new Promise<StockfishEvaluation>((resolve, reject) => {
+        if (!this.worker) {
+          reject(new Error("Stockfish worker not initialized"));
+          return;
+        }
+
+        let lastScore = 0;
+        let lastMate: number | null = null;
+        let lastDepth = 0;
+
+        const handler = (event: MessageEvent) => {
+          const message = event.data;
+
+          if (typeof message !== "string") {
+            return;
+          }
+
+          if (message.startsWith("info depth")) {
+            const depthMatch = message.match(/depth (\d+)/);
+            const scoreMatch = message.match(/score cp (-?\d+)/);
+            const mateMatch = message.match(/score mate (-?\d+)/);
+
+            if (depthMatch) lastDepth = parseInt(depthMatch[1], 10);
+            if (scoreMatch) {
+              lastScore = parseInt(scoreMatch[1], 10);
+              lastMate = null;
+            }
+            if (mateMatch) {
+              lastMate = parseInt(mateMatch[1], 10);
+              lastScore = 0;
+            }
+          }
+
+          if (message.startsWith("bestmove")) {
+            const parts = message.split(" ");
+            const bestMove = parts[1];
+            let ponder: string | null = null;
+            if (parts.length > 3 && parts[2] === "ponder") {
+              ponder = parts[3];
+            }
+
+            this.worker?.removeEventListener("message", handler);
+            resolve({
+              bestMove,
+              ponder,
+              score: lastScore,
+              mate: lastMate,
+              depth: lastDepth,
+            });
+          }
+        };
+
+        this.worker.addEventListener("message", handler);
+        if (multiPV > 1) {
+          this.worker.postMessage(`setoption name MultiPV value ${multiPV}`);
+        }
+        this.worker.postMessage(`position fen ${fen}`);
+        this.worker.postMessage(`go depth ${depth}`);
+      });
+    };
+
+    const evaluationPromise = this.evaluationQueue.then(runEvaluation, runEvaluation);
+    this.evaluationQueue = evaluationPromise.then(() => undefined, () => undefined);
+
+    return evaluationPromise.then((evalResult: StockfishEvaluation) => {
       // Normalize score to be from White's perspective
       // Stockfish returns score relative to side to move
       const sideToMove = fen.split(" ")[1]; // 'w' or 'b'

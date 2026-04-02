@@ -7,6 +7,11 @@ const mockRouter = {
     push: mockPush,
 };
 
+interface MockStartOptions {
+    personality: { name: string };
+    color: 'white' | 'black' | 'random';
+}
+
 jest.mock('next/navigation', () => ({
     useRouter: () => mockRouter,
 }));
@@ -18,7 +23,7 @@ jest.mock('@/components/ChessGame', () => ({
 
 jest.mock('@/components/StartScreen', () => ({
     __esModule: true,
-    default: ({ onStartGame }: { onStartGame: (options: any) => void }) => (
+    default: ({ onStartGame }: { onStartGame: (options: MockStartOptions) => void }) => (
         <div data-testid="start-screen">
             <button onClick={() => onStartGame({ personality: { name: 'Test Personality' }, color: 'white' })}>
                 Start Game

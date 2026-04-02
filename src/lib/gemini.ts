@@ -1,7 +1,6 @@
 import { GoogleGenerativeAI, SchemaType, FunctionDeclaration } from "@google/generative-ai";
-import { StockfishEvaluation } from "./stockfish";
 
-export async function getAvailableModels(apiKey: string): Promise<string[]> {
+export async function getAvailableModels(): Promise<string[]> {
     // Prioritize newer models
     return [
         "gemini-3-pro-preview",

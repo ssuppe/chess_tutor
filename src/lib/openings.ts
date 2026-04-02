@@ -209,7 +209,6 @@ export function buildMoveSequenceFromSteps(
     upToIndex: number
 ): string {
     const parts: string[] = [];
-    let currentMoveNumber = 0;
 
     for (let i = 0; i < upToIndex && i < steps.length; i++) {
         const step = steps[i];
@@ -217,7 +216,6 @@ export function buildMoveSequenceFromSteps(
         if (step.color === 'white') {
             // White's move - include move number
             parts.push(`${step.moveNumber}. ${step.san}`);
-            currentMoveNumber = step.moveNumber;
         } else {
             // Black's move - no move number prefix
             parts.push(step.san);

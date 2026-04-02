@@ -24,10 +24,6 @@ export default function DebugPanel({ entryId, inline = false }: DebugPanelProps)
 
     const latestEntry = displayEntries[displayEntries.length - 1];
 
-    const copyToClipboard = (text: string) => {
-        navigator.clipboard.writeText(text);
-    };
-
     const formatTimestamp = (timestamp: number) => {
         const date = new Date(timestamp);
         return date.toLocaleTimeString();
@@ -189,4 +185,3 @@ function DebugEntryDetail({ entry, onClose }: { entry: DebugEntry; onClose: () =
         </div>
     );
 }
-

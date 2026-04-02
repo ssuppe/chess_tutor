@@ -23,6 +23,30 @@ export interface GameMetadata {
     url?: string; // Link to game on platform
 }
 
+interface ChessComGame {
+    uuid?: string;
+    url?: string;
+    pgn: string;
+    white?: { username?: string };
+    black?: { username?: string };
+    end_time: number;
+    time_class?: string;
+}
+
+interface LichessGame {
+    id: string;
+    pgn: string;
+    status?: string;
+    winner?: "white" | "black";
+    createdAt: number;
+    speed?: string;
+    opening?: { eco?: string; name?: string };
+    players?: {
+        white?: { user?: { name?: string } };
+        black?: { user?: { name?: string } };
+    };
+}
+
 /**
  * Fetch games from Chess.com
  * Uses the Published-Data API (PubAPI) - no authentication required
@@ -97,7 +121,7 @@ export async function fetchChessComGames(
 /**
  * Parse a Chess.com game object into our GameMetadata format
  */
-function parseChessComGame(game: any): GameMetadata {
+function parseChessComGame(game: ChessComGame): GameMetadata {
     const pgn = game.pgn;
     const chess = new Chess();
     chess.loadPgn(pgn);
@@ -180,7 +204,7 @@ export async function fetchLichessGames(
 /**
  * Parse a Lichess game object into our GameMetadata format
  */
-function parseLichessGame(game: any): GameMetadata {
+function parseLichessGame(game: LichessGame): GameMetadata {
     const pgn = game.pgn;
     const chess = new Chess();
     chess.loadPgn(pgn);
@@ -202,4 +226,3 @@ function parseLichessGame(game: any): GameMetadata {
         url: `https://lichess.org/${game.id}`
     };
 }
-

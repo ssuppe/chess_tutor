@@ -1,4 +1,5 @@
 import '@testing-library/jest-dom'
+import { PropsWithChildren } from 'react';
 
 if (typeof window !== 'undefined') {
   // Mock scrollIntoView for JSDOM
@@ -9,5 +10,5 @@ if (typeof window !== 'undefined') {
 // Mock react-markdown to avoid ESM issues in Jest
 jest.mock('react-markdown', () => ({
     __esModule: true,
-    default: (props: any) => props.children,
+    default: ({ children }: PropsWithChildren) => children,
 }));

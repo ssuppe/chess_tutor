@@ -33,7 +33,7 @@ export default function PrivacyPage() {
                         </p>
                         <ul className="list-disc pl-5 mt-2 space-y-2 text-gray-600 dark:text-gray-300">
                             <li>
-                                <strong>Local Storage:</strong> Your settings (language preference, API key) are stored locally in your browser's Local Storage. This data never leaves your device unless you explicitly send it (e.g., the API key is sent to Google's servers to generate AI responses).
+                                <strong>Local Storage:</strong> Your settings (language preference, API key) are stored locally in your browser&apos;s Local Storage. This data never leaves your device unless you explicitly send it (e.g., the API key is sent to Google&apos;s servers to generate AI responses).
                             </li>
                             <li>
                                 <strong>Cookies:</strong> We do not use cookies for tracking or analytics.
@@ -47,7 +47,7 @@ export default function PrivacyPage() {
                     <section>
                         <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">3. Third-Party Services</h2>
                         <p className="text-gray-600 dark:text-gray-300">
-                            <strong>Google Gemini API:</strong> When you use the AI Tutor feature, your game state (FEN string) and your API key are sent to Google's servers to generate the response. Please refer to <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Google's Privacy Policy</a> for more information on how they handle data.
+                            <strong>Google Gemini API:</strong> When you use the AI Tutor feature, your game state (FEN string) and your API key are sent to Google&apos;s servers to generate the response. Please refer to <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Google&apos;s Privacy Policy</a> for more information on how they handle data.
                         </p>
                     </section>
                 </div>

@@ -11,7 +11,6 @@ export type SavedGame = {
     updatedAt: number;
     evaluation?: Pick<StockfishEvaluation, "score" | "mate" | "depth"> | null;
     language?: SupportedLanguage;
-    apiKey?: string | null;
 };
 
 const STORAGE_KEY = "chess_tutor_saves";
@@ -24,7 +23,15 @@ const parseSavedGames = (): SavedGame[] => {
     try {
         const data = JSON.parse(raw);
         if (!Array.isArray(data)) return [];
-        return data.filter(Boolean);
+        return data.filter(Boolean).map((game) => {
+            if (game && typeof game === "object" && "apiKey" in game) {
+                const safeGame = { ...(game as SavedGame & { apiKey?: string | null }) };
+                delete safeGame.apiKey;
+                return safeGame;
+            }
+
+            return game as SavedGame;
+        });
     } catch (e) {
         console.error("Failed to parse saved games", e);
         return [];

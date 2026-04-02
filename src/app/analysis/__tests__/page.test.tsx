@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { DebugProvider } from "@/contexts/DebugContext";
 
 jest.mock("next/navigation", () => ({
@@ -58,9 +58,20 @@ const uciToSanMock = tacticMocks.uciToSan;
 import AnalysisPage from "../page";
 
 describe("AnalysisPage", () => {
+    let consoleErrorSpy: jest.SpyInstance;
+
     beforeEach(() => {
         jest.clearAllMocks();
         localStorage.clear();
+        consoleErrorSpy = jest.spyOn(console, "error").mockImplementation((message?: unknown) => {
+            if (typeof message === "string" && message.includes("not wrapped in act")) {
+                return;
+            }
+
+            if (message instanceof Error && message.message.includes("not wrapped in act")) {
+                return;
+            }
+        });
         evaluateMock.mockImplementation((fen: string) => {
             const sideToMove = fen.split(" ")[1];
             const baseEval = sideToMove === "w" ? 0 : 50;
@@ -76,6 +87,10 @@ describe("AnalysisPage", () => {
         uciToSanMock.mockReturnValue("e4");
     });
 
+    afterEach(() => {
+        consoleErrorSpy.mockRestore();
+    });
+
     const samplePgn = `
 [Event "Casual Game"]
 [Site "Berlin GER"]
@@ -88,21 +103,30 @@ describe("AnalysisPage", () => {
 1. e4 e5 2. Nf3 Nc6 3. Bb5 a6
 `;
 
-    const loadGame = () => {
-        render(
-            <DebugProvider>
-                <AnalysisPage />
-            </DebugProvider>
-        );
+    const loadGame = async () => {
+        await act(async () => {
+            render(
+                <DebugProvider>
+                    <AnalysisPage />
+                </DebugProvider>
+            );
+        });
         const textarea = screen.getByPlaceholderText(/Paste PGN or FEN here/i);
-        fireEvent.change(textarea, { target: { value: samplePgn } });
-        fireEvent.click(screen.getByText(/Start Analysis/i));
+        await act(async () => {
+            fireEvent.change(textarea, { target: { value: samplePgn } });
+            fireEvent.click(screen.getByText(/Start Analysis/i));
+        });
+        await waitFor(() => {
+            expect(evaluateMock).toHaveBeenCalled();
+        });
     };
 
     it("replays PGN moves with engine evaluations", async () => {
-        loadGame();
+        await loadGame();
 
-        fireEvent.click(screen.getByLabelText(/Next Move/i));
+        await act(async () => {
+            fireEvent.click(screen.getByLabelText(/Next Move/i));
+        });
 
         await waitFor(() => {
             expect(screen.getByText(/Move 1 \/ 6/)).toBeInTheDocument();
@@ -126,8 +150,10 @@ describe("AnalysisPage", () => {
             },
         ]);
 
-        loadGame();
-        fireEvent.click(screen.getByLabelText(/Next Move/i));
+        await loadGame();
+        await act(async () => {
+            fireEvent.click(screen.getByLabelText(/Next Move/i));
+        });
 
         await waitFor(() => {
             expect(screen.getByText(/fork \(~3.0 pawns\) on e5/)).toBeInTheDocument();

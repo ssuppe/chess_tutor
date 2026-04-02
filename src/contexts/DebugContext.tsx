@@ -9,7 +9,7 @@ export interface DebugEntry {
     action: string; // e.g., "Best Move", "Hint", "General Question", "Move Analysis"
     prompt: string;
     response?: string;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
 }
 
 interface DebugContextType {
@@ -56,4 +56,3 @@ export function useDebug() {
     }
     return context;
 }
-

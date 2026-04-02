@@ -11,6 +11,9 @@ const eslintConfig = defineConfig([
     ".next/**",
     "out/**",
     "build/**",
+    "coverage/**",
+    "public/stockfish/**",
+    "scripts/**",
     "next-env.d.ts",
   ]),
 ]);

@@ -1,40 +1,28 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Header from "@/components/Header";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { SupportedLanguage } from "@/lib/i18n/translations";
 import { ArrowLeft, Save, Trash2 } from "lucide-react";
+import { useHasHydrated } from "@/lib/useHasHydrated";
 
 export default function SettingsPage() {
     const router = useRouter();
-    const [apiKey, setApiKey] = useState("");
-    const [language, setLanguage] = useState<SupportedLanguage>('en');
-    const [chesscomUsername, setChesscomUsername] = useState("");
-    const [lichessUsername, setLichessUsername] = useState("");
-    const [mounted, setMounted] = useState(false);
+    const [apiKey, setApiKey] = useState(() => typeof window === "undefined" ? "" : localStorage.getItem("gemini_api_key") || "");
+    const [language, setLanguage] = useState<SupportedLanguage>(() => {
+        if (typeof window === "undefined") {
+            return "en";
+        }
+
+        return (localStorage.getItem("chess_tutor_language") as SupportedLanguage) || "en";
+    });
+    const [chesscomUsername, setChesscomUsername] = useState(() => typeof window === "undefined" ? "" : localStorage.getItem("chesscom_username") || "");
+    const [lichessUsername, setLichessUsername] = useState(() => typeof window === "undefined" ? "" : localStorage.getItem("lichess_username") || "");
     const [consentGiven, setConsentGiven] = useState(false);
     const [showConsentError, setShowConsentError] = useState(false);
-
-    // Load settings on mount
-    useEffect(() => {
-        const storedKey = localStorage.getItem("gemini_api_key");
-        const storedLang = localStorage.getItem("chess_tutor_language");
-        const storedChesscomUsername = localStorage.getItem("chesscom_username");
-        const storedLichessUsername = localStorage.getItem("lichess_username");
-
-        if (storedKey) {
-            setApiKey(storedKey);
-            // If there's already a stored key, consent was previously given
-            setConsentGiven(true);
-        }
-        if (storedLang) setLanguage(storedLang as SupportedLanguage);
-        if (storedChesscomUsername) setChesscomUsername(storedChesscomUsername);
-        if (storedLichessUsername) setLichessUsername(storedLichessUsername);
-
-        setMounted(true);
-    }, []);
+    const hasHydrated = useHasHydrated();
 
     const t = useTranslation(language);
 
@@ -74,15 +62,12 @@ export default function SettingsPage() {
 
     const handleClearAllData = () => {
         if (window.confirm(t.common.clearAllDataConfirm)) {
-            // Clear all localStorage
             localStorage.clear();
-
-            // Redirect to onboarding
             router.push("/onboarding");
         }
     };
 
-    if (!mounted) return null;
+    if (!hasHydrated) return null;
 
     return (
         <>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { X, Loader2, Send, BookOpen } from "lucide-react";
 import { OpeningMetadata } from "@/lib/openings";
 import { getGenAIModel } from "@/lib/gemini";
@@ -47,7 +47,7 @@ export function OpeningsModal({
     }, [explanations, activeTab]);
 
     // Generate explanation when tab is clicked
-    const generateExplanation = async (index: number) => {
+    const generateExplanation = useCallback(async (index: number) => {
         if (explanations[index]?.content || explanations[index]?.isLoading) return;
 
         const opening = openings[index];
@@ -101,14 +101,14 @@ Respond in ${language === 'de' ? 'German' : language === 'fr' ? 'French' : langu
                 [index]: { content: "Failed to generate explanation. Please check your API key.", isLoading: false, messages: [] }
             }));
         }
-    };
+    }, [currentFen, explanations, language, openings, personality]);
 
     // Generate explanation for first tab on mount
     useEffect(() => {
         if (openings.length > 0) {
             generateExplanation(0);
         }
-    }, []);
+    }, [generateExplanation, openings.length]);
 
     // Handle tab change
     const handleTabChange = (index: number) => {
@@ -270,4 +270,3 @@ Respond in ${language === 'de' ? 'German' : language === 'fr' ? 'French' : langu
         </div>
     );
 }
-

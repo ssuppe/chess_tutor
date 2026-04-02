@@ -1,4 +1,4 @@
-import { detectMissedTactics, uciToSan, DetectedTactic } from '../tacticDetection';
+import { detectMissedTactics, uciToSan } from '../tacticDetection';
 
 describe('tacticDetection', () => {
     describe('uciToSan', () => {
@@ -73,7 +73,6 @@ describe('tacticDetection', () => {
                 });
 
                 // Should not suggest capturing if it can be immediately recaptured
-                const captureTactic = result.find(t => t.tactic_type === 'win_piece' || t.tactic_type === 'win_pawn');
                 // This depends on position analysis
                 expect(Array.isArray(result)).toBe(true);
             });
@@ -290,4 +289,3 @@ describe('tacticDetection', () => {
         });
     });
 });
-

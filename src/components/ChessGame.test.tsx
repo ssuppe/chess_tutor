@@ -1,9 +1,21 @@
 import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 import ChessGame from "./ChessGame";
+import { Tutor } from "./Tutor";
+
+interface MockChessboardProps {
+    options: {
+        onPieceDrop?: (move: { sourceSquare: string; targetSquare: string | null }) => void;
+    };
+}
+
+interface MockStartOptions {
+    personality: { name: string };
+    color: 'white' | 'black' | 'random';
+}
 
 // Mock dependencies
 jest.mock("react-chessboard", () => ({
-    Chessboard: ({ options }: any) => (
+    Chessboard: ({ options }: MockChessboardProps) => (
         <div data-testid="chessboard" onClick={() => {
             // Simulate a move drop
             if (options.onPieceDrop) {
@@ -16,18 +28,21 @@ jest.mock("react-chessboard", () => ({
 }));
 
 jest.mock("../lib/stockfish", () => {
+    const evaluate = jest.fn().mockResolvedValue({
+        score: 0.5,
+        mate: null,
+        bestMove: "e7e5",
+        depth: 15
+    });
     return {
+        __mock: { evaluate },
         Stockfish: jest.fn().mockImplementation(() => ({
-            evaluate: jest.fn().mockResolvedValue({
-                score: 0.5,
-                mate: null,
-                bestMove: "e7e5",
-                depth: 15
-            }),
+            evaluate,
             terminate: jest.fn(),
         })),
     };
 });
+const { __mock: stockfishMock } = jest.requireMock("../lib/stockfish") as { __mock: { evaluate: jest.Mock } };
 
 jest.mock("./Tutor", () => ({
     Tutor: jest.fn(({ currentFen, userMove, computerMove, evalP0, evalP2, openingData, language }) => (
@@ -55,7 +70,7 @@ jest.mock("./GameOverModal", () => ({
 
 jest.mock("./StartScreen", () => ({
     __esModule: true,
-    default: ({ onStartGame }: { onStartGame: (options: any) => void }) => (
+    default: ({ onStartGame }: { onStartGame: (options: MockStartOptions) => void }) => (
         <div data-testid="start-screen">
             <button onClick={() => onStartGame({ personality: { name: 'Test Personality' }, color: 'white' })}>
                 Start Game
@@ -78,6 +93,12 @@ describe("ChessGame Component", () => {
         localStorage.clear();
         jest.clearAllMocks();
         jest.useFakeTimers();
+        stockfishMock.evaluate.mockResolvedValue({
+            score: 0.5,
+            mate: null,
+            bestMove: "e7e5",
+            depth: 15
+        });
     });
 
     it("renders the game board and tutor", async () => {
@@ -96,7 +117,6 @@ describe("ChessGame Component", () => {
     });
 
     it("handles user move and triggers analysis", async () => {
-        const Tutor = require('./Tutor').Tutor;
         render(
             <ChessGame
                 gameId="test-game"
@@ -106,7 +126,8 @@ describe("ChessGame Component", () => {
             />
         );
 
-        const initialCalls = Tutor.mock.calls.length;
+        const mockedTutor = jest.mocked(Tutor);
+        const initialCalls = mockedTutor.mock.calls.length;
 
         // Make a move by clicking the mock chessboard
         await act(async () => {
@@ -117,7 +138,75 @@ describe("ChessGame Component", () => {
 
         // Wait for the component to update
         await waitFor(() => {
-            expect(Tutor.mock.calls.length).toBeGreaterThan(initialCalls);
+            expect(mockedTutor.mock.calls.length).toBeGreaterThan(initialCalls);
         });
+    });
+
+    it("restores a PGN game and persists save data without apiKey", async () => {
+        render(
+            <ChessGame
+                gameId="restore-game"
+                initialPersonality={mockPersonality}
+                initialColor="white"
+                initialPgn="1. e4 e5 2. Nf3 Nc6"
+                onBack={() => {}}
+            />
+        );
+
+        await waitFor(() => {
+            const saved = JSON.parse(localStorage.getItem("chess_tutor_save") || "{}");
+            expect(saved.id).toBe("restore-game");
+            expect(saved.pgn).toContain("1. e4 e5");
+            expect(saved).not.toHaveProperty("apiKey");
+        });
+    });
+
+    it("undoes cleanly while analysis is in flight", async () => {
+        render(
+            <ChessGame
+                gameId="undo-game"
+                initialPersonality={mockPersonality}
+                initialColor="white"
+                onBack={() => {}}
+            />
+        );
+
+        await act(async () => {
+            fireEvent.click(screen.getByTestId("chessboard"));
+        });
+
+        await act(async () => {
+            fireEvent.click(screen.getByText(/undo/i));
+            jest.runAllTimers();
+        });
+
+        await waitFor(() => {
+            const tutor = screen.getByTestId("tutor");
+            expect(tutor).not.toHaveTextContent("Computer Move:");
+        });
+    });
+
+    it("ignores rapid repeated drops once the turn has switched", async () => {
+        render(
+            <ChessGame
+                gameId="rapid-game"
+                initialPersonality={mockPersonality}
+                initialColor="white"
+                onBack={() => {}}
+            />
+        );
+
+        await act(async () => {
+            fireEvent.click(screen.getByTestId("chessboard"));
+            fireEvent.click(screen.getByTestId("chessboard"));
+            jest.runAllTimers();
+        });
+
+        await waitFor(() => {
+            expect(stockfishMock.evaluate.mock.calls.length).toBeGreaterThanOrEqual(2);
+        });
+
+        const playerTriggeredEvaluations = stockfishMock.evaluate.mock.calls.filter(([fen]: [string]) => typeof fen === "string");
+        expect(playerTriggeredEvaluations.length).toBeLessThanOrEqual(3);
     });
 });

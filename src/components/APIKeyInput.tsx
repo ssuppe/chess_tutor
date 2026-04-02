@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Key } from "lucide-react";
 
 interface APIKeyInputProps {
@@ -9,22 +9,19 @@ interface APIKeyInputProps {
 
 export function APIKeyInput({ onKeySubmit }: APIKeyInputProps) {
     const [key, setKey] = useState("");
-    const [isOpen, setIsOpen] = useState(false);
+    const envKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+    const storedKey = typeof window !== "undefined" ? localStorage.getItem("gemini_api_key") : null;
+    const resolvedKey = envKey || storedKey;
+    const [isOpen, setIsOpen] = useState(() => !resolvedKey);
     const [consentGiven, setConsentGiven] = useState(false);
     const [error, setError] = useState("");
 
     useEffect(() => {
-        const envKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
-        const storedKey = localStorage.getItem("gemini_api_key");
-
-        if (envKey) {
-            onKeySubmit(envKey);
-        } else if (storedKey) {
-            onKeySubmit(storedKey);
-        } else {
-            setIsOpen(true);
+        if (resolvedKey) {
+            onKeySubmit(resolvedKey);
+            setConsentGiven(true);
         }
-    }, [onKeySubmit]);
+    }, [onKeySubmit, resolvedKey]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();

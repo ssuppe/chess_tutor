@@ -74,7 +74,7 @@ export function uciToSan(fen: string, uci: string): string | null {
     const chess = new Chess(fen);
     const move = chess.move(uciToMove(uci));
     return move ? move.san : null;
-  } catch (error) {
+  } catch {
     return null;
   }
 }
