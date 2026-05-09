@@ -134,7 +134,7 @@ Plain text paragraph.
                             <div>
                                 <h3 className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest leading-none mb-2 flex items-center gap-1.5">
                                     <Trophy size={12} className="text-yellow-500" />
-                                    Coach's Summary
+                                    Coach&apos;s Summary
                                 </h3>
                                 <div className="p-3 bg-purple-50 dark:bg-purple-900/10 border border-purple-100 dark:border-purple-900/20 rounded-lg text-sm text-gray-800 dark:text-gray-200 leading-snug">
                                     {summary}

@@ -35,7 +35,7 @@ export default function DeviationDialog({
             <span className="font-semibold">{openingName}</span>.
           </p>
           <p className="text-gray-600 dark:text-gray-400 mt-2">
-            This move isn't in your repertoire. What would you like to do?
+            This move isn&apos;t in your repertoire. What would you like to do?
           </p>
         </div>
 

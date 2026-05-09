@@ -85,8 +85,8 @@ export function GameOverModal({ result, winner, history, apiKey, language, onClo
                     let playerMove: string;
                     let bestMove: string | undefined;
                     let bestMoveSan: string | null | undefined;
-                    let missedTactics = item.missedTactics;
-                    let cpLoss: number | undefined = item.cpLoss;
+                    const missedTactics = item.missedTactics;
+                    const cpLoss: number | undefined = item.cpLoss;
 
                     if (item.evalBeforePlayerMove && item.evalAfterPlayerMove) {
                         // New enhanced format
@@ -297,7 +297,7 @@ Plain text paragraph (2-3 sentences).
                             <div>
                                 <h3 className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest flex items-center gap-1.5 mb-2">
                                     <Trophy size={14} className="text-yellow-500" />
-                                    Coach's Feedback
+                                    Coach&apos;s Feedback
                                 </h3>
                                 <div className="p-3 bg-purple-50 dark:bg-purple-900/10 border border-purple-100 dark:border-purple-900/20 rounded-lg text-sm text-gray-800 dark:text-gray-200 leading-snug prose prose-sm dark:prose-invert max-w-none">
                                     <ReactMarkdown
