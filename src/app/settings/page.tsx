@@ -5,14 +5,17 @@ import { useRouter } from "next/navigation";
 import Header from "@/components/Header";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { SupportedLanguage } from "@/lib/i18n/translations";
-import { ArrowLeft, Save, Trash2, RefreshCw, Loader2 } from "lucide-react";
+import { ArrowLeft, Save, Trash2, RefreshCw, Loader2, Cpu } from "lucide-react";
 import { useHasHydrated } from "@/lib/useHasHydrated";
 import { clearWikipediaLocalStorage } from "@/lib/openingTrainer/wikipediaService";
+import { getAvailableModels, DEFAULT_MODEL_ID } from "@/lib/gemini";
 import { useEffect } from "react";
 
 export default function SettingsPage() {
     const router = useRouter();
     const [apiKey, setApiKey] = useState(() => typeof window === "undefined" ? "" : localStorage.getItem("gemini_api_key") || "");
+    const [modelId, setModelId] = useState(() => typeof window === "undefined" ? DEFAULT_MODEL_ID : localStorage.getItem("gemini_model_id") || DEFAULT_MODEL_ID);
+    const [availableModels, setAvailableModels] = useState<string[]>([]);
     const [language, setLanguage] = useState<SupportedLanguage>(() => {
         if (typeof window === "undefined") {
             return "en";
@@ -26,6 +29,10 @@ export default function SettingsPage() {
     const [showConsentError, setShowConsentError] = useState(false);
     const [isRebuilding, setIsRebuilding] = useState(false);
     const hasHydrated = useHasHydrated();
+
+    useEffect(() => {
+        getAvailableModels().then(setAvailableModels);
+    }, []);
 
     const t = useTranslation(language);
 
@@ -72,6 +79,7 @@ export default function SettingsPage() {
             localStorage.removeItem("gemini_api_key");
         }
 
+        localStorage.setItem("gemini_model_id", modelId);
         localStorage.setItem("chess_tutor_language", language);
 
         // Save online platform usernames
@@ -214,6 +222,32 @@ export default function SettingsPage() {
 
                                     <p className="text-xs text-gray-500 dark:text-gray-400">
                                         {t.start.apiKeyRequired} <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">{t.start.getApiKey}</a>
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Gemini Model Selection */}
+                            <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    {t.start.geminiModel}
+                                </label>
+                                <div className="space-y-3">
+                                    <select
+                                        value={modelId}
+                                        onChange={(e) => setModelId(e.target.value)}
+                                        className="w-full p-3 border rounded-lg dark:bg-gray-700 dark:border-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                    >
+                                        {availableModels.map((m) => (
+                                            <option key={m} value={m}>
+                                                {m} {m === DEFAULT_MODEL_ID ? `(${t.common.loading === 'Loading...' ? 'Recommended' : 'Empfohlen'})` : ''}
+                                            </option>
+                                        ))}
+                                        {!availableModels.includes(modelId) && (
+                                            <option value={modelId}>{modelId}</option>
+                                        )}
+                                    </select>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                                        {t.start.geminiModelDescription}
                                     </p>
                                 </div>
                             </div>

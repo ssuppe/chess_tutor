@@ -104,7 +104,7 @@ export default function AnalysisPage() {
     // Initialize chat session for conversational analysis
     useEffect(() => {
         if (apiKey) {
-            const model = getGenAIModel(apiKey, "gemini-2.5-flash");
+            const model = getGenAIModel(apiKey);
             const session = model.startChat({
                 history: [
                     {

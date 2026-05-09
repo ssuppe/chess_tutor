@@ -47,6 +47,8 @@ export interface Translations {
         formatPgn: string;
         formatInvalid: string;
         apiKeyRequired: string;
+        geminiModel: string;
+        geminiModelDescription: string;
         colorSelection: string;
         playAsWhite: string;
         playAsBlack: string;
@@ -286,7 +288,10 @@ const en: Translations = {
         formatPgn: 'PGN Game',
         formatInvalid: 'Invalid format - please paste a valid FEN or PGN',
         apiKeyRequired: 'Please enter a valid API Key to continue.',
-        colorSelection: 'Choose Your Color:',
+        geminiModel: 'Gemini Model',
+        geminiModelDescription: 'Choose the Gemini model for the AI Chess Tutor. Flash models are faster and usually free, while Pro models offer better reasoning but may have stricter limits.',
+        colorSelection: 'Choose your color',
+
         playAsWhite: 'Play as White',
         playAsBlack: 'Play as Black',
         randomColor: 'Random',
@@ -516,7 +521,10 @@ const de: Translations = {
         formatPgn: 'PGN-Partie',
         formatInvalid: 'Ungültiges Format - bitte gültiges FEN oder PGN einfügen',
         apiKeyRequired: 'Bitte geben Sie einen gültigen API-Schlüssel ein, um fortzufahren.',
-        colorSelection: 'Wähle deine Farbe:',
+        geminiModel: 'Gemini Modell',
+        geminiModelDescription: 'Wählen Sie das Gemini-Modell für den AI Chess Tutor. Flash-Modelle sind schneller und meist kostenlos, während Pro-Modelle eine bessere Argumentation bieten, aber möglicherweise strengere Limits haben.',
+        colorSelection: 'Wähle deine Farbe',
+
         playAsWhite: 'Als Weiß spielen',
         playAsBlack: 'Als Schwarz spielen',
         randomColor: 'Zufällig',
@@ -746,7 +754,10 @@ const fr: Translations = {
         formatPgn: 'Partie PGN',
         formatInvalid: 'Format invalide - veuillez coller un FEN ou PGN valide',
         apiKeyRequired: 'Veuillez entrer une clé API valide pour continuer.',
-        colorSelection: 'Choisissez votre couleur :',
+        geminiModel: 'Modèle Gemini',
+        geminiModelDescription: 'Choisissez le modèle Gemini pour le tuteur d\'échecs IA. Les modèles Flash sont plus rapides et généralement gratuits, tandis que les modèles Pro offrent un meilleur raisonnement mais peuvent avoir des limites plus strictes.',
+        colorSelection: 'Choisissez votre couleur',
+
         playAsWhite: 'Jouer Blancs',
         playAsBlack: 'Jouer Noirs',
         randomColor: 'Aléatoire',
@@ -976,7 +987,10 @@ const it: Translations = {
         formatPgn: 'Partita PGN',
         formatInvalid: 'Formato non valido - incolla un FEN o PGN valido',
         apiKeyRequired: 'Inserisci una chiave API valida per continuare.',
-        colorSelection: 'Scegli il tuo colore:',
+        geminiModel: 'Modello Gemini',
+        geminiModelDescription: 'Scegli il modello Gemini per l\'AI Chess Tutor. I modelli Flash sono più veloci e solitamente gratuiti, mentre i modelli Pro offrono un ragionamento migliore ma possono avere limiti più severi.',
+        colorSelection: 'Scegli il tuo colore',
+
         playAsWhite: 'Gioca Bianco',
         playAsBlack: 'Gioca Nero',
         randomColor: 'Casuale',
@@ -1206,7 +1220,10 @@ const pl: Translations = {
         formatPgn: 'Partia PGN',
         formatInvalid: 'Nieprawidłowy format - wklej poprawny FEN lub PGN',
         apiKeyRequired: 'Podaj prawidłowy klucz API, aby kontynuować.',
-        colorSelection: 'Wybierz kolor:',
+        geminiModel: 'Model Gemini',
+        geminiModelDescription: 'Wybierz model Gemini dla AI Chess Tutor. Modele Flash są szybsze i zazwyczaj darmowe, podczas gdy modele Pro oferują lepsze rozumowanie, ale mogą mieć bardziej rygorzyste limity.',
+        colorSelection: 'Wybierz swój kolor',
+
         playAsWhite: 'Graj białymi',
         playAsBlack: 'Graj czarnymi',
         randomColor: 'Losowo',

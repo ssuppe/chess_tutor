@@ -424,7 +424,7 @@ Generates AI tutor responses with enforced personality and chess context.
 - `message` (required): User's message/question
 - `context` (optional): Chess position context (FEN, evaluation, openings, tactics)
 - `history` (optional): Previous conversation history
-- `modelName` (optional): Gemini model name (default: `gemini-2.5-flash`)
+- `modelName` (optional): Gemini model name (default: `gemini-3.1-flash-lite-preview`)
 
 **Notes:**
 - The API key is provided by the client (bring your own key)

@@ -2,10 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ArrowRight, CheckCircle2, KeyRound, Languages, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, KeyRound, Languages, Sparkles, Cpu } from "lucide-react";
 import Header from "@/components/Header";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { SupportedLanguage } from "@/lib/i18n/translations";
+import { getAvailableModels, DEFAULT_MODEL_ID } from "@/lib/gemini";
 
 const STEPS = 4;
 
@@ -14,6 +15,8 @@ export default function OnboardingPage() {
     const [step, setStep] = useState(0);
     const [language, setLanguage] = useState<SupportedLanguage>("en");
     const [apiKey, setApiKey] = useState("");
+    const [modelId, setModelId] = useState(DEFAULT_MODEL_ID);
+    const [availableModels, setAvailableModels] = useState<string[]>([]);
     const [mounted, setMounted] = useState(false);
     const [error, setError] = useState("");
     const [consentGiven, setConsentGiven] = useState(false);
@@ -21,15 +24,22 @@ export default function OnboardingPage() {
     useEffect(() => {
         const storedKey = localStorage.getItem("gemini_api_key");
         const storedLang = localStorage.getItem("chess_tutor_language");
+        const storedModel = localStorage.getItem("gemini_model_id");
 
         if (storedLang) {
             setLanguage(storedLang as SupportedLanguage);
+        }
+
+        if (storedModel) {
+            setModelId(storedModel);
         }
 
         if (storedKey) {
             router.push("/");
             return;
         }
+
+        getAvailableModels().then(setAvailableModels);
 
         setMounted(true);
     }, [router]);
@@ -70,6 +80,7 @@ export default function OnboardingPage() {
         }
 
         localStorage.setItem("gemini_api_key", trimmed);
+        localStorage.setItem("gemini_model_id", modelId);
         localStorage.setItem("chess_tutor_language", language);
         router.push("/");
     };
@@ -211,6 +222,27 @@ export default function OnboardingPage() {
                                         placeholder={t.onboarding.api.placeholder}
                                         className="w-full p-3 rounded-lg border dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
                                     />
+
+                                    <div className="space-y-2 pt-2">
+                                        <label className="flex items-center gap-2 text-sm font-semibold text-gray-800 dark:text-gray-100">
+                                            <Cpu size={16} className="text-blue-600" />
+                                            {t.start.geminiModel}
+                                        </label>
+                                        <select
+                                            value={modelId}
+                                            onChange={(e) => setModelId(e.target.value)}
+                                            className="w-full p-3 rounded-lg border dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                                        >
+                                            {availableModels.map((m) => (
+                                                <option key={m} value={m}>
+                                                    {m} {m === DEFAULT_MODEL_ID ? `(${t.common.loading === 'Loading...' ? 'Recommended' : 'Empfohlen'})` : ''}
+                                                </option>
+                                            ))}
+                                            {!availableModels.includes(modelId) && (
+                                                <option value={modelId}>{modelId}</option>
+                                            )}
+                                        </select>
+                                    </div>
 
                                     {/* Consent Checkbox */}
                                     <div className="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">

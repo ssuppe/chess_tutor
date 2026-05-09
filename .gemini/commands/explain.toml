@@ -1,0 +1,4 @@
+description = "explain"
+prompt = """
+Explain what you are doing before making any more changes.
+"""

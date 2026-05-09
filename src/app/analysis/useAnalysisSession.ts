@@ -72,7 +72,7 @@ export function useAnalysisSession({ importError }: UseAnalysisSessionArgs) {
     useEffect(() => {
         if (!apiKey) return;
 
-        const model = getGenAIModel(apiKey, "gemini-2.5-flash");
+        const model = getGenAIModel(apiKey);
         const session = model.startChat({
             history: [
                 {

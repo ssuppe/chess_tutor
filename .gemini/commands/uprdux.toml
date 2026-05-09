@@ -1,0 +1,4 @@
+description = "Update main and ux documentation"
+prompt = """
+Reread the README.md and the docs/ folder and make sure all the documentation is up to date.
+"""

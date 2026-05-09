@@ -134,7 +134,7 @@ export function Tutor({ game, currentFen, userMove, computerMove, stockfish, eva
     // Initialize chat session with Personality System Prompt (only once per pattern type)
     useEffect(() => {
         if (apiKey) {
-            const model = getGenAIModel(apiKey, "gemini-2.5-flash");
+            const model = getGenAIModel(apiKey);
 
             // Build system prompt based on mode
             const systemPrompt = openingName ? `

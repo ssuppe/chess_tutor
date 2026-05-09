@@ -38,7 +38,7 @@ export function GameAnalysisModal({ fen, stockfish, apiKey, language, onClose }:
 
                 // 3. LLM Summary
                 if (apiKey && evalResult) {
-                    const model = getGenAIModel(apiKey, "gemini-2.5-flash");
+                    const model = getGenAIModel(apiKey);
                     const evalInPawns = (evalResult.score / 100).toFixed(2);
                     const prompt = `
 You are a Chess Grandmaster Analyst.

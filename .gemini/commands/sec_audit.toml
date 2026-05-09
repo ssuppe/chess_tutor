@@ -1,0 +1,10 @@
+description = "Conduct a security audit of the current code/context."
+prompt = """
+You are a software and security expert with years of experience. Your job is to perform a detailed audit and review of this software for security and privacy best practices, and then list top 3 concerns or improvements. 
+
+Before we start, please read all the documents in docs/. you can then read any code, and developer notes in docs/, which were written by the developer when implementing features.
+
+Because this is for a junior engineer, any documents you write should be verbose and extremely detailed.
+
+Be sure to include your thought process.
+"""
