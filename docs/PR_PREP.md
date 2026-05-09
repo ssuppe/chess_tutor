@@ -78,3 +78,29 @@ Rapidly navigating through move history (scrubbing) triggered instantaneous API 
 ### 3. Testing
 - **New Unit Test:** Added a test case in `src/components/__tests__/Tutor.test.tsx` using `jest.useFakeTimers()` to verify that requests are correctly delayed and that immediate greetings are still sent instantly.
 - Total passing tests: **227** (on this branch).
+
+---
+
+# Pull Request Preparation: Analysis Mobile Layout Improvements
+
+## Context
+The game analysis page on mobile devices had a suboptimal layout where technical "Position Analysis" took precedence over the "AI Analysis" (coach commentary). Additionally, the "Play from here" button was located below the board, requiring scrolling and cluttering the main interaction area.
+
+## Changes
+
+### 1. Mobile-First Layout Reordering
+- **AI-First Priority:** Swapped the vertical order of the Analysis Tiles on mobile. The **AI Analysis** (coach commentary) now appears above the **Position Analysis** (technical stats) to prioritize the "Tutor" experience on smaller screens.
+- **Responsive Grid:** Used Tailwind `order` classes to maintain the side-by-side layout on desktop while controlling the stacking order on mobile.
+
+### 2. Header Interaction Improvements
+- **Play Button Relocation:** Moved the "Play from here" button from below the chessboard to the analysis header (top-right), placing it next to the orientation selector.
+- **Label Simplification:** Shortened the button label to **"Play"** to save horizontal space while retaining its clear intent via the `PlayCircle` icon.
+- **Consistency:** The "Load New Game" button was also moved to the header, centralizing all game-level actions in one row.
+
+### 3. UI Refinements
+- **Icon Visibility:** Ensured that both "Load New Game" and "Play" buttons include their descriptive text alongside icons for accessibility and clarity.
+- **Orientation Select:** Positioned the board orientation selector (White/Black) as the rightmost element in the action row for easy thumb access.
+
+### 4. Testing & Validation
+- Verified the layout across multiple breakpoints using browser developer tools (Mobile S/M/L and Desktop).
+- Confirmed that "Play" functionality still correctly triggers the game setup modal and transition to gameplay.
