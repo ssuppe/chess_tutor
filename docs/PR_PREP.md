@@ -7,7 +7,7 @@ The application was suffering from `429 Too Many Requests` errors when fetching 
 
 ### 1. Infrastructure & Persistence
 - **Docker Volume:** Added a volume mapping in `docker-compose.yml` (`./wikipedia-cache:/app/public/wikipedia`) to persist cached JSON files.
-- **Auto-Initialization:** Added `scripts/ensure-cache.js` which runs before `npm run dev` and `npm run build` to check if the cache is empty/incomplete (< 10 files) and trigger a rebuild if necessary.
+- **Auto-Initialization:** Added `scripts/ensure-cache.js` which runs before `npm run dev` and `npm run build` to check if the cache is empty/incomplete (< 20 files) and trigger a rebuild if necessary.
 - **Smart Fetching:** Updated `scripts/fetch-wikipedia-openings.ts` to skip already cached files.
 - **Locking Mechanism:** Implemented a `.rebuilding` lock file to prevent concurrent rebuild processes.
 
