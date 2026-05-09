@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { resolveModelId } from '@/lib/gemini';
 import {
   OPENING_TUTOR_SYSTEM_PROMPT,
   OPENING_TUTOR_TEMPERATURE,
@@ -53,7 +54,7 @@ export async function POST(request: NextRequest) {
     // Initialize Gemini API
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
-      model: 'gemini-1.5-flash',
+      model: resolveModelId(),
       generationConfig: {
         temperature: OPENING_TUTOR_TEMPERATURE,
         maxOutputTokens: OPENING_TUTOR_MAX_TOKENS,

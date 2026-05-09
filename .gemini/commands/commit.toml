@@ -1,0 +1,4 @@
+description = "commit to git"
+prompt = """
+Use git to evaluate all the uncommitted changes, then update the documentation in docs/ to reflect the new changes and decisions we made, and then commit the changes. fix any issues that come from the pre checks. when complete, run git push.
+"""

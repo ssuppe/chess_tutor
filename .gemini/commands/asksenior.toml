@@ -1,0 +1,4 @@
+description = "Ask the Senior Engineer"
+prompt = """
+Please write up a report for the senior engineer to review. Include a description of the problem, fixes attempted, and your latest hypothesis. Include snippers of code and errors for completeness. Don't write it to a file, just output it here.
+"""

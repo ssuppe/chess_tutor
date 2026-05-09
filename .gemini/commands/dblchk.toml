@@ -1,0 +1,4 @@
+description = "Double-check your work"
+prompt = """
+Have we missed anything? any logic errors , bugs, unchecked assumptions, missed steps? be thorough.
+"""

@@ -1,12 +1,33 @@
 import { GoogleGenerativeAI, SchemaType, FunctionDeclaration } from "@google/generative-ai";
 
+export const DEFAULT_MODEL_ID = process.env.NEXT_PUBLIC_GEMINI_MODEL_ID || "gemini-3.1-flash-lite-preview";
+
 export async function getAvailableModels(): Promise<string[]> {
-    // Prioritize newer models
     return [
-        "gemini-3-pro-preview",
-        "gemini-2.5-pro",
-        "gemini-2.5-flash"
+        "gemini-3.1-flash-lite-preview",
+        "gemini-2.0-flash-exp",
+        "gemini-1.5-flash",
+        "gemini-1.5-pro"
     ];
+}
+
+/**
+ * Resolves the Gemini model ID to use.
+ * Order of precedence: 
+ * 1. Explicitly provided modelName
+ * 2. localStorage (user preference)
+ * 3. Environment variable
+ * 4. Default constant
+ */
+export function resolveModelId(explicitModelName?: string): string {
+    if (explicitModelName) return explicitModelName;
+
+    if (typeof window !== "undefined") {
+        const savedModel = localStorage.getItem("gemini_model_id");
+        if (savedModel) return savedModel;
+    }
+
+    return DEFAULT_MODEL_ID;
 }
 
 const evaluatePositionTool: FunctionDeclaration = {
@@ -28,10 +49,11 @@ const evaluatePositionTool: FunctionDeclaration = {
     },
 };
 
-export function getGenAIModel(apiKey: string, modelName: string = "gemini-2.5-flash") {
+export function getGenAIModel(apiKey: string, modelName?: string) {
+    const resolvedModel = resolveModelId(modelName);
     const genAI = new GoogleGenerativeAI(apiKey);
     return genAI.getGenerativeModel({
-        model: modelName,
+        model: resolvedModel,
         tools: [{ functionDeclarations: [evaluatePositionTool] }],
     });
 }

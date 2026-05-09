@@ -138,7 +138,7 @@ export function GameOverModal({ result, winner, history, apiKey, language, onClo
 
                 // 2. LLM Analysis
                 if (apiKey) {
-                    const model = getGenAIModel(apiKey, "gemini-2.5-flash");
+                    const model = getGenAIModel(apiKey);
 
                     const blunders = detectedMistakes.filter(m => m.category === 'blunder');
                     const mistakes = detectedMistakes.filter(m => m.category === 'mistake');

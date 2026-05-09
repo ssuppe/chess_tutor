@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unknown personality" }, { status: 400 });
     }
 
-    const model = getGenAIModel(apiKey, modelName ?? "gemini-2.5-flash");
+    const model = getGenAIModel(apiKey, modelName);
     const systemHistory = buildTutorSystemHistory(personality, language, playerColor);
     const chat = model.startChat({
       history: [...systemHistory, ...normalizeHistory(history)],

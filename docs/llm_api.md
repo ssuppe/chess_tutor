@@ -23,7 +23,8 @@ Die mobile App soll dieselben Tutor-Funktionen wie das Web nutzen, ohne eigene P
       - `missedTactics`: String-Liste zu erkannten taktischen Themen.
     - **Allgemeiner Modus**: `{ currentFen?, evaluation?, openingCandidates?, missedTactics? }`
   - `history` (optional): Bisherige Unterhaltung `{ role: "user" | "model", text }[]`; der Server ergänzt immer den System Prompt.
-  - `modelName` (optional): Overrides des Default-Modells `gemini-2.5-flash`.
+  - `modelName` (optional): Overrides des Default-Modells `gemini-3.1-flash-lite-preview`.
+
 - Response: `{ reply: string }`
 
 ### Warum serverseitiger System Prompt?
