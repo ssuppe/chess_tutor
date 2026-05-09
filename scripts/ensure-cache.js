@@ -17,8 +17,8 @@ function needsRebuild() {
   const files = fs.readdirSync(wikiDir);
   const jsonFiles = files.filter(f => f.endsWith('.json') && f !== 'index.json');
   
-  // If we have fewer than 10 files, it's probably incomplete
-  return jsonFiles.length < 10;
+  // If we have fewer than 20 files, it's probably incomplete
+  return jsonFiles.length < 20;
 }
 
 if (needsRebuild()) {
