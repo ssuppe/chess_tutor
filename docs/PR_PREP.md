@@ -25,8 +25,32 @@ The application was suffering from `429 Too Many Requests` errors when fetching 
 - Added **10 new tests** in `src/app/api/v1/cache/wikipedia/route.test.ts` covering all API methods and edge cases.
 - Total passing tests: **232**.
 
-## How to Submit
-When ready to submit this PR:
-1. Switch to the `feature/wikipedia-cache-persistence` branch.
-2. Review the changes.
-3. Use `gh pr create --title "feat: persistent wikipedia cache and management UI" --body-file docs/PR_PREP.md`.
+---
+
+# Pull Request Preparation: Gemini Model Migration
+
+## Context
+The application had hardcoded references to older Gemini models (e.g., `gemini-2.5-flash`), which had very low rate limits (20 requests/day). This caused the AI Chess Tutor to hang once the quota was exhausted.
+
+## Changes
+
+### 1. Migration to SOTA Models
+- **New Default:** Migrated the entire application to use `gemini-3.1-flash-lite-preview` by default, which offers a much higher free quota (1,000 requests/day) and improved reasoning.
+- **Surgical Refactoring:** Replaced all hardcoded model ID strings in components (`Tutor`, `GameAnalysisModal`, etc.) and API routes with a centralized resolution logic.
+
+### 2. Centralized Model Resolution
+- **New Library (`src/lib/gemini.ts`):** Implemented `resolveModelId()` which handles model resolution with the following priority:
+  1. Explicitly provided model name (from API call).
+  2. User preference (from `localStorage`).
+  3. Environment variable (`NEXT_PUBLIC_GEMINI_MODEL_ID`).
+  4. System default (`gemini-3.1-flash-lite-preview`).
+
+### 3. UI & Onboarding
+- **Onboarding Integration:** Added a "Gemini Model" selection dropdown to the initial setup step, allowing users to choose their preferred model immediately.
+- **Settings UI:** Added a new "Gemini Model" section to the Settings page with a dropdown and descriptive tooltips explaining the differences between Flash and Pro models.
+- **I18n Support:** Fully translated all new UI strings across English, German, French, Italian, and Polish.
+
+### 4. Testing & Documentation
+- **New Tests:** Added `src/lib/__tests__/gemini.test.ts` with 100% coverage for the resolution logic.
+- **Updated API Tests:** Verified that chat and analysis routes correctly delegate model resolution.
+- **Documentation:** Updated `README.md` and `docs/llm_api.md` to reflect the new default model and configuration options.
