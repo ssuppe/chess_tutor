@@ -99,8 +99,17 @@ export default function SettingsPage() {
         router.push("/");
     };
 
-    const handleClearAllData = () => {
+    const handleClearAllData = async () => {
         if (window.confirm(t.common.clearAllDataConfirm)) {
+            try {
+                // Clear server-side cache
+                await fetch("/api/v1/cache/wikipedia", {
+                    method: "DELETE",
+                });
+            } catch (error) {
+                console.error("Failed to clear server-side cache during full wipe:", error);
+            }
+            
             localStorage.clear();
             router.push("/onboarding");
         }
