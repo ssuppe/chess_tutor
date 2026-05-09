@@ -372,6 +372,9 @@ Acknowledge this new puzzle briefly (1 sentence) and encourage the student to fi
     const isFamilyMode = openingPracticeMode?.isFamilyMode ?? false;
     const variationInfo = openingPracticeMode?.variationInfo;
 
+    // Track last analyzed exchange in opening practice to avoid duplicates
+    const lastOpeningExchangeRef = useRef<string | null>(null);
+
     // Automatic commentary for opening practice mode
     useEffect(() => {
         if (!chatSession || !openingName) return;
@@ -383,19 +386,79 @@ Acknowledge this new puzzle briefly (1 sentence) and encourage the student to fi
             return;
         }
 
-        const userMoveKey = lastUserMoveSan
-            ? `${lastUserMoveSan}-${currentMoveIndex}`
-            : null;
-        const tutorMoveKey = lastTutorMoveSan
-            ? `${lastTutorMoveSan}-${currentMoveIndex}`
-            : null;
+        // Create a unique key for this opening exchange
+        // If it's the start, tutorMove might be null. If user just moved, tutorMove might still be null.
+        // We want to analyze whenever the "current state" of the opening progresses.
+        const openingKey = `opening-${currentMoveIndex}-${lastUserMoveSan || 'none'}-${lastTutorMoveSan || 'none'}`;
+
+        // Prevent double analysis of the same opening state
+        if (lastOpeningExchangeRef.current === openingKey) return;
 
         // Implementation of debounced messaging
         const debounceDelay = isReviewing ? 3000 : 0;
         const timer = setTimeout(() => {
-            // Check if user made a new move
-            if (userMoveKey && userMoveKey !== lastUserMoveRef.current) {
-                lastUserMoveRef.current = userMoveKey;
+            // Re-check key after debounce
+            if (lastOpeningExchangeRef.current === openingKey) return;
+            lastOpeningExchangeRef.current = openingKey;
+
+            // 1. Case: Tutor just moved (usually in response to user move)
+            if (lastTutorMoveSan && lastTutorMoveRef.current !== `${lastTutorMoveSan}-${currentMoveIndex}`) {
+                lastTutorMoveRef.current = `${lastTutorMoveSan}-${currentMoveIndex}`;
+                
+                // If user also just moved, we analyze BOTH in one go
+                const userJustMoved = lastUserMoveSan && lastUserMoveRef.current !== `${lastUserMoveSan}-${currentMoveIndex}`;
+                if (userJustMoved) {
+                    lastUserMoveRef.current = `${lastUserMoveSan}-${currentMoveIndex}`;
+                }
+
+                const prompt = `
+[SYSTEM TRIGGER: opening_exchange]
+${userJustMoved ? `The student just played: ${lastUserMoveSan}
+Move category: ${currentFeedback?.category || 'unknown'}
+Position status: ${isInTheory ? 'In theory' : 'Deviated from repertoire'}` : ''}
+I just replied with: ${lastTutorMoveSan}
+Current position FEN: ${currentFen}
+Progress: ${currentMoveIndex}/${repertoireMovesLength} moves in ${openingName}
+
+INSTRUCTIONS:
+${userJustMoved 
+    ? isInTheory
+        ? isFamilyMode
+            ? `- The student is playing a valid move in the ${openingName} family
+- Tell them which specific variation(s) they're now in (if narrowed down)
+- Explain the key idea behind their move (${lastUserMoveSan})
+- Explain WHY I played my move (${lastTutorMoveSan}) and what it accomplishes (controls center, develops, etc.)`
+            : `- The student is following the repertoire correctly - praise them briefly for ${lastUserMoveSan}
+- Explain the key idea behind their move (1-2 sentences)
+- Explain WHY I played my move (${lastTutorMoveSan}) and what it accomplishes`
+        : isFamilyMode
+            ? `- The student played a move (${lastUserMoveSan}) not in any known variation of ${openingName}
+- Gently mention which moves would have been in theory (${currentFeedback?.theoreticalAlternatives?.join(' or ') || 'the main lines'})
+- Explain why those moves are preferred
+- Mention that even so, I replied with ${lastTutorMoveSan} to keep the game going`
+            : `- The student deviated from ${openingName} theory with ${lastUserMoveSan}
+- Gently point out what the repertoire move was
+- Explain why the repertoire move is preferred
+- Mention my response ${lastTutorMoveSan} and what it aims for`
+    : `- Explain WHY I played my move (${lastTutorMoveSan}) and what it accomplishes
+- Mention the key goal for ${playerColorName} in this stage of the ${openingName}`
+}
+- Keep it conversational, in character, and concise (3-5 sentences max).
+- Stay in ${language}.
+`.trim();
+
+                chatSession.sendMessage(prompt).then(result => {
+                    const response = result.response.text();
+                    setMessages(prev => [...prev, { role: "model", text: response, timestamp: Date.now() }]);
+                    openingPracticeMode?.onTutorMessageSent?.();
+                }).catch(err => {
+                    console.error("Failed to generate opening exchange commentary:", err);
+                    if (isGeminiError(err)) setGeminiError(parseGeminiError(err));
+                });
+            }
+            // 2. Case: ONLY user just moved (e.g. they deviated or it's the end of repertoire)
+            else if (lastUserMoveSan && lastUserMoveRef.current !== `${lastUserMoveSan}-${currentMoveIndex}`) {
+                lastUserMoveRef.current = `${lastUserMoveSan}-${currentMoveIndex}`;
 
                 // Build variation context for family mode
                 const variationContext = isFamilyMode && variationInfo ? `
@@ -405,94 +468,33 @@ Variation info:
 - Possible next moves: ${variationInfo.possibleMoves.join(', ') || 'none (end of line)'}
 ${variationInfo.isEndOfLine ? '- This is the end of this variation line' : ''}` : '';
 
-                // Generate commentary about user's move
-                const moveCommentary = `
+                const prompt = `
 [SYSTEM TRIGGER: user_move_in_opening]
-
 The student just played: ${lastUserMoveSan}
 Move category: ${currentFeedback?.category || 'unknown'}
 Position status: ${isInTheory ? 'In theory' : 'Deviated from repertoire'}
 ${currentFeedback?.evaluationChange !== undefined ? `Evaluation change: ${currentFeedback.evaluationChange.toFixed(2)}` : ''}
-${currentFeedback?.theoreticalAlternatives && currentFeedback.theoreticalAlternatives.length > 0 ? `Theory suggested: ${currentFeedback.theoreticalAlternatives.join(', ')}` : ''}
 ${variationContext}
 
 INSTRUCTIONS:
 ${isInTheory
-    ? isFamilyMode
-        ? `- The student is playing a valid move in the ${openingName} family
-- Tell them which specific variation(s) they're now in (if narrowed down)
-- Explain the key idea behind this move (1-2 sentences)
-- If there are multiple possible moves at this position, you can briefly mention alternatives
-- If you're about to make the next move, explain what it accomplishes`
-        : `- The student is following the repertoire correctly - praise them briefly
-- Explain the key idea behind this move (1-2 sentences)
-- If you're about to make the next move, you can mention it naturally`
-    : isFamilyMode
-        ? `- The student played a move not in any known variation of ${openingName}
-- Gently mention which moves would have been in theory (${currentFeedback?.theoreticalAlternatives?.join(' or ') || 'the main lines'})
-- Explain why those moves are preferred in the ${openingName}
-- Encourage them to explore or try a different move`
-        : `- The student deviated from theory
-- Gently point out what the repertoire move was
-- Explain why the repertoire move is preferred
-- Ask if they want to try again or continue exploring`}
-- Keep it concise (2-3 sentences max)
-- Stay in ${language}
-- Maintain your personality
+    ? `- The student is following the ${openingName} theory correctly - praise them briefly.
+- Explain the key idea behind this move (1-2 sentences).`
+    : `- The student deviated from ${openingName} theory.
+- Gently point out what the repertoire move was (${currentFeedback?.theoreticalAlternatives?.join(' or ') || 'the main line'}).
+- Explain why the theory move is preferred and ask if they want to try again.`}
+- Keep it concise (2-3 sentences max).
+- Stay in ${language} and maintain your personality.
 `.trim();
 
-                chatSession.sendMessage(moveCommentary).then(result => {
+                chatSession.sendMessage(prompt).then(result => {
                     const response = result.response.text();
                     setMessages(prev => [...prev, { role: "model", text: response, timestamp: Date.now() }]);
-
-                    // Notify parent that tutor sent a message
                     openingPracticeMode?.onTutorMessageSent?.();
                 }).catch(err => {
                     console.error("Failed to generate user move commentary:", err);
-                    if (isGeminiError(err)) {
-                        setGeminiError(parseGeminiError(err));
-                    }
+                    if (isGeminiError(err)) setGeminiError(parseGeminiError(err));
                 });
-            }
-
-            // Check if tutor made a new move
-            if (tutorMoveKey && tutorMoveKey !== lastTutorMoveRef.current) {
-                lastTutorMoveRef.current = tutorMoveKey;
-
-                // Generate commentary about tutor's move
-                const tutorCommentary = `
-[SYSTEM TRIGGER: tutor_move_in_opening]
-
-I just played: ${lastTutorMoveSan}
-Current position FEN: ${currentFen}
-Progress: ${currentMoveIndex}/${repertoireMovesLength} moves
-
-INSTRUCTIONS:
-- Explain WHY you played this move (the idea behind it)
-- Mention what it accomplishes (controls center, develops, creates threat, etc.)
-- If relevant, mention what the student should think about for their next move
-- Keep it conversational and in character
-- 2-3 sentences max
-- Respond in ${language}
-
-Remember: You are both the opponent AND the tutor. Explain your move as if you're teaching.
-`.trim();
-
-                // Add small delay before tutor explains their move
-                setTimeout(() => {
-                    chatSession.sendMessage(tutorCommentary).then(result => {
-                        const response = result.response.text();
-                        setMessages(prev => [...prev, { role: "model", text: response, timestamp: Date.now() }]);
-
-                        // Notify parent that tutor sent a message
-                        openingPracticeMode?.onTutorMessageSent?.();
-                    }).catch(err => {
-                        console.error("Failed to generate tutor move commentary:", err);
-                        if (isGeminiError(err)) {
-                            setGeminiError(parseGeminiError(err));
-                        }
-                    });
-                }, 300); // Brief delay so the move appears first, then the explanation
             }
         }, debounceDelay);
 
@@ -534,6 +536,9 @@ Remember: You are both the opponent AND the tutor. Explain your move as if you'r
 
         // We trigger this when computerMove changes (meaning the exchange is complete)
         const analyzeExchange = async () => {
+            // Prevent double analysis - lock the move immediately
+            lastAnalyzedMoveRef.current = exchangeKey;
+            
             setIsLoading(true);
             try {
                 // Calculate Evaluation Change (Delta)
@@ -703,7 +708,6 @@ React to this exchange as the player.
                 `;
 
                 await sendMessageToChat(prompt, true);
-                lastAnalyzedMoveRef.current = exchangeKey;
             } catch (e) {
                 console.error(e);
             } finally {

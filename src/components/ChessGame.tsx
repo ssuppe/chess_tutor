@@ -7,7 +7,6 @@ import { Stockfish, StockfishEvaluation } from "@/lib/stockfish";
 import { Tutor } from "./Tutor";
 import { EvaluationBar } from "./EvaluationBar";
 import { Personality } from "@/lib/personalities";
-import Header from "./Header";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { SupportedLanguage } from "@/lib/i18n/translations";
 import { lookupOpening, lookupPossibleOpenings, extractMoveSequenceFromPGN, OpeningMetadata } from "@/lib/openings";
@@ -45,9 +44,11 @@ const PIECE_VALUES: Record<string, number> = {
     'k': 0
 };
 
+const DEFAULT_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+
 export default function ChessGame({ gameId, initialFen, initialPgn, initialPersonality, initialColor, initialStockfishDepth, openingContext, onBack }: ChessGameProps) {
-    const gameRef = useRef(new Chess(initialFen || "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"));
-    const [fen, setFen] = useState(gameRef.current.fen());
+    const [game] = useState(() => new Chess(initialFen || DEFAULT_FEN));
+    const [fen, setFen] = useState(initialFen || DEFAULT_FEN);
     const [stockfish, setStockfish] = useState<Stockfish | null>(null);
 
     // Analysis States
@@ -104,6 +105,51 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
     const [capturedBlackPieces, setCapturedBlackPieces] = useState<string[]>([]);
     const [materialScore, setMaterialScore] = useState<{ white: number, black: number }>({ white: 0, black: 0 });
 
+    const updateCapturedPieces = useCallback(() => {
+        const history = game.history({ verbose: true });
+        const whitePiecesLost: string[] = [];
+        const blackPiecesLost: string[] = [];
+        let whiteLostScore = 0;
+        let blackLostScore = 0;
+
+        history.forEach(move => {
+            if (move.captured) {
+                if (move.color === 'w') { // White moved, captured a black piece. So a black piece was lost.
+                    blackPiecesLost.push(move.captured);
+                    blackLostScore += PIECE_VALUES[move.captured] || 0;
+                } else { // Black moved, captured a white piece. So a white piece was lost.
+                    whitePiecesLost.push(move.captured);
+                    whiteLostScore += PIECE_VALUES[move.captured] || 0;
+                }
+            }
+        });
+
+        setCapturedWhitePieces(whitePiecesLost);
+        setCapturedBlackPieces(blackPiecesLost);
+        setMaterialScore({ white: whiteLostScore, black: blackLostScore });
+    }, []);
+
+    const makeAMove = useCallback(
+        (move: { from: string; to: string; promotion?: string }) => {
+            try {
+                const result = game.move(move);
+
+                if (result) {
+                    const newFen = game.fen();
+                    setFen(newFen);
+                    updateCapturedPieces();
+                    playMoveSound(!!result.captured);
+
+                    return { result, newFen };
+                }
+            } catch (e) {
+                return null;
+            }
+            return null;
+        },
+        [game, updateCapturedPieces, playMoveSound]
+    );
+
     const t = useTranslation(language);
 
     // Initialize Stockfish
@@ -137,7 +183,14 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
                 parsingGame.loadPgn(initialPgn);
                 const verboseMoves = parsingGame.history({ verbose: true });
 
-                const replayGame = new Chess(setupFen);
+                if (verboseMoves.length === 0) {
+                    setMoveHistory([]);
+                    return;
+                }
+
+                // Initialize from the actual starting position of this move sequence
+                const startFen = verboseMoves[0].before;
+                const replayGame = new Chess(startFen);
                 const playerTurnColor = playerColor === 'white' ? 'w' : 'b';
                 const rebuiltHistory: MoveHistoryItem[] = [];
 
@@ -146,7 +199,12 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
 
                     // Play through opponent moves until it's the player's turn
                     if (move.color !== playerTurnColor) {
-                        replayGame.move(move);
+                        try {
+                            replayGame.move(move.lan);
+                        } catch (e) {
+                            console.error("Invalid opponent move in history:", move.lan, e);
+                            break;
+                        }
                         continue;
                     }
 
@@ -154,8 +212,14 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
                     const fenBeforePlayerMove = replayGame.fen();
                     const evalBeforePlayerMove = await stockfish.evaluate(fenBeforePlayerMove, stockfishDepth);
 
-                    const playerMoveResult = replayGame.move(move);
-                    if (!playerMoveResult) break;
+                    let playerMoveResult;
+                    try {
+                        playerMoveResult = replayGame.move(move.lan);
+                        if (!playerMoveResult) break;
+                    } catch (e) {
+                        console.error("Invalid player move in history:", move.lan, e);
+                        break;
+                    }
 
                     const fenAfterPlayerMove = replayGame.fen();
                     const evalAfterPlayerMove = await stockfish.evaluate(fenAfterPlayerMove, stockfishDepth);
@@ -166,12 +230,17 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
 
                     if (i + 1 < verboseMoves.length && verboseMoves[i + 1].color !== move.color) {
                         const computerMove = verboseMoves[i + 1];
-                        const computerMoveResult = replayGame.move(computerMove);
-                        if (computerMoveResult) {
-                            computerMoveSan = computerMoveResult.san;
-                            fenAfterComputerMove = replayGame.fen();
-                            evalAfterComputerMove = await stockfish.evaluate(fenAfterComputerMove, stockfishDepth);
-                            i++; // Skip the computer move we just processed
+                        try {
+                            const computerMoveResult = replayGame.move(computerMove.lan);
+                            if (computerMoveResult) {
+                                computerMoveSan = computerMoveResult.san;
+                                fenAfterComputerMove = replayGame.fen();
+                                evalAfterComputerMove = await stockfish.evaluate(fenAfterComputerMove, stockfishDepth);
+                                i++; // Skip the computer move we just processed
+                            }
+                        } catch (e) {
+                            console.error("Invalid computer move in history:", computerMove.lan, e);
+                            // We don't break here, we just stop processing this specific computer move
                         }
                     }
 
@@ -240,18 +309,22 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
         if (storedKey) setApiKey(storedKey);
         if (storedLang) setLanguage(storedLang as SupportedLanguage);
 
-        // If initialFen is provided, ensure gameRef is synced
-        if (initialFen && initialFen !== gameRef.current.fen()) {
-            gameRef.current = new Chess(initialFen);
-            setFen(initialFen);
-            updateCapturedPieces(); // Update captured pieces for loaded game
+        // If initialFen is provided, ensure game is synced
+        if (initialFen && initialFen !== game.fen()) {
+            try {
+                game.load(initialFen);
+                setFen(initialFen);
+                updateCapturedPieces(); // Update captured pieces for loaded game
+            } catch (e) {
+                console.error("Failed to load initial FEN:", e);
+            }
         }
 
         // If initialPgn is provided, load it to restore history
         if (initialPgn) {
             try {
-                gameRef.current.loadPgn(initialPgn);
-                setFen(gameRef.current.fen());
+                game.loadPgn(initialPgn);
+                setFen(game.fen());
                 updateCapturedPieces();
             } catch (e) {
                 console.error("Failed to load PGN:", e);
@@ -262,16 +335,16 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
         // This handles both:
         // 1. Standard new games where computer plays first (player is black)
         // 2. Games starting from opening trainer with custom FEN where it might be computer's turn
-        if (stockfish && gameRef.current.history().length === 0) {
+        if (stockfish && game.history().length === 0) {
             // No moves have been made yet - check whose turn it is
-            const currentTurn = gameRef.current.turn(); // 'w' or 'b'
+            const currentTurn = game.turn(); // 'w' or 'b'
             const computerTurn = initialColor === 'white' ? 'b' : 'w';
 
             if (currentTurn === computerTurn) {
                 console.log('[ChessGame] Initial position - computer\'s turn, making move...');
                 // Small delay to ensure stockfish is ready
                 setTimeout(() => {
-                    stockfish.evaluate(gameRef.current.fen(), 10).then(evalResult => {
+                    stockfish.evaluate(game.fen(), 10).then(evalResult => {
                         const computerMoveData = {
                             from: evalResult.bestMove.substring(0, 2),
                             to: evalResult.bestMove.substring(2, 4),
@@ -295,7 +368,7 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
             language,
             selectedPersonality,
             playerColor, // Save player color too
-            pgn: gameRef.current.pgn(),
+            pgn: game.pgn(),
             updatedAt: Date.now(),
             evaluation: evalP0 ? {
                 score: evalP0.score,
@@ -306,11 +379,10 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
 
         upsertSavedGame(saveData);
         localStorage.setItem("chess_tutor_save", JSON.stringify(saveData));
-    }, [fen, language, selectedPersonality, playerColor, gameId, evalP0]);
+    }, [fen, language, selectedPersonality, playerColor, gameId, evalP0, game]);
 
     // Game Over Detection
     useEffect(() => {
-        const game = gameRef.current;
         if (game.isGameOver()) {
             let result = "";
             let winner: "White" | "Black" | "Draw" = "Draw";
@@ -339,74 +411,23 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
 
             setGameOverState({ result, winner });
         }
-    }, [fen, playerColor, playDefeat, playVictory, playCheck]);
+    }, [fen, playerColor, playDefeat, playVictory, playCheck, game]);
 
     // Pre-Analysis (P0)
     useEffect(() => {
         const playerTurn = playerColor === 'white' ? 'w' : 'b';
-        if (stockfish && gameRef.current.turn() === playerTurn && !isAnalyzing && !gameOverState) {
-            stockfish.evaluate(gameRef.current.fen(), stockfishDepth).then(evalResult => {
+        if (stockfish && game.turn() === playerTurn && !isAnalyzing && !gameOverState) {
+            stockfish.evaluate(game.fen(), stockfishDepth).then(evalResult => {
                 setEvalP0(evalResult);
             }).catch(err => console.error("Pre-analysis failed:", err));
         }
-    }, [playerColor, fen, stockfish, stockfishDepth, isAnalyzing, gameOverState]);
-
-    const updateCapturedPieces = useCallback(() => {
-        const history = gameRef.current.history({ verbose: true });
-        const whitePiecesLost: string[] = [];
-        const blackPiecesLost: string[] = [];
-        let whiteLostScore = 0;
-        let blackLostScore = 0;
-
-        history.forEach(move => {
-            if (move.captured) {
-                if (move.color === 'w') { // White moved, captured a black piece. So a black piece was lost.
-                    blackPiecesLost.push(move.captured);
-                    blackLostScore += PIECE_VALUES[move.captured] || 0;
-                } else { // Black moved, captured a white piece. So a white piece was lost.
-                    whitePiecesLost.push(move.captured);
-                    whiteLostScore += PIECE_VALUES[move.captured] || 0;
-                }
-            }
-        });
-
-        setCapturedWhitePieces(whitePiecesLost);
-        setCapturedBlackPieces(blackPiecesLost);
-        setMaterialScore({ white: whiteLostScore, black: blackLostScore });
-    }, []);
-
-    const makeAMove = useCallback(
-        (move: { from: string; to: string; promotion?: string }) => {
-            try {
-                const game = gameRef.current;
-                const result = game.move(move);
-
-                if (result) {
-                    const newFen = game.fen();
-                    setFen(newFen);
-                    updateCapturedPieces();
-                    playMoveSound(!!result.captured);
-
-                    // If it was computer's move, update state
-                    if (game.turn() === 'w') { // Computer just moved (assuming computer is Black? No, wait)
-                        // Logic below handles turns
-                    }
-
-                    return { result, newFen };
-                }
-            } catch (e) {
-                return null;
-            }
-            return null;
-        },
-        [updateCapturedPieces]
-    );
+    }, [playerColor, fen, stockfish, stockfishDepth, isAnalyzing, gameOverState, game]);
 
     function onDrop({ sourceSquare, targetSquare }: { sourceSquare: string; targetSquare: string | null }) {
         if (!targetSquare || !stockfish || gameOverState) return false;
 
         // Check if it's the player's turn
-        const currentTurn = gameRef.current.turn(); // 'w' or 'b'
+        const currentTurn = game.turn(); // 'w' or 'b'
         const playerTurn = playerColor === 'white' ? 'w' : 'b';
 
         if (currentTurn !== playerTurn) {
@@ -428,7 +449,7 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
         };
 
         // Capture FEN BEFORE player's move (P0)
-        const fenP0 = gameRef.current.fen();
+        const fenP0 = game.fen();
 
         // 1. User Move (P0 -> P1)
         const moveResult = makeAMove(move);
@@ -449,7 +470,7 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
         stockfish.evaluate(fenP1, stockfishDepth).then(p1Eval => {
             // Store partial history data if evalP0 is available
             const partialHistoryItem = evalP0 ? {
-                moveNumber: gameRef.current.moveNumber(),
+                moveNumber: game.moveNumber(),
                 playerMove: moveResult.result.san,
                 playerColor: playerColor,
                 fenBeforePlayerMove: fenP0,
@@ -476,7 +497,7 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
                         setEvalP2(p2Eval);
 
                         // 4. Opening Lookup - Get multiple possible openings
-                        const currentPgn = gameRef.current.pgn();
+                        const currentPgn = game.pgn();
                         const moveSequence = extractMoveSequenceFromPGN(currentPgn);
                         const possibleOpenings = lookupPossibleOpenings(moveSequence, 5);
                         setOpeningData(possibleOpenings);
@@ -540,7 +561,7 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
     const checkAndMakeComputerMove = useCallback(() => {
         if (!stockfish || gameOverState || isAnalyzing) return;
 
-        const currentTurn = gameRef.current.turn();
+        const currentTurn = game.turn();
         const computerTurn = playerColor === 'white' ? 'b' : 'w';
 
         // If it's the computer's turn and we're not already analyzing, make a move
@@ -548,7 +569,7 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
             console.log("Safety check: Computer's turn detected, making move...");
             setIsAnalyzing(true);
 
-            const currentFen = gameRef.current.fen();
+            const currentFen = game.fen();
             stockfish.evaluate(currentFen, stockfishDepth).then(evalResult => {
                 const computerMoveData = {
                     from: evalResult.bestMove.substring(0, 2),
@@ -564,7 +585,7 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
                     // Evaluate the position after computer's move
                     stockfish.evaluate(newFen, stockfishDepth).then(p2Eval => {
                         setEvalP2(p2Eval);
-                        const currentPgn = gameRef.current.pgn();
+                        const currentPgn = game.pgn();
                         const moveSequence = extractMoveSequenceFromPGN(currentPgn);
                         const possibleOpenings = lookupPossibleOpenings(moveSequence, 5);
                         setOpeningData(possibleOpenings);
@@ -586,9 +607,8 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
     const handleNewGame = () => {
         // Reset game to initial props or just reload?
         // For now, let's just reset the board
-        const newGame = new Chess();
-        gameRef.current = newGame;
-        setFen(newGame.fen());
+        game.reset();
+        setFen(game.fen());
         setGameOverState(null);
         setMoveHistory([]);
         setUserMove(null);
@@ -609,7 +629,7 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
         setShowResignConfirm(false);
         setIsAnalyzing(false);
 
-        const currentFen = gameRef.current.fen();
+        const currentFen = game.fen();
         let evaluation: StockfishEvaluation | null = null;
 
         if (stockfish) {
@@ -643,7 +663,7 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
     }, []);
 
     const handleDownloadPGN = () => {
-        const pgn = gameRef.current.pgn();
+        const pgn = game.pgn();
         const blob = new Blob([pgn], { type: 'text/plain' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -657,7 +677,7 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
     };
 
     const handleDownloadFEN = () => {
-        const fen = gameRef.current.fen();
+        const fen = game.fen();
         const blob = new Blob([fen], { type: 'text/plain' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -677,6 +697,10 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
 
     const [showStrengthSlider, setShowStrengthSlider] = useState(false);
     const [isHistoryExpanded, setIsHistoryExpanded] = useState(false);
+
+    const handleAnalysisComplete = useCallback(() => {
+        setIsAnalyzing(false);
+    }, []);
 
     return (
         <>
@@ -747,7 +771,6 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
                             <div className="flex items-center gap-3">
                                 <button
                                     onClick={() => {
-                                        const game = gameRef.current;
                                         game.undo();
                                         game.undo();
                                         setFen(game.fen());
@@ -815,7 +838,7 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
                          However, the Board Area defines the row height.
                      */}
                     <Tutor
-                        game={gameRef.current}
+                        game={game}
                         currentFen={fen}
                         userMove={userMove}
                         computerMove={computerMove}
@@ -824,7 +847,7 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
                         evalP2={evalP2}
                         openingData={openingData}
                         missedTactics={latestMissedTactics}
-                        onAnalysisComplete={() => { }}
+                        onAnalysisComplete={handleAnalysisComplete}
                         apiKey={apiKey}
                         personality={selectedPersonality}
                         language={language}
