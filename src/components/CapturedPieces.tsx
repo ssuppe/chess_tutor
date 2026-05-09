@@ -29,8 +29,8 @@ export const CapturedPieces = memo(function CapturedPieces({ captured, color, sc
     );
 
     return (
-        <div className="flex items-center h-8 gap-2 text-gray-600 dark:text-gray-300">
-            <div className="flex -space-x-1 text-2xl leading-none select-none">
+        <div className="flex items-center h-6 gap-2 text-gray-600 dark:text-gray-300">
+            <div className="flex -space-x-1 text-xl leading-none select-none">
                 {sortedPieces.map((piece, index) => (
                     <span key={index} className={color === 'w' ? "text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]" : "text-black"}>
                         {PIECE_ICONS[piece.toLowerCase()] || piece}
@@ -38,7 +38,7 @@ export const CapturedPieces = memo(function CapturedPieces({ captured, color, sc
                 ))}
             </div>
             {score && score > 0 && (
-                <span className="text-xs font-semibold bg-gray-200 dark:bg-gray-700 px-1.5 py-0.5 rounded text-gray-700 dark:text-gray-300">
+                <span className="text-[10px] font-semibold bg-gray-200 dark:bg-gray-700 px-1 py-0 rounded text-gray-700 dark:text-gray-300">
                     +{score}
                 </span>
             )}

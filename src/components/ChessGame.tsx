@@ -694,7 +694,17 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
                 </div>
 
                 {/* 2. Board Area (Col 1-2) */}
-                <div className="md:col-span-2 bg-white dark:bg-gray-800 p-4 rounded-lg shadow-lg flex flex-col md:flex-row gap-4 relative">
+                <div className="md:col-span-2 bg-white dark:bg-gray-800 p-2 md:p-4 rounded-lg shadow-lg flex flex-col md:flex-row gap-2 md:gap-8 relative">
+                    {/* Mobile Eval Bar (Horizontal) - Moved to top */}
+                    <div className="md:hidden w-full">
+                        <EvaluationBar
+                            score={isAnalyzing ? null : evalP0?.score}
+                            mate={isAnalyzing ? null : evalP0?.mate}
+                            isPlayerWhite={playerColor === 'white'}
+                            orientation="horizontal"
+                        />
+                    </div>
+
                     {/* Desktop Eval Bar (Vertical) */}
                     <div className="hidden md:block h-[560px]">
                         <EvaluationBar
@@ -705,40 +715,9 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
                         />
                     </div>
 
-                    <div className="flex-1 flex flex-col justify-center">
-                        {/* Opponent's Captured Pieces (Top) */}
-                        <div className="mb-2 h-8">
-                            <CapturedPieces
-                                captured={playerColor === 'white' ? capturedWhitePieces : capturedBlackPieces}
-                                color={playerColor === 'white' ? 'w' : 'b'}
-                                score={playerColor === 'white' ? (blackAdvantage > 0 ? blackAdvantage : null) : (whiteAdvantage > 0 ? whiteAdvantage : null)}
-                            />
-                        </div>
-
-                        <div className="bg-[#779954] p-[2px] rounded-sm">
-                            <Chessboard
-                                options={{
-                                    position: fen,
-                                    onPieceDrop: ({ sourceSquare, targetSquare }) => onDrop({ sourceSquare, targetSquare }),
-                                    darkSquareStyle: { backgroundColor: '#779954' },
-                                    lightSquareStyle: { backgroundColor: '#e9edcc' },
-                                    animationDurationInMs: 200,
-                                    boardOrientation: playerColor
-                                }}
-                            />
-                        </div>
-
-                        {/* Player's Captured Pieces (Bottom) */}
-                        <div className="mt-2 h-8">
-                            <CapturedPieces
-                                captured={playerColor === 'white' ? capturedBlackPieces : capturedWhitePieces}
-                                color={playerColor === 'white' ? 'b' : 'w'}
-                                score={playerColor === 'white' ? (whiteAdvantage > 0 ? whiteAdvantage : null) : (blackAdvantage > 0 ? blackAdvantage : null)}
-                            />
-                        </div>
-
-                        {/* Board Footer: Controls */}
-                        <div className="mt-2 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                    <div className="flex-1 flex flex-col gap-1">
+                        {/* Board Controls - Moved to top */}
+                        <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
                             <div className="relative">
                                 <button
                                     onClick={() => setShowStrengthSlider(!showStrengthSlider)}
@@ -747,7 +726,7 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
                                     {t.game.stockfishLevel}: {stockfishDepth}
                                 </button>
                                 {showStrengthSlider && (
-                                    <div className="absolute bottom-full left-0 mb-2 w-48 bg-white dark:bg-gray-700 p-3 rounded shadow-xl border border-gray-200 dark:border-gray-600 z-10">
+                                    <div className="absolute top-full left-0 mt-2 w-48 bg-white dark:bg-gray-700 p-3 rounded shadow-xl border border-gray-200 dark:border-gray-600 z-10">
                                         <label className="block text-xs font-bold mb-1 text-gray-700 dark:text-gray-200">
                                             {t.game.stockfishStrength} ({t.game.depth}: {stockfishDepth})
                                         </label>
@@ -792,16 +771,37 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
                                 </button>
                             </div>
                         </div>
-                    </div>
 
-                    {/* Mobile Eval Bar (Horizontal) */}
-                    <div className="md:hidden w-full">
-                        <EvaluationBar
-                            score={isAnalyzing ? null : evalP0?.score}
-                            mate={isAnalyzing ? null : evalP0?.mate}
-                            isPlayerWhite={playerColor === 'white'}
-                            orientation="horizontal"
-                        />
+                        {/* Opponent's Captured Pieces (Top) */}
+                        <div className="h-6">
+                            <CapturedPieces
+                                captured={playerColor === 'white' ? capturedWhitePieces : capturedBlackPieces}
+                                color={playerColor === 'white' ? 'w' : 'b'}
+                                score={playerColor === 'white' ? (blackAdvantage > 0 ? blackAdvantage : null) : (whiteAdvantage > 0 ? whiteAdvantage : null)}
+                            />
+                        </div>
+
+                        <div className="bg-[#779954] p-[2px] rounded-sm">
+                            <Chessboard
+                                options={{
+                                    position: fen,
+                                    onPieceDrop: ({ sourceSquare, targetSquare }) => onDrop({ sourceSquare, targetSquare }),
+                                    darkSquareStyle: { backgroundColor: '#779954' },
+                                    lightSquareStyle: { backgroundColor: '#e9edcc' },
+                                    animationDurationInMs: 200,
+                                    boardOrientation: playerColor
+                                }}
+                            />
+                        </div>
+
+                        {/* Player's Captured Pieces (Bottom) */}
+                        <div className="h-6">
+                            <CapturedPieces
+                                captured={playerColor === 'white' ? capturedBlackPieces : capturedWhitePieces}
+                                color={playerColor === 'white' ? 'b' : 'w'}
+                                score={playerColor === 'white' ? (whiteAdvantage > 0 ? whiteAdvantage : null) : (blackAdvantage > 0 ? blackAdvantage : null)}
+                            />
+                        </div>
                     </div>
                 </div>
 

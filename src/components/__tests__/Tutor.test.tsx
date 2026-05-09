@@ -221,4 +221,42 @@ describe('Tutor', () => {
 
     jest.useRealTimers();
   });
+
+  it('renders a streamlined header without redundant subtitle', () => {
+    render(
+      <DebugProvider>
+        <Tutor
+          game={game}
+          currentFen={game.fen()}
+          userMove={null}
+          computerMove={null}
+          stockfish={stockfish}
+          evalP0={null}
+          evalP2={null}
+          openingData={[]}
+          missedTactics={null}
+          onAnalysisComplete={() => {}}
+          apiKey="test-api-key"
+          personality={{
+              id: "test",
+              name: "Test Personality",
+              systemPrompt: "Test Prompt",
+              image: "🤖",
+              description: "Test description"
+          }}
+          language="en"
+          playerColor="white"
+          onCheckComputerMove={() => {}}
+          resignationContext={null}
+        />
+      </DebugProvider>
+    );
+
+    expect(screen.getByText('Test Personality')).toBeInTheDocument();
+    expect(screen.queryByText(/AI Coach/i)).not.toBeInTheDocument();
+    
+    // Check for smaller avatar size class (text-xl)
+    const avatar = screen.getByText('🤖');
+    expect(avatar).toHaveClass('text-xl');
+  });
 });

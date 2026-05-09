@@ -1017,29 +1017,28 @@ INSTRUCTIONS:
     return (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 h-[400px] md:h-[600px] flex flex-col">
             {/* Header */}
-            <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center gap-3 bg-gray-50 dark:bg-gray-900 rounded-t-lg">
-                <div className="text-2xl">{personality.image}</div>
+            <div className="p-2 px-4 border-b border-gray-200 dark:border-gray-700 flex items-center gap-3 bg-gray-50 dark:bg-gray-900 rounded-t-lg">
+                <div className="text-xl">{personality.image}</div>
                 <div>
                     <h2 className="font-bold text-gray-900 dark:text-white">{personality.name}</h2>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">AI Coach ({language.toUpperCase()})</p>
                 </div>
             </div>
 
             {/* Messages Area */}
-            <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4">
+            <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-3 space-y-3">
                 {messages.map((msg, idx) => (
                     <div key={idx} className={clsx(
-                        "flex gap-3 max-w-[85%]",
+                        "flex gap-2 max-w-[92%]",
                         msg.role === "user" ? "ml-auto flex-row-reverse" : ""
                     )}>
                         <div className={clsx(
-                            "w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-sm",
+                            "w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-xs",
                             msg.role === "user" ? "bg-blue-600 text-white" : "bg-gray-200 dark:bg-gray-700"
                         )}>
-                            {msg.role === "user" ? <UserIcon size={16} /> : personality.image}
+                            {msg.role === "user" ? <UserIcon size={12} /> : personality.image}
                         </div>
                         <div className={clsx(
-                            "p-3 rounded-lg text-sm",
+                            "p-2 px-3 rounded-lg text-sm",
                             msg.role === "user"
                                 ? "bg-blue-600 text-white rounded-tr-none"
                                 : "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-tl-none prose prose-sm dark:prose-invert max-w-none"
@@ -1049,16 +1048,16 @@ INSTRUCTIONS:
                             ) : (
                                 <ReactMarkdown
                                     components={{
-                                        p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                                        p: ({ children }) => <p className="mb-1 last:mb-0">{children}</p>,
                                         strong: ({ children }) => <strong className="font-bold text-gray-900 dark:text-white">{children}</strong>,
                                         em: ({ children }) => <em className="italic">{children}</em>,
-                                        ul: ({ children }) => <ul className="list-disc list-inside mb-2 last:mb-0 space-y-1">{children}</ul>,
-                                        ol: ({ children }) => <ol className="list-decimal list-inside mb-2 last:mb-0 space-y-1">{children}</ol>,
+                                        ul: ({ children }) => <ul className="list-disc list-inside mb-1 last:mb-0 space-y-0.5">{children}</ul>,
+                                        ol: ({ children }) => <ol className="list-decimal list-inside mb-1 last:mb-0 space-y-0.5">{children}</ol>,
                                         li: ({ children }) => <li className="ml-2">{children}</li>,
                                         code: ({ children }) => <code className="bg-gray-200 dark:bg-gray-600 px-1 py-0.5 rounded text-xs font-mono">{children}</code>,
-                                        h1: ({ children }) => <h1 className="text-lg font-bold mb-2">{children}</h1>,
-                                        h2: ({ children }) => <h2 className="text-base font-bold mb-2">{children}</h2>,
-                                        h3: ({ children }) => <h3 className="text-sm font-bold mb-1">{children}</h3>,
+                                        h1: ({ children }) => <h1 className="text-base font-bold mb-1">{children}</h1>,
+                                        h2: ({ children }) => <h2 className="text-sm font-bold mb-1">{children}</h2>,
+                                        h3: ({ children }) => <h3 className="text-xs font-bold mb-0.5">{children}</h3>,
                                     }}
                                 >
                                     {msg.text}
@@ -1068,49 +1067,57 @@ INSTRUCTIONS:
                     </div>
                 ))}
                 {isLoading && (
-                    <div className="flex gap-3">
-                        <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
+                    <div className="flex gap-2">
+                        <div className="w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center flex-shrink-0 text-xs">
                             {personality.image}
                         </div>
-                        <div className="bg-gray-100 dark:bg-gray-700 p-3 rounded-lg rounded-tl-none flex items-center">
-                            <Loader2 className="animate-spin text-gray-500" size={16} />
+                        <div className="bg-gray-100 dark:bg-gray-700 p-2 px-3 rounded-lg rounded-tl-none flex items-center">
+                            <Loader2 className="animate-spin text-gray-500" size={14} />
                         </div>
                     </div>
                 )}
             </div>
 
             {/* Quick Actions */}
-            <div className="px-4 py-2 flex gap-2 overflow-x-auto">
+            <div className="px-3 py-1.5 flex gap-2 overflow-x-auto">
                 <button
                     onClick={() => sendMessageToChat("Give me a hint")}
-                    className="flex items-center gap-1 px-3 py-1 text-xs bg-yellow-100 text-yellow-800 rounded-full hover:bg-yellow-200 dark:bg-yellow-900 dark:text-yellow-200"
+                    className="flex items-center gap-1 px-3 py-1 text-xs bg-yellow-100 text-yellow-800 rounded-full hover:bg-yellow-200 dark:bg-yellow-900 dark:text-yellow-200 flex-shrink-0"
                 >
                     <Lightbulb size={12} /> {t.tutor.hint}
                 </button>
                 <button
                     onClick={() => sendMessageToChat("What is the best move?")}
-                    className="flex items-center gap-1 px-3 py-1 text-xs bg-green-100 text-green-800 rounded-full hover:bg-green-200 dark:bg-green-900 dark:text-green-200"
+                    className="flex items-center gap-1 px-3 py-1 text-xs bg-green-100 text-green-800 rounded-full hover:bg-green-200 dark:bg-green-900 dark:text-green-200 flex-shrink-0"
                 >
                     <Trophy size={12} /> {t.tutor.bestMove}
                 </button>
             </div>
 
             {/* Input Area */}
-            <form onSubmit={handleSubmit} className="p-4 border-t border-gray-200 dark:border-gray-700 flex gap-2">
-                <input
-                    type="text"
+            <form onSubmit={handleSubmit} className="p-3 border-t border-gray-200 dark:border-gray-700 flex gap-2 items-end">
+                <textarea
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            if (input.trim() && !isLoading) {
+                                handleSubmit(e as any);
+                            }
+                        }
+                    }}
                     placeholder={t.tutor.askCoach}
-                    className="flex-1 p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    rows={3}
+                    className="flex-1 p-1.5 px-3 border rounded-lg dark:bg-gray-700 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm resize-none"
                     disabled={isLoading}
                 />
                 <button
                     type="submit"
                     disabled={isLoading || !input.trim()}
-                    className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed mb-0.5"
                 >
-                    <Send size={20} />
+                    <Send size={18} />
                 </button>
             </form>
 
