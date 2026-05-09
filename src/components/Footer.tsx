@@ -5,14 +5,14 @@ export default function Footer() {
     const imprintUrl = process.env.IMPRINT_URL;
 
     return (
-        <footer className="bg-gray-100 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 py-6 mt-auto">
+        <footer className="bg-gray-100 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 py-3 mt-auto">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                <div className="flex flex-col md:flex-row justify-between items-center gap-2">
+                    <div className="text-[11px] text-gray-500 dark:text-gray-400 font-medium">
                         © {new Date().getFullYear()} Chess Tutor AI. All rights reserved.
                     </div>
 
-                    <div className="flex gap-6 text-sm">
+                    <div className="flex gap-4 text-[11px]">
                         {imprintUrl ? (
                             <a
                                 href={imprintUrl}

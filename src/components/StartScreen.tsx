@@ -90,77 +90,76 @@ export default function StartScreen({ onStartGame, onResumeGame, savedGames, onD
     if (!mounted) return null;
 
     return (
-        <>
-            <Header language={language} />
-            <div className="flex-grow bg-gray-100 dark:bg-gray-900 p-4 flex flex-col items-center justify-center relative">
-                <div className="absolute top-4 right-4 md:top-8 md:right-8">
+        <div className="flex flex-col min-h-screen bg-gray-100 dark:bg-gray-900">
+            <div className="flex-grow p-3 md:p-8 flex flex-col items-center justify-center relative">
+                <div className="absolute top-4 right-4">
                     <button
                         onClick={() => router.push("/settings")}
-                        className="p-3 bg-white dark:bg-gray-800 rounded-full shadow-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-all text-gray-700 dark:text-gray-200"
+                        className="p-2 bg-white dark:bg-gray-800 rounded-full shadow-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-all text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200"
                         title={t.start.settings}
                     >
-                        <Settings size={24} />
+                        <Settings size={20} />
                     </button>
                 </div>
 
-                <h1 className="text-5xl font-bold mb-12 text-gray-800 dark:text-white tracking-tight">
+                <h1 className="text-3xl md:text-4xl font-bold mb-6 md:mb-10 text-gray-800 dark:text-white tracking-tight">
                     {t.start.title}
                 </h1>
 
-                <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-xl max-w-3xl w-full space-y-8">
-                    <div className="space-y-6">
-                        <h2 className="text-2xl font-bold text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-700 pb-4">
+                <div className="bg-white dark:bg-gray-800 p-4 md:p-8 rounded-2xl shadow-xl max-w-2xl w-full space-y-4 md:space-y-6">
+                    <div className="space-y-4">
+                        <h2 className="text-xl font-bold text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-700 pb-2">
                             {t.start.startGame}
                         </h2>
 
-                        <div className="space-y-6">
+                        <div className="space-y-4">
                             {/* Start New Game Button - Always visible at top */}
                             <div>
                                 <button
                                     onClick={() => setShowNewGameOptions(!showNewGameOptions)}
-                                    className="w-full py-4 px-4 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-semibold shadow-lg transition-transform transform hover:scale-[1.02] flex items-center justify-center gap-2"
+                                    className="w-full py-2.5 px-4 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-semibold shadow-lg transition-all active:scale-[0.98] flex items-center justify-center gap-2 text-sm"
                                 >
-                                    <Brain size={18} />
+                                    <Brain size={16} />
                                     {t.start.startNewGame}
                                 </button>
                             </div>
 
                             {/* Unfinished Games Section */}
                             {hasSavedGames && !showNewGameOptions && (
-                                <div className="space-y-4">
+                                <div className="space-y-3">
                                     <div className="flex items-center justify-between">
-                                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                                        <h3 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
                                             {t.start.savedGamesTitle}
                                         </h3>
                                     </div>
 
                                     {sortedSavedGames.length === 0 && (
-                                        <div className="text-sm text-gray-500 dark:text-gray-400">
+                                        <div className="text-xs text-gray-500 dark:text-gray-400 italic">
                                             {t.start.savedGamesEmpty}
                                         </div>
                                     )}
 
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                         {sortedSavedGames.map(game => (
                                             <div
                                                 key={game.id}
                                                 onClick={() => onResumeGame(game)}
-                                                className="group relative bg-gray-50 dark:bg-gray-700 p-4 rounded-xl border border-gray-200 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-300 shadow-sm hover:shadow-md transition-all cursor-pointer"
+                                                className="group relative bg-gray-50 dark:bg-gray-700 p-3 rounded-xl border border-gray-200 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-300 shadow-sm transition-all cursor-pointer"
                                             >
-                                                <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <div className="absolute top-1.5 right-1.5 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                                                     <button
                                                         onClick={(e) => {
                                                             e.stopPropagation();
                                                             // Navigate to analysis with this game's PGN
                                                             if (game.pgn) {
-                                                                localStorage.setItem('chess_tutor_pending_analysis', game.pgn);
+                                                                localStorage.setItem('chess_t_pending_analysis', game.pgn);
                                                             }
                                                             router.push('/analysis');
                                                         }}
                                                         aria-label={t.start.analyzeThisGame}
-                                                        className="p-2 rounded-full bg-white dark:bg-gray-800 text-gray-500 hover:text-purple-600 shadow"
+                                                        className="p-1.5 rounded-full bg-white dark:bg-gray-800 text-gray-500 hover:text-purple-600 shadow-sm"
                                                     >
-                                                        <BarChart2 size={16} />
+                                                        <BarChart2 size={12} />
                                                     </button>
                                                     <button
                                                         onClick={(e) => {
@@ -168,13 +167,13 @@ export default function StartScreen({ onStartGame, onResumeGame, savedGames, onD
                                                             onDeleteSavedGame(game.id);
                                                         }}
                                                         aria-label={t.start.deleteGame}
-                                                        className="p-2 rounded-full bg-white dark:bg-gray-800 text-gray-500 hover:text-red-600 shadow"
+                                                        className="p-1.5 rounded-full bg-white dark:bg-gray-800 text-gray-500 hover:text-red-600 shadow-sm"
                                                     >
-                                                        <Trash2 size={16} />
+                                                        <Trash2 size={12} />
                                                     </button>
                                                 </div>
 
-                                                <div className="bg-[#779954] p-[2px] rounded-sm">
+                                                <div className="bg-[#779954] p-[1.5px] rounded-sm max-w-[120px] mx-auto sm:max-w-none">
                                                     <Chessboard
                                                         options={{
                                                             position: game.fen,
@@ -188,21 +187,19 @@ export default function StartScreen({ onStartGame, onResumeGame, savedGames, onD
                                                     />
                                                 </div>
 
-                                                <div className="mt-3 flex items-start justify-between gap-2 text-sm">
-                                                    <div className="space-y-1">
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-lg">{game.selectedPersonality.image}</span>
-                                                            <div>
-                                                                <div className="font-semibold text-gray-900 dark:text-white">{game.selectedPersonality.name}</div>
-                                                                <div className="text-xs text-gray-500 dark:text-gray-400">
-                                                                    {t.start.opponentLabel}: {game.playerColor === 'white' ? t.game.black : t.game.white}
-                                                                </div>
-                                                            </div>
+                                                <div className="mt-2 flex items-start justify-between gap-2 text-xs">
+                                                    <div className="space-y-0.5">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className="text-base">{game.selectedPersonality.image}</span>
+                                                            <div className="font-semibold text-gray-900 dark:text-white truncate max-w-[80px]">{game.selectedPersonality.name}</div>
+                                                        </div>
+                                                        <div className="text-[10px] text-gray-500 dark:text-gray-400">
+                                                            vs {game.playerColor === 'white' ? t.game.black : t.game.white}
                                                         </div>
                                                     </div>
                                                     <div className="text-right">
-                                                        <div className="text-xs uppercase text-gray-500 dark:text-gray-400">{t.start.evaluationLabel}</div>
-                                                        <div className="font-semibold text-gray-900 dark:text-white">{formatEvaluation(game)}</div>
+                                                        <div className="text-[9px] uppercase font-bold text-gray-400 dark:text-gray-500">{t.start.evaluationLabel}</div>
+                                                        <div className="font-bold text-gray-900 dark:text-white text-[11px]">{formatEvaluation(game)}</div>
                                                     </div>
                                                 </div>
                                             </div>
@@ -213,59 +210,59 @@ export default function StartScreen({ onStartGame, onResumeGame, savedGames, onD
 
                             {/* New Game Options */}
                             {showNewGameOptions && (
-                                <div className="space-y-8 animate-in fade-in slide-in-from-top-4 duration-300">
+                                <div className="space-y-6 animate-in fade-in slide-in-from-top-4 duration-300">
                                     {/* Color Selection */}
                                     <div>
-                                        <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 uppercase tracking-wide">
+                                        <label className="block text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400 font-bold mb-2">
                                             {t.start.colorSelection}
                                         </label>
-                                        <div className="grid grid-cols-3 gap-4">
+                                        <div className="grid grid-cols-3 gap-3">
                                             <button
                                                 onClick={() => setColorSelection('white')}
-                                                className={`py-4 px-4 rounded-xl border-2 text-sm font-bold transition-all flex flex-col items-center gap-2 ${colorSelection === 'white'
+                                                className={`py-2 px-2 rounded-xl border-2 text-xs font-bold transition-all flex flex-col items-center gap-1 ${colorSelection === 'white'
                                                     ? 'bg-blue-50 border-blue-600 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400'
                                                     : 'bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 hover:border-blue-300 dark:hover:border-blue-500'
                                                     }`}
                                             >
-                                                <span className="text-3xl">♔</span> {t.start.playAsWhite}
+                                                <span className="text-2xl">♔</span> {t.start.playAsWhite}
                                             </button>
                                             <button
                                                 onClick={() => setColorSelection('black')}
-                                                className={`py-4 px-4 rounded-xl border-2 text-sm font-bold transition-all flex flex-col items-center gap-2 ${colorSelection === 'black'
+                                                className={`py-2 px-2 rounded-xl border-2 text-xs font-bold transition-all flex flex-col items-center gap-1 ${colorSelection === 'black'
                                                     ? 'bg-blue-50 border-blue-600 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400'
                                                     : 'bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 hover:border-blue-300 dark:hover:border-blue-500'
                                                     }`}
                                             >
-                                                <span className="text-3xl">♚</span> {t.start.playAsBlack}
+                                                <span className="text-2xl">♚</span> {t.start.playAsBlack}
                                             </button>
                                             <button
                                                 onClick={() => setColorSelection('random')}
-                                                className={`py-4 px-4 rounded-xl border-2 text-sm font-bold transition-all flex flex-col items-center gap-2 ${colorSelection === 'random'
+                                                className={`py-2 px-2 rounded-xl border-2 text-xs font-bold transition-all flex flex-col items-center gap-1 ${colorSelection === 'random'
                                                     ? 'bg-blue-50 border-blue-600 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400'
                                                     : 'bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 hover:border-blue-300 dark:hover:border-blue-500'
                                                     }`}
                                             >
-                                                <span className="text-3xl">🎲</span> {t.start.randomColor}
+                                                <span className="text-2xl">🎲</span> {t.start.randomColor}
                                             </button>
                                         </div>
                                     </div>
 
                                     {/* Personality Grid */}
                                     <div>
-                                        <p className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 uppercase tracking-wide">
+                                        <p className="text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400 font-bold mb-2">
                                             {t.start.chooseCoach}
                                         </p>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                             {PERSONALITIES.map(p => (
                                                 <button
                                                     key={p.id}
                                                     onClick={() => handleNewGame(p)}
-                                                    className="group relative bg-gray-50 dark:bg-gray-700 p-5 rounded-xl hover:bg-white dark:hover:bg-gray-600 transition-all border-2 border-transparent hover:border-blue-500 dark:hover:border-blue-400 shadow-sm hover:shadow-md text-left flex items-start gap-4"
+                                                    className="group relative bg-gray-50 dark:bg-gray-700 p-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-600 transition-all border border-gray-200 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400 shadow-sm text-left flex items-start gap-3"
                                                 >
-                                                    <div className="text-4xl shrink-0 group-hover:scale-110 transition-transform">{p.image}</div>
+                                                    <div className="text-3xl shrink-0 group-hover:scale-110 transition-transform">{p.image}</div>
                                                     <div>
-                                                        <h3 className="font-bold text-gray-900 dark:text-white text-lg">{p.name}</h3>
-                                                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">{p.description}</p>
+                                                        <h3 className="font-bold text-gray-900 dark:text-white text-sm">{p.name}</h3>
+                                                        <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5 leading-tight line-clamp-2">{p.description}</p>
                                                     </div>
                                                 </button>
                                             ))}
@@ -273,34 +270,34 @@ export default function StartScreen({ onStartGame, onResumeGame, savedGames, onD
                                     </div>
 
                                     {/* Advanced Options (Accordion) */}
-                                    <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                                    <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
                                         <button
                                             onClick={() => setShowAdvanced(!showAdvanced)}
-                                            className="flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 transition-colors"
+                                            className="flex items-center gap-1.5 text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 transition-colors"
                                         >
-                                            {showAdvanced ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                            {showAdvanced ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                                             Advanced Options
                                         </button>
 
                                         {showAdvanced && (
-                                            <div className="mt-4 animate-in fade-in slide-in-from-top-2 space-y-2">
-                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                            <div className="mt-3 animate-in fade-in slide-in-from-top-2 space-y-2">
+                                                <label className="block text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400 font-bold mb-1">
                                                     {t.start.importPosition}
                                                 </label>
                                                 <textarea
                                                     placeholder={t.start.importPositionPlaceholder}
                                                     value={importInput}
                                                     onChange={(e) => handleImportChange(e.target.value)}
-                                                    className="w-full p-3 border rounded-lg dark:bg-gray-700 dark:border-gray-600 font-mono text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-vertical min-h-[80px]"
-                                                    rows={4}
+                                                    className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 font-mono text-[11px] focus:ring-2 focus:ring-blue-500 outline-none resize-none min-h-[60px]"
+                                                    rows={3}
                                                 />
 
                                                 {/* Format Detection Indicator */}
                                                 {importInput && (
-                                                    <div className="text-xs">
+                                                    <div className="text-[10px] font-bold uppercase tracking-tight">
                                                         {detectedFormat === 'fen' && (
                                                             <span className="flex items-center gap-1 text-green-600 dark:text-green-400">
-                                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                                                                 </svg>
                                                                 {t.start.formatDetected} {t.start.formatFen}
@@ -308,7 +305,7 @@ export default function StartScreen({ onStartGame, onResumeGame, savedGames, onD
                                                         )}
                                                         {detectedFormat === 'pgn' && (
                                                             <span className="flex items-center gap-1 text-blue-600 dark:text-blue-400">
-                                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                                                                 </svg>
                                                                 {t.start.formatDetected} {t.start.formatPgn}
@@ -316,7 +313,7 @@ export default function StartScreen({ onStartGame, onResumeGame, savedGames, onD
                                                         )}
                                                         {detectedFormat === 'invalid' && (
                                                             <span className="flex items-center gap-1 text-red-600 dark:text-red-400">
-                                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                                                                 </svg>
                                                                 {t.start.formatInvalid}
@@ -330,44 +327,47 @@ export default function StartScreen({ onStartGame, onResumeGame, savedGames, onD
 
                                     <button
                                         onClick={() => setShowNewGameOptions(false)}
-                                        className="w-full py-3 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+                                        className="w-full py-2 text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors uppercase font-bold tracking-widest"
                                     >
                                         {t.common.cancel}
                                     </button>
                                 </div>
                             )}
 
-                            {/* Analysis Mode - Always Visible */}
-                            <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
-                                <p className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 uppercase tracking-wide">
-                                    {t.start.analyzeGame}
-                                </p>
-                                <button
-                                    onClick={() => router.push("/analysis")}
-                                    className="w-full py-4 px-4 bg-purple-600 text-white rounded-xl hover:bg-purple-700 font-semibold shadow-lg transition-transform transform hover:scale-[1.02] flex items-center justify-center gap-2"
-                                >
-                                    <Brain size={18} />
-                                    {t.start.analyzeGame}
-                                </button>
-                            </div>
+                            {/* Mode Links Section */}
+                            {!showNewGameOptions && (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 border-t border-gray-100 dark:border-gray-700 pt-6">
+                                    <div className="space-y-2">
+                                        <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">
+                                            {t.start.analyzeGame}
+                                        </p>
+                                        <button
+                                            onClick={() => router.push("/analysis")}
+                                            className="w-full py-3 px-4 bg-purple-600 text-white rounded-xl hover:bg-purple-700 font-semibold shadow-md transition-all active:scale-[0.98] flex items-center justify-center gap-2 text-sm"
+                                        >
+                                            <Brain size={16} />
+                                            {t.start.analyzeGame}
+                                        </button>
+                                    </div>
 
-                            {/* Learning Area */}
-                            <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
-                                <p className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 uppercase tracking-wide">
-                                    {t.start.learningArea}
-                                </p>
-                                <button
-                                    onClick={() => router.push("/learning")}
-                                    className="w-full py-4 px-4 bg-teal-600 text-white rounded-xl hover:bg-teal-700 font-semibold shadow-lg transition-transform transform hover:scale-[1.02] flex items-center justify-center gap-2"
-                                >
-                                    <GraduationCap size={18} />
-                                    {t.start.learningArea}
-                                </button>
-                            </div>
+                                    <div className="space-y-2">
+                                        <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">
+                                            {t.start.learningArea}
+                                        </p>
+                                        <button
+                                            onClick={() => router.push("/learning")}
+                                            className="w-full py-3 px-4 bg-teal-600 text-white rounded-xl hover:bg-teal-700 font-semibold shadow-md transition-all active:scale-[0.98] flex items-center justify-center gap-2 text-sm"
+                                        >
+                                            <GraduationCap size={16} />
+                                            {t.start.learningArea}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
             </div>
-        </>
+        </div>
     );
 }

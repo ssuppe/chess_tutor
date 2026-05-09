@@ -35,33 +35,40 @@ export default function OpeningsPage() {
 
   if (!mounted) return null;
 
-  return (
-    <>
-      <Header language={language} />
-      <div className="flex-grow bg-gray-100 dark:bg-gray-900 p-4 flex flex-col">
-        <div className="max-w-6xl mx-auto w-full">
-          {/* Header */}
-          <div className="mb-8 flex items-center justify-between">
-            <button
-              onClick={() => router.push('/learning')}
-              className="p-2 md:px-4 md:py-2 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 text-sm font-medium transition-colors flex items-center gap-2"
-            >
-              <ArrowLeft size={20} />
-              <span className="hidden md:inline">{t.learning.backToMenu}</span>
-            </button>
-          </div>
+    return (
+        <div className="flex flex-col min-h-screen bg-gray-100 dark:bg-gray-900">
+            {/* Slim Navigation Row */}
+            <div className="w-full px-4 pt-2">
+                <div className="max-w-6xl mx-auto flex justify-between items-center py-1">
+                    <button
+                        onClick={() => router.push('/learning')}
+                        className="flex items-center gap-1.5 px-2 py-1 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md text-xs font-medium transition-all"
+                        aria-label={t.learning.backToMenu}
+                    >
+                        <ArrowLeft size={14} />
+                        <span className="hidden sm:inline">{t.learning.backToMenu}</span>
+                    </button>
+                    <div className="text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400 font-semibold">
+                        Opening Training
+                    </div>
+                </div>
+            </div>
 
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            Opening Training
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400 mb-8">
-            Select an opening family to train. You can play any variation within the family,
-            and your AI coach will guide you through the different lines.
-          </p>
+            <main className="flex-grow w-full flex justify-center px-4 py-4 md:py-8">
+                <div className="w-full max-w-6xl space-y-4 md:space-y-6">
+                    <div>
+                        <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
+                            Opening Training
+                        </h1>
+                        <p className="text-sm md:text-base text-gray-600 dark:text-gray-400">
+                            Select an opening family to train. You can play any variation within the family,
+                            and your AI coach will guide you through the different lines.
+                        </p>
+                    </div>
 
-          <FamilySelector families={openingFamilies} />
+                    <FamilySelector families={openingFamilies} />
+                </div>
+            </main>
         </div>
-      </div>
-    </>
-  );
+    );
 }

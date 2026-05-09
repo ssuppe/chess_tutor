@@ -99,13 +99,13 @@ export function GameImportModal({ onClose, onSelectGame, language }: GameImportM
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden border border-gray-200 dark:border-gray-700 animate-in fade-in zoom-in duration-200">
                 {/* Header */}
-                <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-900">
-                    <h2 className="text-lg font-bold flex items-center gap-2 text-gray-900 dark:text-white">
-                        <Download className="text-purple-600" />
-                        Import Game from Online Platform
+                <div className="p-3 px-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-900">
+                    <h2 className="text-sm font-bold flex items-center gap-2 text-gray-900 dark:text-white uppercase tracking-wider">
+                        <Download className="text-purple-600" size={16} />
+                        Import Game
                     </h2>
-                    <button onClick={onClose} className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
-                        <X size={20} />
+                    <button onClick={onClose} className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md transition-colors text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+                        <X size={18} />
                     </button>
                 </div>
 
@@ -141,26 +141,26 @@ export function GameImportModal({ onClose, onSelectGame, language }: GameImportM
                     </div>
 
                     {/* Username Input */}
-                    <div className="space-y-3">
-                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                    <div className="space-y-2">
+                        <label className="block text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400 font-bold">
                             Username
                         </label>
-                        <div className="flex gap-3">
+                        <div className="flex gap-2">
                             <input
                                 type="text"
                                 value={username}
                                 onChange={(e) => setUsername(e.target.value)}
                                 onKeyDown={(e) => e.key === 'Enter' && handleFetchGames()}
                                 placeholder={`Enter ${platform === 'chesscom' ? 'Chess.com' : 'Lichess'} username`}
-                                className="flex-1 px-4 py-3 border rounded-lg dark:bg-gray-700 dark:border-gray-600 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                className="flex-1 px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 focus:ring-2 focus:ring-purple-500 outline-none text-sm"
                             />
                             <button
                                 onClick={handleFetchGames}
                                 disabled={isLoading || !username.trim()}
-                                className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-bold text-xs uppercase tracking-wider shadow-md disabled:opacity-50 flex items-center gap-1.5 transition-all"
                             >
-                                {isLoading ? <Loader2 className="animate-spin" size={18} /> : <Download size={18} />}
-                                Fetch Games
+                                {isLoading ? <Loader2 className="animate-spin" size={14} /> : <Download size={14} />}
+                                Fetch
                             </button>
                         </div>
                     </div>
@@ -182,21 +182,21 @@ export function GameImportModal({ onClose, onSelectGame, language }: GameImportM
 
                     {/* Games Grid */}
                     {!isLoading && games.length > 0 && (
-                        <div className="space-y-3">
-                            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                        <div className="space-y-2">
+                            <h3 className="text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400 font-bold">
                                 Recent Games ({games.length})
                             </h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                 {games.map((game) => (
                                     <div
                                         key={game.id}
                                         onClick={() => handleSelectGame(game)}
-                                        className="group relative bg-gray-50 dark:bg-gray-700 p-4 rounded-xl border border-gray-200 dark:border-gray-600 hover:border-purple-400 dark:hover:border-purple-300 shadow-sm hover:shadow-md transition-all cursor-pointer"
+                                        className="group relative bg-gray-50 dark:bg-gray-700 p-2 rounded-xl border border-gray-200 dark:border-gray-600 hover:border-purple-400 dark:hover:border-purple-300 shadow-sm transition-all cursor-pointer"
                                     >
                                         {/* Game Info */}
-                                        <div className="flex gap-4">
+                                        <div className="flex gap-3">
                                             {/* Mini Chessboard */}
-                                            <div className="w-24 h-24 shrink-0">
+                                            <div className="w-20 h-20 shrink-0 bg-[#779954] p-[1px] rounded-[4px]">
                                                 <Chessboard
                                                     options={{
                                                         position: game.finalFen,
@@ -204,19 +204,19 @@ export function GameImportModal({ onClose, onSelectGame, language }: GameImportM
                                                         allowDragging: false,
                                                         darkSquareStyle: { backgroundColor: '#779954' },
                                                         lightSquareStyle: { backgroundColor: '#e9edcc' },
-                                                        boardStyle: { borderRadius: '8px' }
+                                                        boardStyle: { borderRadius: '3px' }
                                                     }}
                                                 />
                                             </div>
 
                                             {/* Game Details */}
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-start justify-between gap-2 mb-2">
+                                            <div className="flex-1 min-w-0 py-0.5">
+                                                <div className="flex items-start justify-between gap-1 mb-1">
                                                     <div className="flex-1 min-w-0">
-                                                        <p className="font-semibold text-gray-900 dark:text-white truncate">
+                                                        <p className="font-bold text-gray-900 dark:text-white text-xs truncate">
                                                             {game.white} vs {game.black}
                                                         </p>
-                                                        <p className={`text-sm font-medium ${getResultColor(game.result, game.white, game.black, username)}`}>
+                                                        <p className={`text-[10px] font-bold uppercase tracking-tight ${getResultColor(game.result, game.white, game.black, username)}`}>
                                                             {getResultText(game.result)}
                                                         </p>
                                                     </div>
@@ -229,25 +229,22 @@ export function GameImportModal({ onClose, onSelectGame, language }: GameImportM
                                                             className="text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors"
                                                             title="View on platform"
                                                         >
-                                                            <ExternalLink size={16} />
+                                                            <ExternalLink size={12} />
                                                         </a>
                                                     )}
                                                 </div>
 
-                                                <div className="space-y-1 text-xs text-gray-600 dark:text-gray-400">
+                                                <div className="space-y-0.5 text-[10px] text-gray-500 dark:text-gray-400 font-medium">
                                                     <p>{formatDate(game.date)}</p>
                                                     <p className="capitalize">{game.timeControl}</p>
                                                     {game.opening && (
-                                                        <p className="truncate" title={game.opening}>
+                                                        <p className="truncate text-gray-400" title={game.opening}>
                                                             {game.opening}
                                                         </p>
                                                     )}
                                                 </div>
                                             </div>
                                         </div>
-
-                                        {/* Hover Effect */}
-                                        <div className="absolute inset-0 bg-purple-500/5 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
                                     </div>
                                 ))}
                             </div>

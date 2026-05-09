@@ -235,30 +235,30 @@ Plain text paragraph (2-3 sentences).
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-2xl w-full overflow-hidden border border-gray-200 dark:border-gray-700 animate-in fade-in zoom-in duration-300">
                 {/* Header */}
-                <div className={`p-6 text-center ${winner === "White" ? "bg-green-100 dark:bg-green-900/30" : winner === "Black" ? "bg-red-100 dark:bg-red-900/30" : "bg-gray-100 dark:bg-gray-800"}`}>
-                    <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                <div className={`p-4 md:p-6 text-center ${winner === "White" ? "bg-green-100 dark:bg-green-900/30" : winner === "Black" ? "bg-red-100 dark:bg-red-900/30" : "bg-gray-100 dark:bg-gray-800"}`}>
+                    <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white mb-1">
                         {winner === "White" ? "Victory!" : winner === "Black" ? "Defeat" : "Draw"}
                     </h2>
-                    <p className="text-lg text-gray-600 dark:text-gray-300">{result}</p>
+                    <p className="text-sm md:text-base text-gray-600 dark:text-gray-300 uppercase tracking-widest font-bold">{result}</p>
                 </div>
 
                 {/* Content */}
-                <div className="p-6 space-y-6">
+                <div className="p-4 md:p-6 space-y-4 md:space-y-6">
                     {isLoading ? (
-                        <div className="flex flex-col items-center justify-center py-8 space-y-4">
-                            <Loader2 className="animate-spin text-purple-600" size={48} />
-                            <p className="text-gray-500">Analyzing your performance...</p>
+                        <div className="flex flex-col items-center justify-center py-8 space-y-3">
+                            <Loader2 className="animate-spin text-purple-600" size={32} />
+                            <p className="text-xs text-gray-500 uppercase tracking-widest font-bold">Analyzing your performance...</p>
                         </div>
                     ) : (
                         <>
                             {/* Mistakes List */}
                             {mistakes.length > 0 && (
-                                <div className="space-y-3">
-                                    <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                                        <AlertTriangle className="text-orange-500" size={20} />
+                                <div className="space-y-2">
+                                    <h3 className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest flex items-center gap-1.5">
+                                        <AlertTriangle className="text-orange-500" size={14} />
                                         Key Moments / Mistakes
                                     </h3>
-                                    <div className="max-h-40 overflow-y-auto space-y-2 pr-2">
+                                    <div className="max-h-32 overflow-y-auto space-y-1.5 pr-2">
                                         {mistakes.map((m, idx) => {
                                             const categoryColors = {
                                                 inaccuracy: 'bg-yellow-50 dark:bg-yellow-900/10 border-yellow-200 dark:border-yellow-900/30 text-yellow-700 dark:text-yellow-400',
@@ -268,23 +268,24 @@ Plain text paragraph (2-3 sentences).
                                             const categoryColor = categoryColors[m.category || 'inaccuracy'];
 
                                             return (
-                                                <div key={idx} className={`p-3 border rounded-lg text-sm ${categoryColor}`}>
-                                                    <div className="flex items-center gap-2">
+                                                <div key={idx} className={`p-2 border rounded-lg text-xs ${categoryColor}`}>
+                                                    <div className="flex items-center justify-between">
                                                         <span className="font-bold text-gray-900 dark:text-white">Move {m.moveNumber}: {m.move}</span>
-                                                        <span className="px-2 py-0.5 rounded text-xs font-semibold uppercase bg-white/50 dark:bg-black/20">
+                                                        <span className="px-1.5 py-0.5 rounded-[4px] text-[9px] font-bold uppercase bg-white/50 dark:bg-black/20 tracking-tighter">
                                                             {m.category}
                                                         </span>
                                                     </div>
-                                                    <div className="mt-1 text-xs">
-                                                        <span className="font-medium">Loss: -{m.cpLoss}cp</span>
-                                                        <span className="mx-2 text-gray-400">|</span>
+                                                    <div className="mt-0.5 flex items-center gap-2 text-[10px] opacity-80 font-medium">
+                                                        <span>Loss: -{m.cpLoss}cp</span>
+                                                        <span className="opacity-30">|</span>
                                                         <span>Eval: {m.evalBefore} → {m.evalAfter}</span>
+                                                        {m.bestMove && (
+                                                            <>
+                                                                <span className="opacity-30">|</span>
+                                                                <span>Best: <span className="font-mono font-bold">{m.bestMove}</span></span>
+                                                            </>
+                                                        )}
                                                     </div>
-                                                    {m.bestMove && (
-                                                        <div className="text-gray-600 dark:text-gray-400 mt-1 text-xs">
-                                                            Best: <span className="font-mono">{m.bestMove}</span>
-                                                        </div>
-                                                    )}
                                                 </div>
                                             );
                                         })}
@@ -294,23 +295,19 @@ Plain text paragraph (2-3 sentences).
 
                             {/* AI Analysis */}
                             <div>
-                                <h3 className="font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
-                                    <Trophy size={20} className="text-yellow-500" />
+                                <h3 className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest flex items-center gap-1.5 mb-2">
+                                    <Trophy size={14} className="text-yellow-500" />
                                     Coach's Feedback
                                 </h3>
-                                <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg text-gray-800 dark:text-gray-200 leading-relaxed prose prose-sm dark:prose-invert max-w-none">
+                                <div className="p-3 bg-purple-50 dark:bg-purple-900/10 border border-purple-100 dark:border-purple-900/20 rounded-lg text-sm text-gray-800 dark:text-gray-200 leading-snug prose prose-sm dark:prose-invert max-w-none">
                                     <ReactMarkdown
                                         components={{
-                                            // Customize markdown rendering for better styling
-                                            p: ({ children }) => <p className="mb-3 last:mb-0">{children}</p>,
+                                            p: ({ children }) => <p className="mb-2 last:mb-0 leading-snug">{children}</p>,
                                             strong: ({ children }) => <strong className="font-bold text-gray-900 dark:text-white">{children}</strong>,
                                             em: ({ children }) => <em className="italic">{children}</em>,
-                                            ul: ({ children }) => <ul className="list-disc list-inside mb-3 space-y-1">{children}</ul>,
-                                            ol: ({ children }) => <ol className="list-decimal list-inside mb-3 space-y-1">{children}</ol>,
-                                            li: ({ children }) => <li className="ml-2">{children}</li>,
-                                            h1: ({ children }) => <h1 className="text-xl font-bold mb-2 mt-4 first:mt-0">{children}</h1>,
-                                            h2: ({ children }) => <h2 className="text-lg font-bold mb-2 mt-3 first:mt-0">{children}</h2>,
-                                            h3: ({ children }) => <h3 className="text-base font-bold mb-2 mt-2 first:mt-0">{children}</h3>,
+                                            ul: ({ children }) => <ul className="list-disc list-inside mb-2 space-y-0.5">{children}</ul>,
+                                            ol: ({ children }) => <ol className="list-decimal list-inside mb-2 space-y-0.5">{children}</ol>,
+                                            li: ({ children }) => <li className="ml-1 text-xs">{children}</li>,
                                         }}
                                     >
                                         {analysis}
@@ -322,25 +319,25 @@ Plain text paragraph (2-3 sentences).
                 </div>
 
                 {/* Footer */}
-                <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3 bg-gray-50 dark:bg-gray-900">
+                <div className="p-3 border-t border-gray-200 dark:border-gray-700 flex flex-wrap justify-end gap-2 bg-gray-50 dark:bg-gray-900">
                     <button
                         onClick={onClose}
-                        className="px-4 py-2 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white"
+                        className="px-3 py-1.5 text-xs font-bold text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 transition-colors"
                     >
-                        Close
+                        CLOSE
                     </button>
                     <button
                         onClick={onAnalyze}
-                        className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center gap-2 shadow-sm"
+                        className="px-3 py-1.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-sm transition-all active:scale-95"
                     >
-                        <Trophy size={16} />
-                        Analyze Game
+                        <Trophy size={12} />
+                        Analyze
                     </button>
                     <button
                         onClick={onNewGame}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 shadow-sm"
+                        className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-sm transition-all active:scale-95"
                     >
-                        <RefreshCw size={16} />
+                        <RefreshCw size={12} />
                         Play Again
                     </button>
                 </div>

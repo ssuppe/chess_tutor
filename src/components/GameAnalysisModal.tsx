@@ -84,30 +84,30 @@ Plain text paragraph.
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-lg w-full overflow-hidden border border-gray-200 dark:border-gray-700 animate-in fade-in zoom-in duration-200">
                 {/* Header */}
-                <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-900">
-                    <h2 className="text-lg font-bold flex items-center gap-2 text-gray-900 dark:text-white">
-                        <Brain className="text-purple-600" />
+                <div className="p-3 px-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-900">
+                    <h2 className="text-sm font-bold flex items-center gap-2 text-gray-900 dark:text-white uppercase tracking-wider">
+                        <Brain className="text-purple-600" size={16} />
                         Game Analysis
                     </h2>
-                    <button onClick={onClose} className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
-                        <X size={20} />
+                    <button onClick={onClose} className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md transition-colors text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+                        <X size={18} />
                     </button>
                 </div>
 
                 {/* Content */}
-                <div className="p-6 space-y-6">
+                <div className="p-4 md:p-6 space-y-4 md:space-y-6">
                     {isLoading ? (
-                        <div className="flex flex-col items-center justify-center py-8 space-y-4">
-                            <Loader2 className="animate-spin text-purple-600" size={48} />
-                            <p className="text-gray-500">Analyzing position...</p>
+                        <div className="flex flex-col items-center justify-center py-8 space-y-3">
+                            <Loader2 className="animate-spin text-purple-600" size={32} />
+                            <p className="text-xs text-gray-500 uppercase tracking-widest font-bold">Analyzing position...</p>
                         </div>
                     ) : (
                         <>
                             {/* Evaluation Score */}
-                            <div className="flex items-center justify-between p-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                            <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-700 rounded-lg">
                                 <div>
-                                    <p className="text-sm text-gray-500 dark:text-gray-400">Evaluation</p>
-                                    <p className={`text-2xl font-bold ${(evaluation?.score || 0) > 0 ? "text-green-600" : (evaluation?.score || 0) < 0 ? "text-red-600" : "text-gray-600"
+                                    <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest leading-none mb-1">Evaluation</p>
+                                    <p className={`text-xl font-bold leading-none ${(evaluation?.score || 0) > 0 ? "text-green-600" : (evaluation?.score || 0) < 0 ? "text-red-600" : "text-gray-600"
                                         }`}>
                                         {evaluation?.mate
                                             ? `Mate in ${evaluation.mate}`
@@ -115,8 +115,8 @@ Plain text paragraph.
                                     </p>
                                 </div>
                                 <div className="text-right">
-                                    <p className="text-sm text-gray-500 dark:text-gray-400">Best Move</p>
-                                    <p className="text-xl font-mono font-bold text-gray-900 dark:text-white">
+                                    <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest leading-none mb-1">Best Move</p>
+                                    <p className="text-lg font-mono font-bold text-gray-900 dark:text-white leading-none">
                                         {evaluation?.bestMove}
                                     </p>
                                 </div>
@@ -124,24 +124,34 @@ Plain text paragraph.
 
                             {/* Opening Info */}
                             {opening && (
-                                <div className="p-4 border border-blue-200 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-800 rounded-lg">
-                                    <h3 className="font-semibold text-blue-800 dark:text-blue-300 mb-1">Opening Identified</h3>
-                                    <p className="text-blue-900 dark:text-blue-100">{opening.name} ({opening.eco})</p>
+                                <div className="p-3 border border-blue-100 bg-blue-50 dark:bg-blue-900/10 dark:border-blue-900/30 rounded-lg">
+                                    <h3 className="text-[10px] font-bold text-blue-700 dark:text-blue-400 uppercase tracking-widest leading-none mb-1.5">Opening Identified</h3>
+                                    <p className="text-sm font-semibold text-blue-900 dark:text-blue-100">{opening.name} ({opening.eco})</p>
                                 </div>
                             )}
 
                             {/* AI Summary */}
                             <div>
-                                <h3 className="font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
-                                    <Trophy size={16} className="text-yellow-500" />
+                                <h3 className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest leading-none mb-2 flex items-center gap-1.5">
+                                    <Trophy size={12} className="text-yellow-500" />
                                     Coach's Summary
                                 </h3>
-                                <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg text-gray-800 dark:text-gray-200 leading-relaxed">
+                                <div className="p-3 bg-purple-50 dark:bg-purple-900/10 border border-purple-100 dark:border-purple-900/20 rounded-lg text-sm text-gray-800 dark:text-gray-200 leading-snug">
                                     {summary}
                                 </div>
                             </div>
                         </>
                     )}
+                </div>
+                
+                {/* Footer/Action */}
+                <div className="p-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex justify-end">
+                    <button 
+                        onClick={onClose}
+                        className="px-4 py-1.5 bg-blue-600 text-white text-xs font-bold uppercase tracking-wider rounded-lg shadow-md hover:bg-blue-700 transition-all active:scale-95"
+                    >
+                        Close
+                    </button>
                 </div>
             </div>
         </div>

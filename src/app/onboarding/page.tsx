@@ -88,58 +88,56 @@ export default function OnboardingPage() {
     if (!mounted) return null;
 
     return (
-        <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
-            <Header language={language} />
-
-            <div className="max-w-4xl mx-auto px-4 py-10">
-                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden border border-gray-100 dark:border-gray-700">
+        <div className="flex flex-col min-h-screen bg-gray-100 dark:bg-gray-900">
+            <div className="flex-grow max-w-4xl mx-auto w-full px-3 md:px-4 py-4 md:py-10 flex flex-col justify-center">
+                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden border border-gray-100 dark:border-gray-700">
                     <div className="h-1 bg-gray-200 dark:bg-gray-700">
                         <div className="h-full bg-blue-600 transition-all duration-300" style={{ width: `${progress}%` }} />
                     </div>
 
-                    <div className="p-6 md:p-10 space-y-8">
+                    <div className="p-4 md:p-8 space-y-4 md:space-y-6">
                         <div className="flex items-center justify-between gap-4">
                             <div>
-                                <p className="text-sm text-gray-500 dark:text-gray-400 uppercase tracking-wide font-semibold">
+                                <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-widest font-bold">
                                     {t.onboarding.stepIndicator(step + 1, STEPS)}
                                 </p>
-                                <h1 className="text-3xl font-bold text-gray-900 dark:text-white mt-1">
+                                <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white mt-0.5">
                                     {step === 0 && t.onboarding.welcome.title}
                                     {step === 1 && t.onboarding.language.title}
                                     {step === 2 && t.onboarding.value.title}
                                     {step === 3 && t.onboarding.api.title}
                                 </h1>
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5">
                                 {Array.from({ length: STEPS }).map((_, index) => (
                                     <div
                                         key={index}
-                                        className={`w-3 h-3 rounded-full transition-all duration-200 ${index <= step ? 'bg-blue-600 scale-105' : 'bg-gray-300 dark:bg-gray-600'}`}
+                                        className={`w-2 h-2 rounded-full transition-all duration-200 ${index <= step ? 'bg-blue-600 scale-110' : 'bg-gray-200 dark:bg-gray-700'}`}
                                     />
                                 ))}
                             </div>
                         </div>
 
                         {step === 0 && (
-                            <div className="space-y-6">
-                                <div className="flex flex-col md:flex-row items-center gap-8">
-                                    <div className="flex-1 space-y-4">
-                                        <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-sm font-medium">
-                                            <Sparkles size={16} />
+                            <div className="space-y-4">
+                                <div className="flex flex-col md:flex-row items-center gap-6">
+                                    <div className="flex-1 space-y-3">
+                                        <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-full text-[11px] font-bold uppercase tracking-wider">
+                                            <Sparkles size={12} />
                                             {t.onboarding.welcome.subtitle}
                                         </div>
-                                        <p className="text-xl text-gray-700 dark:text-gray-200 leading-relaxed">
+                                        <p className="text-lg text-gray-700 dark:text-gray-200 leading-snug">
                                             {t.onboarding.welcome.claim}
                                         </p>
                                     </div>
-                                    <div className="flex-1">
+                                    <div className="flex-1 w-full">
                                         <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 text-white shadow-lg">
-                                            <div className="p-6 space-y-3">
-                                                <p className="text-5xl">♟️</p>
-                                                <p className="text-lg font-semibold">{t.start.title}</p>
-                                                <p className="text-sm text-blue-100">Gemini • Stockfish • Tactics</p>
+                                            <div className="p-5 space-y-2">
+                                                <p className="text-4xl">♟️</p>
+                                                <p className="text-base font-bold">{t.start.title}</p>
+                                                <p className="text-xs text-blue-100/80 font-medium">Gemini • Stockfish • Tactics</p>
                                             </div>
-                                            <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-white/10 rounded-full blur-3xl" />
+                                            <div className="absolute -right-10 -bottom-10 w-32 h-32 bg-white/10 rounded-full blur-3xl" />
                                         </div>
                                     </div>
                                 </div>
@@ -147,20 +145,20 @@ export default function OnboardingPage() {
                         )}
 
                         {step === 1 && (
-                            <div className="space-y-6">
-                                <p className="text-gray-700 dark:text-gray-300">{t.onboarding.language.description}</p>
-                                <div className="flex flex-wrap gap-3">
+                            <div className="space-y-4">
+                                <p className="text-sm text-gray-600 dark:text-gray-400 leading-snug">{t.onboarding.language.description}</p>
+                                <div className="flex flex-wrap gap-2">
                                     {["en", "de", "fr", "it", "pl"].map((lang) => (
                                         <button
                                             key={lang}
                                             onClick={() => setLanguage(lang as SupportedLanguage)}
-                                            className={`px-4 py-3 rounded-xl border text-sm font-semibold transition-all ${language === lang
-                                                ? 'bg-blue-600 text-white border-blue-600 shadow-lg'
+                                            className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all ${language === lang
+                                                ? 'bg-blue-600 text-white border-blue-600 shadow-md'
                                                 : 'bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:border-blue-400'}
                                             `}
                                         >
                                             <span className="inline-flex items-center gap-2">
-                                                <Languages size={16} />
+                                                <Languages size={14} />
                                                 {lang.toUpperCase()}
                                             </span>
                                         </button>
@@ -170,35 +168,35 @@ export default function OnboardingPage() {
                         )}
 
                         {step === 2 && (
-                            <div className="grid md:grid-cols-2 gap-6">
+                            <div className="grid md:grid-cols-2 gap-3">
                                 {t.onboarding.value.bullets.map((bullet, index) => (
-                                    <div key={index} className="flex items-start gap-3 bg-gray-50 dark:bg-gray-700/60 rounded-xl p-4 border border-gray-100 dark:border-gray-700">
-                                        <CheckCircle2 className="text-blue-600" size={20} />
-                                        <p className="text-gray-800 dark:text-gray-100 leading-relaxed">{bullet}</p>
+                                    <div key={index} className="flex items-start gap-2.5 bg-gray-50 dark:bg-gray-700/40 rounded-xl p-3 border border-gray-100 dark:border-gray-700">
+                                        <CheckCircle2 className="text-blue-600 shrink-0" size={16} />
+                                        <p className="text-sm text-gray-800 dark:text-gray-200 leading-snug">{bullet}</p>
                                     </div>
                                 ))}
                             </div>
                         )}
 
                         {step === 3 && (
-                            <div className="grid md:grid-cols-2 gap-8 items-start">
-                                <div className="space-y-4">
-                                    <p className="text-gray-700 dark:text-gray-300 leading-relaxed">{t.onboarding.api.description}</p>
-                                    <ul className="space-y-3 text-sm text-gray-700 dark:text-gray-300">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                                <div className="space-y-3">
+                                    <p className="text-sm text-gray-600 dark:text-gray-400 leading-snug">{t.onboarding.api.description}</p>
+                                    <ul className="space-y-2 text-xs text-gray-500 dark:text-gray-400">
                                         <li className="flex gap-2 items-start">
-                                            <KeyRound className="mt-0.5 text-blue-600" size={18} />
+                                            <KeyRound className="mt-0.5 text-blue-600 shrink-0" size={14} />
                                             <span>{t.onboarding.api.storage}</span>
                                         </li>
                                         <li className="flex gap-2 items-start">
-                                            <KeyRound className="mt-0.5 text-blue-600" size={18} />
+                                            <KeyRound className="mt-0.5 text-blue-600 shrink-0" size={14} />
                                             <span>{t.onboarding.api.serverUse}</span>
                                         </li>
                                         <li className="flex gap-2 items-start">
-                                            <KeyRound className="mt-0.5 text-blue-600" size={18} />
+                                            <KeyRound className="mt-0.5 text-blue-600 shrink-0" size={14} />
                                             <span>{t.onboarding.api.costNote}</span>
                                         </li>
                                         <li className="flex gap-2 items-start">
-                                            <KeyRound className="mt-0.5 text-blue-600" size={18} />
+                                            <KeyRound className="mt-0.5 text-blue-600 shrink-0" size={14} />
                                             <span>{t.onboarding.api.privacy}</span>
                                         </li>
                                     </ul>
@@ -206,13 +204,13 @@ export default function OnboardingPage() {
                                         href="https://aistudio.google.com/app/apikey"
                                         target="_blank"
                                         rel="noreferrer"
-                                        className="inline-flex items-center gap-2 text-blue-600 hover:underline font-semibold"
+                                        className="inline-flex items-center gap-1.5 text-blue-600 hover:underline font-bold text-xs"
                                     >
-                                        <ArrowRight size={16} /> {t.onboarding.api.getKey}
+                                        <ArrowRight size={14} /> {t.onboarding.api.getKey}
                                     </a>
                                 </div>
-                                <div className="bg-gray-50 dark:bg-gray-700/60 rounded-xl p-6 border border-gray-100 dark:border-gray-700 space-y-4">
-                                    <label className="block text-sm font-semibold text-gray-800 dark:text-gray-100">
+                                <div className="bg-gray-50 dark:bg-gray-700/40 rounded-xl p-4 border border-gray-100 dark:border-gray-700 space-y-3">
+                                    <label className="block text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400 font-bold">
                                         {t.onboarding.api.inputLabel}
                                     </label>
                                     <input
@@ -220,18 +218,18 @@ export default function OnboardingPage() {
                                         value={apiKey}
                                         onChange={(e) => setApiKey(e.target.value)}
                                         placeholder={t.onboarding.api.placeholder}
-                                        className="w-full p-3 rounded-lg border dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                                        className="w-full p-2 rounded-lg border dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none text-sm"
                                     />
 
-                                    <div className="space-y-2 pt-2">
-                                        <label className="flex items-center gap-2 text-sm font-semibold text-gray-800 dark:text-gray-100">
-                                            <Cpu size={16} className="text-blue-600" />
+                                    <div className="space-y-1.5 pt-1">
+                                        <label className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400 font-bold">
+                                            <Cpu size={12} className="text-blue-600" />
                                             {t.start.geminiModel}
                                         </label>
                                         <select
                                             value={modelId}
                                             onChange={(e) => setModelId(e.target.value)}
-                                            className="w-full p-3 rounded-lg border dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                                            className="w-full p-2 rounded-lg border dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none text-xs"
                                         >
                                             {availableModels.map((m) => (
                                                 <option key={m} value={m}>
@@ -245,51 +243,47 @@ export default function OnboardingPage() {
                                     </div>
 
                                     {/* Consent Checkbox */}
-                                    <div className="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                                    <div className="flex items-start gap-2.5 p-3 bg-blue-50 dark:bg-blue-900/10 rounded-lg border border-blue-100 dark:border-blue-900/30">
                                         <input
                                             type="checkbox"
                                             id="consent-checkbox"
                                             checked={consentGiven}
                                             onChange={(e) => setConsentGiven(e.target.checked)}
-                                            className="mt-1 w-4 h-4 text-blue-600 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500"
+                                            className="mt-0.5 w-4 h-4 text-blue-600 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500"
                                         />
-                                        <label htmlFor="consent-checkbox" className="text-sm text-gray-800 dark:text-gray-200 cursor-pointer">
+                                        <label htmlFor="consent-checkbox" className="text-xs text-gray-700 dark:text-gray-300 cursor-pointer leading-snug">
                                             {t.onboarding.api.consentLabel}
                                         </label>
                                     </div>
 
-                                    {error && <p className="text-sm text-red-600 dark:text-red-400 font-medium">{error}</p>}
-                                    <div className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
-                                        <p>There is no such thing as a free lunch – LLM usage requires your own key.</p>
-                                        <p>{t.onboarding.api.storage}</p>
-                                    </div>
+                                    {error && <p className="text-xs text-red-600 dark:text-red-400 font-bold tracking-tight">{error}</p>}
                                 </div>
                             </div>
                         )}
 
-                        <div className="flex justify-between items-center pt-4 border-t border-gray-200 dark:border-gray-700">
+                        <div className="flex justify-between items-center pt-3 border-t border-gray-200 dark:border-gray-700">
                             <button
                                 onClick={handleBack}
                                 disabled={step === 0}
-                                className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium ${step === 0
-                                    ? 'text-gray-400 cursor-not-allowed'
-                                    : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+                                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors ${step === 0
+                                    ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed'
+                                    : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200'}`}
                             >
-                                <ArrowLeft size={18} /> {t.onboarding.actions.back}
+                                <ArrowLeft size={16} /> {t.onboarding.actions.back}
                             </button>
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2">
                                 {step < STEPS - 1 && (
                                     <button
                                         onClick={handleNext}
-                                        className="inline-flex items-center gap-2 px-5 py-3 bg-blue-600 text-white rounded-lg font-semibold shadow-md hover:bg-blue-700 transition"
+                                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg font-bold text-xs uppercase tracking-wider shadow-md hover:bg-blue-700 transition active:scale-95"
                                     >
-                                        {t.onboarding.actions.next} <ArrowRight size={18} />
+                                        {t.onboarding.actions.next} <ArrowRight size={16} />
                                     </button>
                                 )}
                                 {step === STEPS - 1 && (
                                     <button
                                         onClick={handleFinish}
-                                        className="inline-flex items-center gap-2 px-5 py-3 bg-green-600 text-white rounded-lg font-semibold shadow-md hover:bg-green-700 transition"
+                                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-green-600 text-white rounded-lg font-bold text-xs uppercase tracking-wider shadow-md hover:bg-green-700 transition active:scale-95"
                                     >
                                         {t.onboarding.actions.finish}
                                     </button>

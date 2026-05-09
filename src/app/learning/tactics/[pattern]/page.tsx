@@ -399,92 +399,83 @@ export default function TacticalPracticePage() {
     };
 
     return (
-        <>
-            <Header language={language} />
-            <div className="flex-grow bg-gray-100 dark:bg-gray-900 p-4 flex flex-col">
-                <div className="max-w-6xl mx-auto w-full">
-                    {/* Header */}
-                    <div className="mb-8 flex items-center justify-between">
-                        <button
-                            onClick={() => router.push("/learning")}
-                            className="p-2 md:px-4 md:py-2 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 text-sm font-medium transition-colors flex items-center gap-2"
-                        >
-                            <ArrowLeft size={20} />
-                            <span className="hidden md:inline">{t.learning.practice.backToLearning}</span>
-                        </button>
+        <div className="flex flex-col min-h-screen bg-gray-100 dark:bg-gray-900">
+            {/* Slim Navigation Row */}
+            <div className="w-full px-4 pt-2">
+                <div className="max-w-6xl mx-auto flex justify-between items-center py-1">
+                    <button
+                        onClick={() => router.push("/learning")}
+                        className="flex items-center gap-1.5 px-2 py-1 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md text-xs font-medium transition-all"
+                        aria-label={t.learning.practice.backToLearning}
+                    >
+                        <ArrowLeft size={14} />
+                        <span className="hidden sm:inline">{t.learning.practice.backToLearning}</span>
+                    </button>
 
-                        {/* Difficulty Selector */}
-                        <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Difficulty:
-                            </span>
-                            <div className="flex gap-1 bg-gray-200 dark:bg-gray-700 rounded-lg p-1">
-                                <button
-                                    onClick={() => {
-                                        setDifficulty('easy');
-                                        loadNewExercise();
-                                    }}
-                                    className={`px-3 py-1 text-sm font-medium rounded transition-colors ${
-                                        difficulty === 'easy'
-                                            ? 'bg-green-500 text-white'
-                                            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
-                                    }`}
-                                >
-                                    Easy (800-1400)
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        setDifficulty('medium');
-                                        loadNewExercise();
-                                    }}
-                                    className={`px-3 py-1 text-sm font-medium rounded transition-colors ${
-                                        difficulty === 'medium'
-                                            ? 'bg-yellow-500 text-white'
-                                            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
-                                    }`}
-                                >
-                                    Medium (1400-1800)
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        setDifficulty('hard');
-                                        loadNewExercise();
-                                    }}
-                                    className={`px-3 py-1 text-sm font-medium rounded transition-colors ${
-                                        difficulty === 'hard'
-                                            ? 'bg-red-500 text-white'
-                                            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
-                                    }`}
-                                >
-                                    Hard (1800-2200)
-                                </button>
-                            </div>
+                    {/* Difficulty Selector */}
+                    <div className="flex items-center gap-2">
+                        <div className="flex gap-1 bg-gray-200 dark:bg-gray-800 rounded-lg p-0.5">
+                            <button
+                                onClick={() => {
+                                    setDifficulty('easy');
+                                    loadNewExercise();
+                                }}
+                                className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-tight rounded transition-colors ${
+                                    difficulty === 'easy'
+                                        ? 'bg-green-500 text-white'
+                                        : 'text-gray-500 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-700'
+                                }`}
+                            >
+                                Easy
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setDifficulty('medium');
+                                    loadNewExercise();
+                                }}
+                                className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-tight rounded transition-colors ${
+                                    difficulty === 'medium'
+                                        ? 'bg-yellow-500 text-white'
+                                        : 'text-gray-500 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-700'
+                                }`}
+                            >
+                                Medium
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setDifficulty('hard');
+                                    loadNewExercise();
+                                }}
+                                className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-tight rounded transition-colors ${
+                                    difficulty === 'hard'
+                                        ? 'bg-red-500 text-white'
+                                        : 'text-gray-500 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-700'
+                                }`}
+                            >
+                                Hard
+                            </button>
                         </div>
                     </div>
+                </div>
+            </div>
 
+            <main className="flex-grow w-full flex justify-center px-4 py-4 md:py-8">
+                <div className="w-full max-w-6xl space-y-4 md:space-y-6">
                     {/* Setup Warning Banner */}
                     {showSetupWarning && (
-                        <div className="mb-6 bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-400 p-4 rounded-r-lg">
+                        <div className="bg-yellow-50 dark:bg-yellow-900/10 border-l-4 border-yellow-400 p-3 rounded-r-lg">
                             <div className="flex items-start">
                                 <div className="flex-shrink-0">
-                                    <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                                    <svg className="h-4 w-4 text-yellow-500" viewBox="0 0 20 20" fill="currentColor">
                                         <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                                     </svg>
                                 </div>
                                 <div className="ml-3 flex-1">
-                                    <p className="text-sm text-yellow-800 dark:text-yellow-200 font-medium">
+                                    <p className="text-xs text-yellow-800 dark:text-yellow-200 font-bold uppercase tracking-tight">
                                         ⚠️ Using basic tactical puzzles
                                     </p>
-                                    <p className="mt-1 text-sm text-yellow-700 dark:text-yellow-300">
-                                        For better quality puzzles from Lichess (5.6M verified puzzles), run:
-                                    </p>
-                                    <div className="mt-2 bg-gray-900 dark:bg-gray-950 rounded px-3 py-2">
-                                        <code className="text-xs text-green-400 font-mono">
-                                            cd chess_tutor && python3 scripts/setup_tactical_puzzles.py
-                                        </code>
-                                    </div>
-                                    <p className="mt-2 text-xs text-yellow-600 dark:text-yellow-400">
-                                        One-time setup (~5-10 minutes). Current puzzles will work but may have quality issues.
+                                    <p className="mt-1 text-xs text-yellow-700 dark:text-yellow-300 leading-snug">
+                                        For higher quality, run: <code className="text-[10px] bg-gray-900 text-green-400 px-1 rounded">python3 scripts/setup_tactical_puzzles.py</code>
                                     </p>
                                 </div>
                                 <button
@@ -492,9 +483,9 @@ export default function TacticalPracticePage() {
                                         setShowSetupWarning(false);
                                         localStorage.setItem("tactical_puzzles_warning_dismissed", "true");
                                     }}
-                                    className="ml-3 flex-shrink-0 text-yellow-600 dark:text-yellow-400 hover:text-yellow-800 dark:hover:text-yellow-200"
+                                    className="ml-3 flex-shrink-0 text-yellow-600 dark:text-yellow-400"
                                 >
-                                    <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                    <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                                         <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
                                     </svg>
                                 </button>
@@ -502,68 +493,63 @@ export default function TacticalPracticePage() {
                         </div>
                     )}
 
-                    <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center justify-between">
                         <div>
-                            <h1 className="text-3xl font-bold mb-2 text-gray-800 dark:text-white">
+                            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
                                 {getPatternName()}
                             </h1>
-                            <p className="text-lg text-gray-600 dark:text-gray-400">
-                                {t.learning.practice.findTheMove} {getPatternName().toLowerCase()}
+                            <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 uppercase tracking-widest font-bold mt-0.5">
+                                {t.learning.practice.findTheMove}
                             </p>
                         </div>
 
                         {/* Puzzle Rating Display */}
                         {exercise.rating && (
                             <div className="flex flex-col items-end">
-                                <span className="text-sm text-gray-500 dark:text-gray-400">
-                                    Puzzle Rating
-                                </span>
-                                <div className={`text-2xl font-bold ${
+                                <div className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest leading-none mb-1">
+                                    Rating
+                                </div>
+                                <div className={`text-xl font-bold leading-none ${
                                     exercise.rating < 1400 ? 'text-green-600 dark:text-green-400' :
                                     exercise.rating < 1800 ? 'text-yellow-600 dark:text-yellow-400' :
                                     'text-red-600 dark:text-red-400'
                                 }`}>
                                     {exercise.rating}
                                 </div>
-                                <span className="text-xs text-gray-500 dark:text-gray-400">
-                                    {exercise.rating < 1400 ? 'Easy' :
-                                     exercise.rating < 1800 ? 'Medium' : 'Hard'}
-                                </span>
                             </div>
                         )}
                     </div>
 
-                    {/* Statistics Display */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                        <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-                            <div className="text-sm text-gray-500 dark:text-gray-400">Correct</div>
-                            <div className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.totalCorrect}</div>
+                    {/* Statistics Display - Compact Badges */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                        <div className="bg-white dark:bg-gray-800 p-2 rounded-lg border border-gray-100 dark:border-gray-800 flex flex-col items-center">
+                            <div className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Correct</div>
+                            <div className="text-sm font-bold text-green-600 dark:text-green-400">{stats.totalCorrect}</div>
                         </div>
-                        <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-                            <div className="text-sm text-gray-500 dark:text-gray-400">Incorrect</div>
-                            <div className="text-2xl font-bold text-red-600 dark:text-red-400">{stats.totalIncorrect}</div>
+                        <div className="bg-white dark:bg-gray-800 p-2 rounded-lg border border-gray-100 dark:border-gray-800 flex flex-col items-center">
+                            <div className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Incorrect</div>
+                            <div className="text-sm font-bold text-red-600 dark:text-red-400">{stats.totalIncorrect}</div>
                         </div>
-                        <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-                            <div className="text-sm text-gray-500 dark:text-gray-400">Current Streak</div>
-                            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{stats.currentStreak}</div>
+                        <div className="bg-white dark:bg-gray-800 p-2 rounded-lg border border-gray-100 dark:border-gray-800 flex flex-col items-center">
+                            <div className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Streak</div>
+                            <div className="text-sm font-bold text-blue-600 dark:text-blue-400">{stats.currentStreak}</div>
                         </div>
-                        <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-                            <div className="text-sm text-gray-500 dark:text-gray-400">Best Streak</div>
-                            <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">{stats.bestStreak}</div>
+                        <div className="bg-white dark:bg-gray-800 p-2 rounded-lg border border-gray-100 dark:border-gray-800 flex flex-col items-center">
+                            <div className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Best</div>
+                            <div className="text-sm font-bold text-purple-600 dark:text-purple-400">{stats.bestStreak}</div>
                         </div>
                     </div>
 
                     {/* Main Content Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8">
                         {/* Chessboard */}
                         <div className="md:col-span-2">
-                            <div className="bg-[#779954] p-[2px] rounded-sm max-w-[600px] mx-auto">
+                            <div className="bg-[#779954] p-[2px] rounded-sm max-w-[560px] mx-auto">
                                 <Chessboard
                                     key={fen}
                                     options={{
                                         position: fen,
                                         onPieceDrop: ({ sourceSquare, targetSquare }) => {
-                                            console.log('🎲 onPieceDrop called with:', { sourceSquare, targetSquare });
                                             return onDrop({ sourceSquare: sourceSquare as Square, targetSquare: targetSquare as Square | null });
                                         },
                                         darkSquareStyle: { backgroundColor: '#779954' },
@@ -605,41 +591,39 @@ export default function TacticalPracticePage() {
                                     }}
                                 />
                             ) : (
-                                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-6">
-                                    <div className="text-center">
-                                        <div className="text-4xl mb-4">🔑</div>
-                                        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
-                                            API Key Required
-                                        </h3>
-                                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                                            To chat with your coach, please set up your Gemini API key in the settings.
-                                        </p>
-                                        <button
-                                            onClick={() => router.push('/onboarding')}
-                                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                                        >
-                                            Set Up API Key
-                                        </button>
-                                    </div>
+                                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 flex flex-col items-center justify-center min-h-[200px]">
+                                    <div className="text-3xl mb-3">🔑</div>
+                                    <h3 className="text-base font-bold text-gray-900 dark:text-white mb-2">
+                                        API Key Required
+                                    </h3>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 text-center mb-4 leading-snug">
+                                        To chat with your coach, please set up your Gemini API key.
+                                    </p>
+                                    <button
+                                        onClick={() => router.push('/settings')}
+                                        className="w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold text-xs uppercase tracking-wider transition-all"
+                                    >
+                                        Set Up API Key
+                                    </button>
                                 </div>
                             )}
 
                             {/* Action Buttons */}
-                            <div className="mt-4 space-y-3">
+                            <div className="mt-4 space-y-2">
                                 {feedback === 'correct' ? (
                                     <button
                                         onClick={handleNextExercise}
-                                        className="w-full py-3 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold shadow-lg transition-all flex items-center justify-center gap-2"
+                                        className="w-full py-2.5 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold text-sm shadow-md transition-all active:scale-95 flex items-center justify-center gap-2"
                                     >
-                                        <RefreshCw size={18} />
+                                        <RefreshCw size={16} />
                                         {t.learning.practice.nextExercise}
                                     </button>
                                 ) : (
                                     <button
                                         onClick={handleSkipPuzzle}
-                                        className="w-full py-2 px-4 bg-gray-500 text-white rounded-lg hover:bg-gray-600 font-medium transition-all flex items-center justify-center gap-2"
+                                        className="w-full py-2 px-4 bg-gray-500/10 text-gray-500 dark:text-gray-400 rounded-lg hover:bg-gray-500/20 font-bold text-xs uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2"
                                     >
-                                        <SkipForward size={18} />
+                                        <SkipForward size={14} />
                                         Skip Puzzle
                                     </button>
                                 )}
@@ -647,8 +631,8 @@ export default function TacticalPracticePage() {
                         </div>
                     </div>
                 </div>
-            </div>
-        </>
+            </main>
+        </div>
     );
 }
 
