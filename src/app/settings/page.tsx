@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Header from "@/components/Header";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import { TopUtilityLinks } from "@/components/TopUtilityLinks";
 import { SupportedLanguage } from "@/lib/i18n/translations";
 import { ArrowLeft, Save, Trash2, RefreshCw, Loader2, Cpu } from "lucide-react";
 import { useHasHydrated } from "@/lib/useHasHydrated";
@@ -168,8 +169,11 @@ export default function SettingsPage() {
                         <ArrowLeft size={14} />
                         <span className="hidden sm:inline">{t.game.backToMenu}</span>
                     </button>
-                    <div className="text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400 font-semibold">
-                        {t.start.settings}
+                    <div className="flex items-center gap-4">
+                        <div className="text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400 font-semibold">
+                            {t.start.settings}
+                        </div>
+                        <TopUtilityLinks language={language} />
                     </div>
                 </div>
             </div>

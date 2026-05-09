@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { TopUtilityLinks } from "@/components/TopUtilityLinks";
 import Footer from "@/components/Footer";
 
 // Force dynamic rendering to read environment variables at runtime
@@ -26,8 +27,11 @@ export default async function ImprintPage() {
                         <ArrowLeft size={14} />
                         <span className="hidden sm:inline">Back to Menu</span>
                     </Link>
-                    <div className="text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400 font-semibold">
-                        Imprint
+                    <div className="flex items-center gap-4">
+                        <div className="text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400 font-semibold">
+                            Imprint
+                        </div>
+                        <TopUtilityLinks language="en" />
                     </div>
                 </div>
             </div>

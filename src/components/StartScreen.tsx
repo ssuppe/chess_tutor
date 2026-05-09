@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Settings, ChevronDown, ChevronUp, Brain, Trash2, BarChart2, GraduationCap } from "lucide-react";
 import { Personality, PERSONALITIES } from "@/lib/personalities";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import { TopUtilityLinks } from "./TopUtilityLinks";
 import { SupportedLanguage } from "@/lib/i18n/translations";
 import { detectChessFormat, ChessFormat } from "@/lib/chessFormatDetector";
 import Header from "./Header";
@@ -92,7 +93,8 @@ export default function StartScreen({ onStartGame, onResumeGame, savedGames, onD
     return (
         <div className="flex flex-col min-h-screen bg-gray-100 dark:bg-gray-900">
             <div className="flex-grow p-3 md:p-8 flex flex-col items-center justify-center relative">
-                <div className="absolute top-4 right-4">
+                <div className="absolute top-4 right-4 flex items-center gap-2">
+                    <TopUtilityLinks language={language} />
                     <button
                         onClick={() => router.push("/settings")}
                         className="p-2 bg-white dark:bg-gray-800 rounded-full shadow-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-all text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200"

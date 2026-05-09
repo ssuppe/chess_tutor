@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, CheckCircle2, KeyRound, Languages, Sparkles, Cpu } from "lucide-react";
 import Header from "@/components/Header";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import { TopUtilityLinks } from "@/components/TopUtilityLinks";
 import { SupportedLanguage } from "@/lib/i18n/translations";
 import { getAvailableModels, DEFAULT_MODEL_ID } from "@/lib/gemini";
 
@@ -89,6 +90,13 @@ export default function OnboardingPage() {
 
     return (
         <div className="flex flex-col min-h-screen bg-gray-100 dark:bg-gray-900">
+            {/* Slim Utility Row */}
+            <div className="w-full px-4 pt-2">
+                <div className="max-w-4xl mx-auto flex justify-end items-center py-1">
+                    <TopUtilityLinks language={language} />
+                </div>
+            </div>
+
             <div className="flex-grow max-w-4xl mx-auto w-full px-3 md:px-4 py-4 md:py-10 flex flex-col justify-center">
                 <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden border border-gray-100 dark:border-gray-700">
                     <div className="h-1 bg-gray-200 dark:bg-gray-700">
