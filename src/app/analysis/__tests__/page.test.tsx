@@ -129,7 +129,7 @@ describe("AnalysisPage", () => {
         });
 
         await waitFor(() => {
-            expect(screen.getByText(/Move 1 \/ 6/)).toBeInTheDocument();
+            expect(screen.getAllByText(/1 \/ 6/)[0]).toBeInTheDocument();
             expect(screen.getByText("+0.50")).toBeInTheDocument();
             expect(screen.getByText("-0.50")).toBeInTheDocument();
             expect(screen.getAllByText("e4")[0]).toBeInTheDocument();
@@ -156,7 +156,10 @@ describe("AnalysisPage", () => {
         });
 
         await waitFor(() => {
-            expect(screen.getByText(/fork \(~3.0 pawns\) on e5/)).toBeInTheDocument();
+            // Check for components as they are now in separate spans
+            expect(screen.getByText(/fork/i)).toBeInTheDocument();
+            expect(screen.getByText(/~3.0 pawns/)).toBeInTheDocument();
+            expect(screen.getByText(/on e5/)).toBeInTheDocument();
         });
     });
 

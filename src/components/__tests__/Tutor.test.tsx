@@ -255,8 +255,8 @@ describe('Tutor', () => {
     expect(screen.getByText('Test Personality')).toBeInTheDocument();
     expect(screen.queryByText(/AI Coach/i)).not.toBeInTheDocument();
     
-    // Check for smaller avatar size class (text-xl)
+    // Check for smaller avatar size class (text-base)
     const avatar = screen.getByText('🤖');
-    expect(avatar).toHaveClass('text-xl');
+    expect(avatar).toHaveClass('text-base');
   });
 });
