@@ -939,6 +939,7 @@ INSTRUCTIONS:
                 }
 
                 const transcript = messages.map(msg => `${msg.role === "user" ? "User" : personality.name}: ${msg.text}`).join("\n");
+                const currentPieceList = generateHumanReadableBoard(resignationContext.fen);
                 const whiteEval = evaluation ? `${evaluation.score} cp${evaluation.mate ? ` (mate in ${evaluation.mate})` : ''}` : "N/A";
                 const blackEval = evaluation ? `${-evaluation.score} cp${evaluation.mate ? ` (mate in ${-evaluation.mate})` : ''}` : "N/A";
 
@@ -948,6 +949,7 @@ The user just resigned. Provide a final, in-character message that acknowledges 
 
 RESULT: ${resignationContext.result} (${resignationContext.winner})
 CURRENT POSITION FEN: ${resignationContext.fen}
+CURRENT PIECE POSITIONS: ${currentPieceList}
 ENGINE EVALUATION: White ${whiteEval}, Black ${blackEval}
 
 RECENT CONVERSATION:
@@ -957,6 +959,7 @@ INSTRUCTIONS:
 - Respond in ${language.toUpperCase()} and stay true to your personality (${personality.name}).
 - React naturally to the resignation (sarcastic, encouraging, etc. based on personality).
 - Offer a quick suggestion: either invite a rematch or suggest analyzing the game.
+- Use the CURRENT PIECE POSITIONS to understand exactly how the game ended.
 - Keep it concise (2-3 sentences).
                 `;
 
@@ -1002,11 +1005,13 @@ ${openingContext.wikipediaSummary ? `- Opening Background: ${openingContext.wiki
 
 CURRENT POSITION:
 - FEN: ${currentFen}
+- CURRENT PIECE POSITIONS: ${generateHumanReadableBoard(currentFen)}
 - ENGINE EVALUATION: White ${whiteEval}, Black ${blackEval}
 
 INSTRUCTIONS:
 - Welcome the student to the game continuation
 - Acknowledge that they've studied the ${openingContext.openingName} up to move ${openingContext.movesCompleted}
+- Use the CURRENT PIECE POSITIONS to understand the current tactical landscape.
 - Briefly mention what to focus on next (based on the opening's typical plans)
 - Encourage them to apply what they've learned
 - Keep it concise (3-4 sentences max)
