@@ -5,6 +5,7 @@ import "./globals.css";
 import Footer from "@/components/Footer";
 import { DebugProvider } from "@/contexts/DebugContext";
 import DebugPanel from "@/components/DebugPanel";
+import { KeyboardHandler } from "@/components/KeyboardHandler";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -32,6 +33,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col min-h-screen`}
       >
         <DebugProvider>
+          <KeyboardHandler />
           {children}
           <Footer />
           <DebugPanel />

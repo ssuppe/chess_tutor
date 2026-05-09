@@ -22,6 +22,14 @@ const config: CapacitorConfig = {
       keystoreAlias: undefined,
     },
   },
+
+  // Plugins configuration
+  plugins: {
+    Keyboard: {
+      resize: 'none',
+      style: 'dark',
+    },
+  },
 };
 
 export default config;

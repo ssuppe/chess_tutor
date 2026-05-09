@@ -13,7 +13,7 @@ import { SupportedLanguage } from "@/lib/i18n/translations";
 import { lookupOpening, lookupPossibleOpenings, extractMoveSequenceFromPGN, OpeningMetadata } from "@/lib/openings";
 import { GameAnalysisModal } from "./GameAnalysisModal";
 import { GameOverModal, MoveHistoryItem } from "./GameOverModal";
-import { Brain, ArrowLeft, Download, Flag, AlertTriangle, X } from "lucide-react";
+import { Brain, ArrowLeft, Download, Flag, AlertTriangle, X, ChevronRight, ChevronDown } from "lucide-react";
 import { CapturedPieces } from "./CapturedPieces";
 import { detectMissedTactics, uciToSan, DetectedTactic } from "@/lib/tacticDetection";
 import { upsertSavedGame } from "@/lib/savedGames";
@@ -86,7 +86,12 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
         winner: "White" | "Black" | "Draw";
     } | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const boardAreaRef = useRef<HTMLDivElement>(null);
     const hasRebuiltHistoryRef = useRef(false);
+
+    const handleJumpToBoard = () => {
+        boardAreaRef.current?.scrollIntoView({ behavior: 'smooth' });
+    };
 
     // Chess sounds hook
     const { playMoveSound, playCheck, playVictory, playDefeat } = useChessSounds();
@@ -671,30 +676,27 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
     const blackAdvantage = materialScore.white - materialScore.black;
 
     const [showStrengthSlider, setShowStrengthSlider] = useState(false);
+    const [isHistoryExpanded, setIsHistoryExpanded] = useState(false);
 
     return (
         <>
-            <Header language={language} />
             <div className="flex-grow grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8 w-full max-w-6xl mx-auto p-4">
 
 
-                {/* 1. Header (Col 1-3) */}
-                <div className="md:col-span-3 flex justify-between items-center">
+                {/* 1. Slim Navigation Row */}
+                <div className="md:col-span-3 flex justify-between items-center py-1 px-1">
                     <button
                         onClick={onBack}
-                        className="p-2 md:px-4 md:py-2 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 text-sm font-medium transition-colors"
+                        className="flex items-center gap-1.5 px-2 py-1 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md text-xs font-medium transition-all"
                         aria-label={t.game.backToMenu}
                     >
-                        <span className="hidden md:inline">{t.game.backToMenu}</span>
-                        <ArrowLeft className="md:hidden" size={20} />
+                        <ArrowLeft size={14} />
+                        <span className="hidden sm:inline">{t.game.backToMenu}</span>
                     </button>
-                    <div className="text-sm text-gray-500 hidden md:block">
-                        {t.game.playingAs} {playerColor === 'white' ? t.game.white : t.game.black} {t.game.vs} {selectedPersonality?.name}
-                    </div>
                 </div>
 
                 {/* 2. Board Area (Col 1-2) */}
-                <div className="md:col-span-2 bg-white dark:bg-gray-800 p-2 md:p-4 rounded-lg shadow-lg flex flex-col md:flex-row gap-2 md:gap-8 relative">
+                <div ref={boardAreaRef} className="md:col-span-2 bg-white dark:bg-gray-800 p-2 md:p-4 rounded-lg shadow-lg flex flex-col md:flex-row gap-2 md:gap-8 relative">
                     {/* Mobile Eval Bar (Horizontal) - Moved to top */}
                     <div className="md:hidden w-full">
                         <EvaluationBar
@@ -830,85 +832,100 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
                         onCheckComputerMove={checkAndMakeComputerMove}
                         resignationContext={resignationContext}
                         openingContext={openingContext}
+                        onJumpToBoard={handleJumpToBoard}
                     />
                 </div>
 
                 {/* 4. History (Col 1-3) - Full width at bottom */}
-                <div className="md:col-span-3 bg-white dark:bg-gray-800 p-4 rounded-lg shadow-lg flex flex-col">
-                    <div className="flex items-center justify-between mb-2">
-                        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">{t.game.gameHistory}</h3>
+                <div className="md:col-span-3 bg-white dark:bg-gray-800 p-1.5 md:p-2 px-3 md:px-4 rounded-lg shadow-lg flex flex-col transition-all duration-300">
+                    <div className="flex items-center justify-between">
+                        <button
+                            onClick={() => setIsHistoryExpanded(!isHistoryExpanded)}
+                            className="flex items-center gap-1 hover:bg-gray-100 dark:hover:bg-gray-700/50 p-0.5 px-1 rounded-md transition-colors"
+                        >
+                            {isHistoryExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                            <h3 className="text-xs font-medium text-gray-700 dark:text-gray-300">{t.game.gameHistory}</h3>
+                            {!isHistoryExpanded && moveHistory.length > 0 && (
+                                <span className="text-[9px] bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 px-1 py-0 rounded-full font-bold">
+                                    {moveHistory.length}
+                                </span>
+                            )}
+                        </button>
                         <div className="flex gap-2">
                             <button
                                 onClick={() => setShowDownloadModal(true)}
-                                className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded hover:bg-green-200 dark:bg-green-900 dark:text-green-200 flex items-center gap-1"
+                                className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded hover:bg-green-200 dark:bg-green-900 dark:text-green-200 flex items-center gap-1"
                             >
-                                <Download size={12} /> {t.game.download}
+                                <Download size={10} /> {t.game.download}
                             </button>
                             <button
                                 onClick={() => setShowAnalysisModal(true)}
-                                className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded hover:bg-purple-200 dark:bg-purple-900 dark:text-purple-200 flex items-center gap-1"
+                                className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded hover:bg-purple-200 dark:bg-purple-900 dark:text-purple-200 flex items-center gap-1"
                             >
-                                <Brain size={12} /> {t.game.analyze}
+                                <Brain size={10} /> {t.game.analyze}
                             </button>
                         </div>
                     </div>
-                    <div className="overflow-y-auto border border-gray-200 dark:border-gray-700 rounded bg-gray-50 dark:bg-gray-900 p-2 max-h-40">
-                        <table className="w-full text-sm text-left">
-                            <thead>
-                                <tr className="text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
-                                    <th className="py-1 px-2 w-12">#</th>
-                                    <th className="py-1 px-2">{t.game.white}</th>
-                                    <th className="py-1 px-2">{t.game.black}</th>
-                                    <th className="py-1 px-2 text-center w-20">{t.game.evalChange}</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {moveHistory.length === 0 ? (
-                                    <tr>
-                                        <td colSpan={4} className="py-4 text-center text-gray-500 italic">
-                                            {t.game.noMovesYet}
-                                        </td>
+
+                    {isHistoryExpanded && (
+                        <div className="mt-1.5 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded bg-gray-50 dark:bg-gray-900 p-1.5 max-h-40">
+                            <table className="w-full text-xs text-left">
+                                <thead>
+                                    <tr className="text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
+                                        <th className="py-0.5 px-2 w-10">#</th>
+                                        <th className="py-0.5 px-2">{t.game.white}</th>
+                                        <th className="py-0.5 px-2">{t.game.black}</th>
+                                        <th className="py-0.5 px-2 text-center w-20">{t.game.evalChange}</th>
                                     </tr>
-                                ) : (
-                                    moveHistory.map((item, idx) => {
-                                        // Calculate evaluation change for player's move
-                                        const evalBefore = item.evalBeforePlayerMove.score ?? 0;
-                                        const evalAfter = item.evalAfterPlayerMove.score ?? 0;
-                                        const evalChange = evalAfter - evalBefore;
+                                </thead>
+                                <tbody>
+                                    {moveHistory.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={4} className="py-2 text-center text-gray-500 italic">
+                                                {t.game.noMovesYet}
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        moveHistory.map((item, idx) => {
+                                            // Calculate evaluation change for player's move
+                                            const evalBefore = item.evalBeforePlayerMove.score ?? 0;
+                                            const evalAfter = item.evalAfterPlayerMove.score ?? 0;
+                                            const evalChange = evalAfter - evalBefore;
 
-                                        // Determine color based on evaluation change
-                                        // Positive change = good for white, negative = good for black
-                                        let evalColor = 'text-gray-500';
-                                        if (Math.abs(evalChange) > 50) {
-                                            if (item.playerColor === 'white') {
-                                                evalColor = evalChange > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400';
-                                            } else {
-                                                evalColor = evalChange < 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400';
+                                            // Determine color based on evaluation change
+                                            // Positive change = good for white, negative = good for black
+                                            let evalColor = 'text-gray-500';
+                                            if (Math.abs(evalChange) > 50) {
+                                                if (item.playerColor === 'white') {
+                                                    evalColor = evalChange > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400';
+                                                } else {
+                                                    evalColor = evalChange < 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400';
+                                                }
                                             }
-                                        }
 
-                                        const evalDisplay = evalChange > 0 ? `+${(evalChange / 100).toFixed(1)}` : (evalChange / 100).toFixed(1);
+                                            const evalDisplay = evalChange > 0 ? `+${(evalChange / 100).toFixed(1)}` : (evalChange / 100).toFixed(1);
 
-                                        return (
-                                            <tr key={idx} className="border-b border-gray-100 dark:border-gray-800 last:border-0">
-                                                <td className="py-1 px-2 text-gray-500 dark:text-gray-500">{item.moveNumber}.</td>
-                                                <td className="py-1 px-2 font-medium text-gray-900 dark:text-gray-200">
-                                                    {item.playerColor === 'white' ? item.playerMove : item.computerMove}
-                                                </td>
-                                                <td className="py-1 px-2 font-medium text-gray-900 dark:text-gray-200">
-                                                    {item.playerColor === 'black' ? item.playerMove : item.computerMove}
-                                                </td>
-                                                <td className={`py-1 px-2 text-center font-mono text-xs ${evalColor}`}>
-                                                    {evalDisplay}
-                                                </td>
-                                            </tr>
-                                        );
-                                    })
-                                )}
-                            </tbody>
-                        </table>
-                        <div ref={messagesEndRef} />
-                    </div>
+                                            return (
+                                                <tr key={idx} className="border-b border-gray-100 dark:border-gray-800 last:border-0">
+                                                    <td className="py-0.5 px-2 text-gray-500 dark:text-gray-500">{item.moveNumber}.</td>
+                                                    <td className="py-0.5 px-2 font-medium text-gray-900 dark:text-gray-200">
+                                                        {item.playerColor === 'white' ? item.playerMove : item.computerMove}
+                                                    </td>
+                                                    <td className="py-0.5 px-2 font-medium text-gray-900 dark:text-gray-200">
+                                                        {item.playerColor === 'black' ? item.playerMove : item.computerMove}
+                                                    </td>
+                                                    <td className={`py-0.5 px-2 text-center font-mono text-[10px] ${evalColor}`}>
+                                                        {evalDisplay}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })
+                                    )}
+                                </tbody>
+                            </table>
+                            <div ref={messagesEndRef} />
+                        </div>
+                    )}
                 </div>
             </div>
 

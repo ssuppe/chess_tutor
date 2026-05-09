@@ -6,7 +6,7 @@ import { ChessEngine } from "@/lib/engine";
 import { Chess, Move } from "chess.js";
 import { getGenAIModel } from "@/lib/gemini";
 import { ChatSession } from "@google/generative-ai";
-import { Send, Bot, User as UserIcon, Loader2, Lightbulb, Trophy } from "lucide-react";
+import { Send, Bot, User as UserIcon, Loader2, Lightbulb, Trophy, ArrowUp } from "lucide-react";
 import clsx from "clsx";
 import { Personality } from "@/lib/personalities";
 import { OpeningMetadata } from "@/lib/openings";
@@ -37,6 +37,7 @@ interface TutorProps {
     language: SupportedLanguage;
     playerColor: 'white' | 'black';
     onCheckComputerMove: () => void;
+    onJumpToBoard?: () => void;
     isReviewing?: boolean;
     resignationContext?: {
         trigger: number;
@@ -100,7 +101,7 @@ interface Message {
     timestamp: number;
 }
 
-export function Tutor({ game, currentFen, userMove, computerMove, stockfish, evalP0, evalP2, openingData, missedTactics, onAnalysisComplete, apiKey, personality, language, playerColor, onCheckComputerMove, isReviewing, resignationContext, openingContext, tacticalPracticeMode, openingPracticeMode }: TutorProps) {
+export function Tutor({ game, currentFen, userMove, computerMove, stockfish, evalP0, evalP2, openingData, missedTactics, onAnalysisComplete, apiKey, personality, language, playerColor, onCheckComputerMove, isReviewing, resignationContext, openingContext, tacticalPracticeMode, openingPracticeMode, onJumpToBoard }: TutorProps) {
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState("");
     const [isLoading, setIsLoading] = useState(false);
@@ -1017,15 +1018,24 @@ INSTRUCTIONS:
     return (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 h-[400px] md:h-[600px] flex flex-col">
             {/* Header */}
-            <div className="p-2 px-4 border-b border-gray-200 dark:border-gray-700 flex items-center gap-3 bg-gray-50 dark:bg-gray-900 rounded-t-lg">
-                <div className="text-xl">{personality.image}</div>
-                <div>
-                    <h2 className="font-bold text-gray-900 dark:text-white">{personality.name}</h2>
+            <div className="p-1 px-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between bg-gray-50 dark:bg-gray-900 rounded-t-lg">
+                <div className="flex items-center gap-1.5">
+                    <div className="text-base">{personality.image}</div>
+                    <h2 className="font-medium text-xs text-gray-500 dark:text-gray-400 leading-none">{personality.name}</h2>
                 </div>
+                {onJumpToBoard && (
+                    <button
+                        onClick={onJumpToBoard}
+                        className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+                        title="Jump to board"
+                    >
+                        <ArrowUp size={12} />
+                    </button>
+                )}
             </div>
 
             {/* Messages Area */}
-            <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-3 space-y-3">
+            <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-2 md:p-4 space-y-3">
                 {messages.map((msg, idx) => (
                     <div key={idx} className={clsx(
                         "flex gap-2 max-w-[92%]",
@@ -1038,26 +1048,26 @@ INSTRUCTIONS:
                             {msg.role === "user" ? <UserIcon size={12} /> : personality.image}
                         </div>
                         <div className={clsx(
-                            "p-2 px-3 rounded-lg text-sm",
+                            "p-2 px-3 rounded-lg text-base leading-snug",
                             msg.role === "user"
                                 ? "bg-blue-600 text-white rounded-tr-none"
                                 : "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-tl-none prose prose-sm dark:prose-invert max-w-none"
                         )}>
                             {msg.role === "user" ? (
-                                <span className="whitespace-pre-wrap">{msg.text}</span>
+                                <p className="whitespace-pre-wrap">{msg.text}</p>
                             ) : (
                                 <ReactMarkdown
                                     components={{
-                                        p: ({ children }) => <p className="mb-1 last:mb-0">{children}</p>,
+                                        p: ({ children }) => <p className="mb-1 last:mb-0 leading-snug">{children}</p>,
                                         strong: ({ children }) => <strong className="font-bold text-gray-900 dark:text-white">{children}</strong>,
                                         em: ({ children }) => <em className="italic">{children}</em>,
                                         ul: ({ children }) => <ul className="list-disc list-inside mb-1 last:mb-0 space-y-0.5">{children}</ul>,
                                         ol: ({ children }) => <ol className="list-decimal list-inside mb-1 last:mb-0 space-y-0.5">{children}</ol>,
                                         li: ({ children }) => <li className="ml-2">{children}</li>,
-                                        code: ({ children }) => <code className="bg-gray-200 dark:bg-gray-600 px-1 py-0.5 rounded text-xs font-mono">{children}</code>,
-                                        h1: ({ children }) => <h1 className="text-base font-bold mb-1">{children}</h1>,
-                                        h2: ({ children }) => <h2 className="text-sm font-bold mb-1">{children}</h2>,
-                                        h3: ({ children }) => <h3 className="text-xs font-bold mb-0.5">{children}</h3>,
+                                        code: ({ children }) => <code className="bg-gray-200 dark:bg-gray-600 px-1 py-0.5 rounded text-sm font-mono">{children}</code>,
+                                        h1: ({ children }) => <h1 className="text-lg font-bold mb-1">{children}</h1>,
+                                        h2: ({ children }) => <h2 className="text-base font-bold mb-1">{children}</h2>,
+                                        h3: ({ children }) => <h3 className="text-sm font-bold mb-0.5">{children}</h3>,
                                     }}
                                 >
                                     {msg.text}
@@ -1079,7 +1089,7 @@ INSTRUCTIONS:
             </div>
 
             {/* Quick Actions */}
-            <div className="px-3 py-1.5 flex gap-2 overflow-x-auto">
+            <div className="px-2 md:px-4 py-1.5 flex gap-2 overflow-x-auto">
                 <button
                     onClick={() => sendMessageToChat("Give me a hint")}
                     className="flex items-center gap-1 px-3 py-1 text-xs bg-yellow-100 text-yellow-800 rounded-full hover:bg-yellow-200 dark:bg-yellow-900 dark:text-yellow-200 flex-shrink-0"
@@ -1095,30 +1105,34 @@ INSTRUCTIONS:
             </div>
 
             {/* Input Area */}
-            <form onSubmit={handleSubmit} className="p-3 border-t border-gray-200 dark:border-gray-700 flex gap-2 items-end">
-                <textarea
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                            e.preventDefault();
-                            if (input.trim() && !isLoading) {
-                                handleSubmit(e as any);
-                            }
-                        }
-                    }}
-                    placeholder={t.tutor.askCoach}
-                    rows={3}
-                    className="flex-1 p-1.5 px-3 border rounded-lg dark:bg-gray-700 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm resize-none"
-                    disabled={isLoading}
-                />
-                <button
-                    type="submit"
-                    disabled={isLoading || !input.trim()}
-                    className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed mb-0.5"
-                >
-                    <Send size={18} />
-                </button>
+            <form onSubmit={handleSubmit} className="p-2 md:p-4 border-t border-gray-200 dark:border-gray-700">
+                <div className="mx-8">
+                    <div className="relative flex items-end">
+                        <textarea
+                            value={input}
+                            onChange={(e) => setInput(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' && !e.shiftKey) {
+                                    e.preventDefault();
+                                    if (input.trim() && !isLoading) {
+                                        handleSubmit(e as any);
+                                    }
+                                }
+                            }}
+                            placeholder={t.tutor.askCoach}
+                            rows={3}
+                            className="flex-1 p-1.5 px-3 pr-10 border rounded-lg dark:bg-gray-700 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-base resize-none"
+                            disabled={isLoading}
+                        />
+                        <button
+                            type="submit"
+                            disabled={isLoading || !input.trim()}
+                            className="absolute right-1.5 bottom-1.5 p-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            <Send size={16} />
+                        </button>
+                    </div>
+                </div>
             </form>
 
             {/* Gemini Error Modal */}

@@ -308,7 +308,7 @@ const en: Translations = {
     game: {
         playingAs: 'Playing as',
         vs: 'vs',
-        backToMenu: '← Back to Menu',
+        backToMenu: 'Back to Menu',
         stockfishStrength: 'Stockfish Strength',
         stockfishLevel: 'Stockfish Level',
         depth: 'Depth',
@@ -541,7 +541,7 @@ const de: Translations = {
     game: {
         playingAs: 'Spielst als',
         vs: 'gegen',
-        backToMenu: '← Zurück zum Menü',
+        backToMenu: 'Zurück zum Menü',
         stockfishStrength: 'Stockfish-Stärke',
         stockfishLevel: 'Stockfish-Stufe',
         depth: 'Tiefe',
@@ -774,7 +774,7 @@ const fr: Translations = {
     game: {
         playingAs: 'Jouant',
         vs: 'contre',
-        backToMenu: '← Retour au menu',
+        backToMenu: 'Retour au menu',
         stockfishStrength: 'Force de Stockfish',
         stockfishLevel: 'Niveau Stockfish',
         depth: 'Profondeur',
@@ -1007,7 +1007,7 @@ const it: Translations = {
     game: {
         playingAs: 'Giocando',
         vs: 'contro',
-        backToMenu: '← Torna al menu',
+        backToMenu: 'Torna al menu',
         stockfishStrength: 'Forza di Stockfish',
         stockfishLevel: 'Livello Stockfish',
         depth: 'Profondità',
@@ -1240,7 +1240,7 @@ const pl: Translations = {
     game: {
         playingAs: 'Grasz jako',
         vs: 'przeciw',
-        backToMenu: '← Powrót do menu',
+        backToMenu: 'Powrót do menu',
         stockfishStrength: 'Siła Stockfish',
         stockfishLevel: 'Poziom Stockfish',
         depth: 'Głębokość',
