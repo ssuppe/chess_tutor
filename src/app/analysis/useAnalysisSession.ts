@@ -340,7 +340,7 @@ IMPORTANT:
             } finally {
                 if (!cancelled) setIsCommenting(false);
             }
-        }, 400);
+        }, 3000);
 
         return () => {
             cancelled = true;

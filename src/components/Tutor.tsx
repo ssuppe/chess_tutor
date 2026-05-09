@@ -37,6 +37,7 @@ interface TutorProps {
     language: SupportedLanguage;
     playerColor: 'white' | 'black';
     onCheckComputerMove: () => void;
+    isReviewing?: boolean;
     resignationContext?: {
         trigger: number;
         fen: string;
@@ -99,7 +100,7 @@ interface Message {
     timestamp: number;
 }
 
-export function Tutor({ game, currentFen, userMove, computerMove, stockfish, evalP0, evalP2, openingData, missedTactics, onAnalysisComplete, apiKey, personality, language, playerColor, onCheckComputerMove, resignationContext, openingContext, tacticalPracticeMode, openingPracticeMode }: TutorProps) {
+export function Tutor({ game, currentFen, userMove, computerMove, stockfish, evalP0, evalP2, openingData, missedTactics, onAnalysisComplete, apiKey, personality, language, playerColor, onCheckComputerMove, isReviewing, resignationContext, openingContext, tacticalPracticeMode, openingPracticeMode }: TutorProps) {
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState("");
     const [isLoading, setIsLoading] = useState(false);
@@ -388,20 +389,23 @@ Acknowledge this new puzzle briefly (1 sentence) and encourage the student to fi
             ? `${lastTutorMoveSan}-${currentMoveIndex}`
             : null;
 
-        // Check if user made a new move
-        if (userMoveKey && userMoveKey !== lastUserMoveRef.current) {
-            lastUserMoveRef.current = userMoveKey;
+        // Implementation of debounced messaging
+        const debounceDelay = isReviewing ? 3000 : 0;
+        const timer = setTimeout(() => {
+            // Check if user made a new move
+            if (userMoveKey && userMoveKey !== lastUserMoveRef.current) {
+                lastUserMoveRef.current = userMoveKey;
 
-            // Build variation context for family mode
-            const variationContext = isFamilyMode && variationInfo ? `
+                // Build variation context for family mode
+                const variationContext = isFamilyMode && variationInfo ? `
 Variation info:
 - Matching variations: ${variationInfo.matchingVariations}
 - Current line(s): ${variationInfo.currentVariationNames.slice(0, 3).join(', ')}${variationInfo.currentVariationNames.length > 3 ? '...' : ''}
 - Possible next moves: ${variationInfo.possibleMoves.join(', ') || 'none (end of line)'}
 ${variationInfo.isEndOfLine ? '- This is the end of this variation line' : ''}` : '';
 
-            // Generate commentary about user's move
-            const moveCommentary = `
+                // Generate commentary about user's move
+                const moveCommentary = `
 [SYSTEM TRIGGER: user_move_in_opening]
 
 The student just played: ${lastUserMoveSan}
@@ -436,26 +440,26 @@ ${isInTheory
 - Maintain your personality
 `.trim();
 
-            chatSession.sendMessage(moveCommentary).then(result => {
-                const response = result.response.text();
-                setMessages(prev => [...prev, { role: "model", text: response, timestamp: Date.now() }]);
+                chatSession.sendMessage(moveCommentary).then(result => {
+                    const response = result.response.text();
+                    setMessages(prev => [...prev, { role: "model", text: response, timestamp: Date.now() }]);
 
-                // Notify parent that tutor sent a message
-                openingPracticeMode?.onTutorMessageSent?.();
-            }).catch(err => {
-                console.error("Failed to generate user move commentary:", err);
-                if (isGeminiError(err)) {
-                    setGeminiError(parseGeminiError(err));
-                }
-            });
-        }
+                    // Notify parent that tutor sent a message
+                    openingPracticeMode?.onTutorMessageSent?.();
+                }).catch(err => {
+                    console.error("Failed to generate user move commentary:", err);
+                    if (isGeminiError(err)) {
+                        setGeminiError(parseGeminiError(err));
+                    }
+                });
+            }
 
-        // Check if tutor made a new move
-        if (tutorMoveKey && tutorMoveKey !== lastTutorMoveRef.current) {
-            lastTutorMoveRef.current = tutorMoveKey;
+            // Check if tutor made a new move
+            if (tutorMoveKey && tutorMoveKey !== lastTutorMoveRef.current) {
+                lastTutorMoveRef.current = tutorMoveKey;
 
-            // Generate commentary about tutor's move
-            const tutorCommentary = `
+                // Generate commentary about tutor's move
+                const tutorCommentary = `
 [SYSTEM TRIGGER: tutor_move_in_opening]
 
 I just played: ${lastTutorMoveSan}
@@ -473,22 +477,25 @@ INSTRUCTIONS:
 Remember: You are both the opponent AND the tutor. Explain your move as if you're teaching.
 `.trim();
 
-            // Add small delay before tutor explains their move
-            setTimeout(() => {
-                chatSession.sendMessage(tutorCommentary).then(result => {
-                    const response = result.response.text();
-                    setMessages(prev => [...prev, { role: "model", text: response, timestamp: Date.now() }]);
+                // Add small delay before tutor explains their move
+                setTimeout(() => {
+                    chatSession.sendMessage(tutorCommentary).then(result => {
+                        const response = result.response.text();
+                        setMessages(prev => [...prev, { role: "model", text: response, timestamp: Date.now() }]);
 
-                    // Notify parent that tutor sent a message
-                    openingPracticeMode?.onTutorMessageSent?.();
-                }).catch(err => {
-                    console.error("Failed to generate tutor move commentary:", err);
-                    if (isGeminiError(err)) {
-                        setGeminiError(parseGeminiError(err));
-                    }
-                });
-            }, 300); // Brief delay so the move appears first, then the explanation
-        }
+                        // Notify parent that tutor sent a message
+                        openingPracticeMode?.onTutorMessageSent?.();
+                    }).catch(err => {
+                        console.error("Failed to generate tutor move commentary:", err);
+                        if (isGeminiError(err)) {
+                            setGeminiError(parseGeminiError(err));
+                        }
+                    });
+                }, 300); // Brief delay so the move appears first, then the explanation
+            }
+        }, debounceDelay);
+
+        return () => clearTimeout(timer);
     }, [
         chatSession,
         lastUserMoveSan,
@@ -501,7 +508,8 @@ Remember: You are both the opponent AND the tutor. Explain your move as if you'r
         currentFeedback,
         repertoireMovesLength,
         isFamilyMode,
-        variationInfo
+        variationInfo,
+        isReviewing
     ]);
 
     // Scroll chat container to bottom (not the whole page)
@@ -522,7 +530,6 @@ Remember: You are both the opponent AND the tutor. Explain your move as if you'r
 
         // Prevent double analysis
         if (lastAnalyzedMoveRef.current === exchangeKey) return;
-        lastAnalyzedMoveRef.current = exchangeKey;
 
         // We trigger this when computerMove changes (meaning the exchange is complete)
         const analyzeExchange = async () => {
@@ -695,6 +702,7 @@ React to this exchange as the player.
                 `;
 
                 await sendMessageToChat(prompt, true);
+                lastAnalyzedMoveRef.current = exchangeKey;
             } catch (e) {
                 console.error(e);
             } finally {
@@ -702,8 +710,14 @@ React to this exchange as the player.
                 onAnalysisComplete();
             }
         };
-        analyzeExchange();
-    }, [computerMove, chatSession, evalP0, evalP2, userMove, onAnalysisComplete, openingData, missedTactics, language]);
+
+        const debounceDelay = isReviewing ? 3000 : 0;
+        const timer = setTimeout(() => {
+            analyzeExchange();
+        }, debounceDelay);
+
+        return () => clearTimeout(timer);
+    }, [computerMove, chatSession, evalP0, evalP2, userMove, onAnalysisComplete, openingData, missedTactics, language, isReviewing]);
 
     const evaluateCurrentPosition = async () => {
         if (!stockfish) {

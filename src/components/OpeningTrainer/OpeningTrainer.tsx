@@ -606,6 +606,7 @@ export default function OpeningTrainer({
             language={language}
             playerColor={userColor}
             onCheckComputerMove={() => {}}
+            isReviewing={session.currentMoveIndex < session.moveHistory.length}
             resignationContext={null}
             openingPracticeMode={openingPracticeMode}
           />

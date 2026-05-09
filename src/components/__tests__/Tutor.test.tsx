@@ -140,4 +140,85 @@ describe('Tutor', () => {
 
     expect(callsContainResignation).toBe(true);
   });
+
+  it('debounces automatic commentary when isReviewing is true', async () => {
+    jest.useFakeTimers();
+    
+    const sendMessage = jest.fn().mockResolvedValue({
+        response: {
+            text: () => 'Debounced response',
+        },
+    });
+
+    (gemini.getGenAIModel as jest.Mock).mockReturnValue({
+        startChat: jest.fn().mockReturnValue({
+            sendMessage,
+        }),
+    });
+
+    const openingPracticeMode = {
+        openingName: 'French Defense',
+        openingEco: 'C00',
+        repertoireMoves: ['e4', 'e6'],
+        currentMoveIndex: 1,
+        isInTheory: true,
+        deviationMoveIndex: null,
+        lastUserMove: { san: 'e6', color: 'b' } as any,
+        lastTutorMove: null,
+        currentFeedback: null,
+        shouldTutorSpeak: true,
+    };
+
+    render(
+      <DebugProvider>
+        <Tutor
+          game={game}
+          currentFen={game.fen()}
+          userMove={null}
+          computerMove={null}
+          stockfish={stockfish}
+          evalP0={null}
+          evalP2={null}
+          openingData={[]}
+          missedTactics={null}
+          onAnalysisComplete={() => {}}
+          apiKey="test-api-key"
+          personality={{
+              id: "test",
+              name: "Test Personality",
+              systemPrompt: "Test Prompt",
+              image: "🤖",
+              description: "Test description"
+          }}
+          language="en"
+          playerColor="white"
+          onCheckComputerMove={() => {}}
+          isReviewing={true}
+          openingPracticeMode={openingPracticeMode}
+        />
+      </DebugProvider>
+    );
+
+    // Should have called sendMessage ONCE for the initial greeting
+    expect(sendMessage).toHaveBeenCalledTimes(1);
+
+    // Advance time by 2 seconds
+    act(() => {
+        jest.advanceTimersByTime(2000);
+    });
+    // Still only 1 call (greeting)
+    expect(sendMessage).toHaveBeenCalledTimes(1);
+
+    // Advance time to 3 seconds
+    act(() => {
+        jest.advanceTimersByTime(1000);
+    });
+
+    await waitFor(() => {
+        // Now should have 2 calls (greeting + commentary)
+        expect(sendMessage).toHaveBeenCalledTimes(2);
+    });
+
+    jest.useRealTimers();
+  });
 });
