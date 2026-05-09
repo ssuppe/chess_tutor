@@ -55,3 +55,26 @@ The application had hardcoded references to older Gemini models (e.g., `gemini-2
 - **New Tests:** Added `src/lib/__tests__/gemini.test.ts` with 100% coverage for the resolution logic.
 - **Updated API Tests:** Verified that chat and analysis routes correctly delegate model resolution.
 - **Documentation:** Updated `README.md` and `docs/llm_api.md` to reflect the new default model and configuration options.
+
+---
+
+# Pull Request Preparation: LLM Request Debouncing
+
+## Context
+Rapidly navigating through move history (scrubbing) triggered instantaneous API calls for every move. This led to API quota exhaustion ("choking") and race conditions where multiple feedback messages would overlap.
+
+## Changes
+
+### 1. Standardized Debounce Logic
+- **3-Second Delay:** Implemented a **3-second debounce** on LLM commentary requests triggered by move changes.
+- **Conditional Application:** The delay is **only** applied when analyzing/navigating history (`isReviewing: true`). In live gameplay, responses remain instantaneous to ensure a smooth experience.
+- **Cleanup & Race Condition Prevention:** Integrated `clearTimeout` in the cleanup function of `useEffect` hooks. If a user moves to a new position before the 3-second timer expires, the previous request is cancelled.
+
+### 2. Component Integration
+- **`src/components/Tutor.tsx`:** Added `isReviewing` prop and wrapped automatic opening commentary and move exchange reactions in the debounce logic.
+- **`src/components/OpeningTrainer/OpeningTrainer.tsx`:** Automatically detects historical navigation by comparing `currentMoveIndex` with `moveHistory.length` and passes the status to the Tutor.
+- **`src/app/analysis/useAnalysisSession.ts`:** Standardized the analysis page to use the same 3-second debounce for move-by-move commentary.
+
+### 3. Testing
+- **New Unit Test:** Added a test case in `src/components/__tests__/Tutor.test.tsx` using `jest.useFakeTimers()` to verify that requests are correctly delayed and that immediate greetings are still sent instantly.
+- Total passing tests: **227** (on this branch).
