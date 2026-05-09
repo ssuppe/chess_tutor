@@ -607,7 +607,7 @@ INSTRUCTIONS:
                     {/* Analysis Panels - only shown when game is loaded */}
                     {steps.length > 0 && (
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                            <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-2xl shadow border border-gray-200 dark:border-gray-700 p-6 space-y-4">
+                            <div className="lg:col-span-2 order-2 lg:order-1 bg-white dark:bg-gray-800 rounded-2xl shadow border border-gray-200 dark:border-gray-700 p-6 space-y-4">
                                 <div className="flex items-center justify-between">
                                     <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t.analysis.title}</h2>
                                     {possibleOpenings.length > 0 && (
@@ -666,7 +666,7 @@ INSTRUCTIONS:
                                 )}
                             </div>
 
-                            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow border border-gray-200 dark:border-gray-700 p-6 space-y-4">
+                            <div className="order-1 lg:order-2 bg-white dark:bg-gray-800 rounded-2xl shadow border border-gray-200 dark:border-gray-700 p-6 space-y-4">
                                 <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t.analysis.aiAnalysis}</h2>
 
                                 {/* Horizontal Evaluation Bar */}
