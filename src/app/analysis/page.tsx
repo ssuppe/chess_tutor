@@ -17,6 +17,7 @@ import { lookupPossibleOpenings, buildMoveSequenceFromSteps, OpeningMetadata } f
 import { getGenAIModel } from "@/lib/gemini";
 import { ChatSession } from "@google/generative-ai";
 import ReactMarkdown from "react-markdown";
+import { generateHumanReadableBoard } from "@/lib/gameState";
 import { useDebug } from "@/contexts/DebugContext";
 import { GameImportModal } from "@/components/GameImportModal";
 import { EvaluationBar } from "@/components/EvaluationBar";
@@ -339,6 +340,7 @@ DATA:
 - Move played (SAN): ${step.san}
 - FEN before move: ${step.fenBefore}
 - FEN after move: ${step.fenAfter}
+- CURRENT PIECE POSITIONS: ${generateHumanReadableBoard(step.fenAfter)}
 - Evaluation before move: ${evalBefore.toFixed(2)} pawns
 - Evaluation after move: ${evalAfter.toFixed(2)} pawns
 - Best move suggestion: ${details.bestMoveSan ?? details.evalBefore!.bestMove}
@@ -352,6 +354,7 @@ INSTRUCTIONS:
 - Mention whether the move improved or worsened the position and why.
 - Highlight any tactical ideas the player may have missed.
 - Refer to the player's side as ${step.color}.
+- Use the CURRENT PIECE POSITIONS to verify exactly where all pieces are before speaking.
 - Keep it educational and stay true to your personality tone.`;
 
                 const result = await chatSession.sendMessage(prompt);

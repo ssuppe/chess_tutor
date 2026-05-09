@@ -17,6 +17,7 @@ import { SupportedLanguage } from '@/lib/i18n/translations';
 import { DetectedTactic, filterMeaningfulTactics } from '@/lib/tacticDetection';
 import { useDebug } from '@/contexts/DebugContext';
 import { MoveHistoryItem } from './GameOverModal';
+import { generateHumanReadableBoard } from '@/lib/gameState';
 import { parseGeminiError, GeminiErrorInfo, isGeminiError } from '@/lib/geminiErrorHandler';
 import { GeminiErrorModal } from './GeminiErrorModal';
 import { getApiKeyInfo } from '@/lib/apiKeyHelper';
@@ -418,6 +419,7 @@ Move category: ${currentFeedback?.category || 'unknown'}
 Position status: ${isInTheory ? 'In theory' : 'Deviated from repertoire'}` : ''}
 I just replied with: ${lastTutorMoveSan}
 Current position FEN: ${currentFen}
+CURRENT PIECE POSITIONS: ${generateHumanReadableBoard(currentFen)}
 Progress: ${currentMoveIndex}/${repertoireMovesLength} moves in ${openingName}
 
 INSTRUCTIONS:
@@ -443,6 +445,7 @@ ${userJustMoved
     : `- Explain WHY I played my move (${lastTutorMoveSan}) and what it accomplishes
 - Mention the key goal for ${playerColorName} in this stage of the ${openingName}`
 }
+- Use the CURRENT PIECE POSITIONS list to verify exactly where all pieces are before you speak.
 - Keep it conversational, in character, and concise (3-5 sentences max).
 - Stay in ${language}.
 `.trim();
@@ -473,6 +476,7 @@ ${variationInfo.isEndOfLine ? '- This is the end of this variation line' : ''}` 
 The student just played: ${lastUserMoveSan}
 Move category: ${currentFeedback?.category || 'unknown'}
 Position status: ${isInTheory ? 'In theory' : 'Deviated from repertoire'}
+CURRENT PIECE POSITIONS: ${generateHumanReadableBoard(currentFen)}
 ${currentFeedback?.evaluationChange !== undefined ? `Evaluation change: ${currentFeedback.evaluationChange.toFixed(2)}` : ''}
 ${variationContext}
 
@@ -483,6 +487,7 @@ ${isInTheory
     : `- The student deviated from ${openingName} theory.
 - Gently point out what the repertoire move was (${currentFeedback?.theoreticalAlternatives?.join(' or ') || 'the main line'}).
 - Explain why the theory move is preferred and ask if they want to try again.`}
+- Use the CURRENT PIECE POSITIONS list to verify exactly where all pieces are before you speak.
 - Keep it concise (2-3 sentences max).
 - Stay in ${language} and maintain your personality.
 `.trim();
@@ -678,6 +683,8 @@ IMPORTANT CONTEXT:
                 tempGame2.undo(); // Undo computer move
                 tempGame2.undo(); // Undo user move
                 const fenBeforeUserMove = tempGame2.fen();
+                
+                const currentPieceList = generateHumanReadableBoard(currentFen);
 
                 const prompt = `
 [SYSTEM TRIGGER: move_exchange]
@@ -688,6 +695,7 @@ Position Context:
 - FEN before user's move: ${fenBeforeUserMove}
 - FEN after user's move: ${fenAfterUserMove}
 - FEN after my reply (current position): ${currentFen}
+- CURRENT PIECE POSITIONS: ${currentPieceList}
 
 My Internal Thoughts (Data):
 - Pre-Eval (Before User Move): ${preEvalStr}
@@ -701,7 +709,7 @@ INSTRUCTIONS:
 1. ${evalInstruction}
 2. ${openingInstruction}
 3. ${tacticalInstruction ? 'If tactical opportunities were missed (see above), explain them in your style.' : ''}
-4. Use the FEN data above to understand exactly where all pieces are located on the board.
+4. Use the FEN data and CURRENT PIECE POSITIONS above to understand exactly where all pieces are located on the board and verify positions before speaking.
 5. Respond in ${language}.
 
 React to this exchange as the player.
