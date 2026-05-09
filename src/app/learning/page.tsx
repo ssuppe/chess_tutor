@@ -59,34 +59,41 @@ export default function LearningAreaPage() {
     };
 
     return (
-        <>
-            <Header language={language} />
-            <div className="flex-grow bg-gray-100 dark:bg-gray-900 p-4 flex flex-col">
-                <div className="max-w-6xl mx-auto w-full">
-                    {/* Header */}
-                    <div className="mb-8 flex items-center justify-between">
-                        <button
-                            onClick={() => router.push("/")}
-                            className="p-2 md:px-4 md:py-2 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 text-sm font-medium transition-colors flex items-center gap-2"
-                        >
-                            <ArrowLeft size={20} />
-                            <span className="hidden md:inline">{t.learning.backToMenu}</span>
-                        </button>
+        <div className="flex flex-col min-h-screen bg-gray-100 dark:bg-gray-900">
+            {/* Slim Navigation Row */}
+            <div className="w-full px-4 pt-2">
+                <div className="max-w-6xl mx-auto flex justify-between items-center py-1">
+                    <button
+                        onClick={() => router.push('/')}
+                        className="flex items-center gap-1.5 px-2 py-1 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md text-xs font-medium transition-all"
+                        aria-label={t.learning.backToMenu}
+                    >
+                        <ArrowLeft size={14} />
+                        <span className="hidden sm:inline">{t.learning.backToMenu}</span>
+                    </button>
+                    <div className="text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400 font-semibold">
+                        {t.learning.title}
+                    </div>
+                </div>
+            </div>
+
+            <main className="flex-grow w-full flex justify-center px-4 py-4 md:py-8">
+                <div className="w-full max-w-6xl space-y-4 md:space-y-6">
+                    <div>
+                        <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
+                            {t.learning.title}
+                        </h1>
+                        <p className="text-sm md:text-base text-gray-600 dark:text-gray-400">
+                            {t.learning.subtitle}
+                        </p>
                     </div>
 
-                    <h1 className="text-4xl font-bold mb-4 text-gray-800 dark:text-white">
-                        {t.learning.title}
-                    </h1>
-                    <p className="text-lg text-gray-600 dark:text-gray-400 mb-8">
-                        {t.learning.subtitle}
-                    </p>
-
                     {/* Coach Selection */}
-                    <div className="mb-12 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">
+                    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-3 md:p-4">
+                        <label className="block text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400 font-bold mb-3">
                             {t.analysis.chooseCoach}
                         </label>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                             {PERSONALITIES.map((personality) => (
                                 <button
                                     key={personality.id}
@@ -94,14 +101,14 @@ export default function LearningAreaPage() {
                                         setSelectedPersonality(personality);
                                         localStorage.setItem("chess_tutor_personality", personality.id);
                                     }}
-                                    className={`p-4 rounded-lg border-2 transition-all ${
+                                    className={`p-2 md:p-3 rounded-lg border-2 transition-all flex items-center gap-2 ${
                                         selectedPersonality.id === personality.id
                                             ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                                            : 'border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-700'
+                                            : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50'
                                     }`}
                                 >
-                                    <div className="text-2xl mb-1">{personality.image}</div>
-                                    <div className="text-sm font-medium text-gray-900 dark:text-white">
+                                    <div className="text-xl">{personality.image}</div>
+                                    <div className="text-xs md:text-sm font-medium text-gray-900 dark:text-white">
                                         {personality.name}
                                     </div>
                                 </button>
@@ -110,25 +117,25 @@ export default function LearningAreaPage() {
                     </div>
 
                     {/* Tactical Patterns Section */}
-                    <div className="mb-12">
-                        <div className="flex items-center gap-3 mb-6">
-                            <Target className="text-blue-600 dark:text-blue-400" size={32} />
-                            <h2 className="text-2xl font-bold text-gray-800 dark:text-white">
+                    <div>
+                        <div className="flex items-center gap-2 mb-3">
+                            <Target className="text-blue-600 dark:text-blue-400" size={20} />
+                            <h2 className="text-lg font-bold text-gray-800 dark:text-white uppercase tracking-tight">
                                 {t.learning.tacticalPatterns}
                             </h2>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                             {TACTICAL_PATTERNS.map((pattern) => (
                                 <button
                                     key={pattern.id}
                                     onClick={() => router.push(`/learning/tactics/${pattern.id.toLowerCase()}`)}
-                                    className="group bg-white dark:bg-gray-800 p-6 rounded-xl hover:bg-blue-50 dark:hover:bg-gray-700 transition-all border-2 border-transparent hover:border-blue-500 dark:hover:border-blue-400 shadow-sm hover:shadow-md text-left"
+                                    className="group bg-white dark:bg-gray-800 p-4 rounded-xl hover:bg-blue-50 dark:hover:bg-gray-700 transition-all border border-gray-200 dark:border-gray-700 hover:border-blue-500 dark:hover:border-blue-400 shadow-sm text-left flex items-center gap-3"
                                 >
-                                    <div className="text-4xl mb-3 group-hover:scale-110 transition-transform">
+                                    <div className="text-2xl group-hover:scale-110 transition-transform">
                                         {pattern.icon}
                                     </div>
-                                    <h3 className="font-bold text-gray-900 dark:text-white text-lg">
+                                    <h3 className="font-bold text-gray-900 dark:text-white text-sm">
                                         {getPatternName(pattern.id)}
                                     </h3>
                                 </button>
@@ -138,26 +145,26 @@ export default function LearningAreaPage() {
 
                     {/* Openings Section */}
                     <div>
-                        <div className="flex items-center gap-3 mb-6">
-                            <BookOpen className="text-purple-600 dark:text-purple-400" size={32} />
-                            <h2 className="text-2xl font-bold text-gray-800 dark:text-white">
+                        <div className="flex items-center gap-2 mb-3">
+                            <BookOpen className="text-purple-600 dark:text-purple-400" size={20} />
+                            <h2 className="text-lg font-bold text-gray-800 dark:text-white uppercase tracking-tight">
                                 {t.learning.openings}
                             </h2>
                         </div>
 
                         <button
                             onClick={() => router.push('/learning/openings')}
-                            className="w-full group bg-white dark:bg-gray-800 p-8 rounded-xl hover:bg-purple-50 dark:hover:bg-gray-700 transition-all border-2 border-transparent hover:border-purple-500 dark:hover:border-purple-400 shadow-sm hover:shadow-md text-left"
+                            className="w-full group bg-white dark:bg-gray-800 p-4 md:p-6 rounded-xl hover:bg-purple-50 dark:hover:bg-gray-700 transition-all border border-gray-200 dark:border-gray-700 hover:border-purple-500 dark:hover:border-purple-400 shadow-sm text-left"
                         >
                             <div className="flex items-center gap-4">
-                                <div className="text-5xl group-hover:scale-110 transition-transform">
+                                <div className="text-3xl md:text-4xl group-hover:scale-110 transition-transform">
                                     📖
                                 </div>
                                 <div>
-                                    <h3 className="font-bold text-gray-900 dark:text-white text-xl mb-2">
+                                    <h3 className="font-bold text-gray-900 dark:text-white text-base md:text-lg mb-0.5">
                                         Opening Training
                                     </h3>
-                                    <p className="text-gray-600 dark:text-gray-400">
+                                    <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
                                         Practice opening repertoire with engine-backed feedback and AI explanations
                                     </p>
                                 </div>
@@ -165,8 +172,8 @@ export default function LearningAreaPage() {
                         </button>
                     </div>
                 </div>
-            </div>
-        </>
+            </main>
+        </div>
     );
 }
 

@@ -156,19 +156,29 @@ export default function SettingsPage() {
     if (!hasHydrated) return null;
 
     return (
-        <>
-            <Header language={language} />
-            <div className="min-h-screen bg-gray-100 dark:bg-gray-900 p-4">
-                <div className="max-w-2xl mx-auto pt-8">
-                    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8 space-y-8">
-                        <div className="flex items-center gap-4 border-b border-gray-200 dark:border-gray-700 pb-6">
-                            <button
-                                onClick={() => router.push("/")}
-                                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
-                            >
-                                <ArrowLeft size={24} className="text-gray-600 dark:text-gray-300" />
-                            </button>
-                            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+        <div className="flex flex-col min-h-screen bg-gray-100 dark:bg-gray-900">
+            {/* Slim Navigation Row */}
+            <div className="w-full px-4 pt-2">
+                <div className="max-w-2xl mx-auto flex justify-between items-center py-1">
+                    <button
+                        onClick={() => router.push('/')}
+                        className="flex items-center gap-1.5 px-2 py-1 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md text-xs font-medium transition-all"
+                        aria-label={t.game.backToMenu}
+                    >
+                        <ArrowLeft size={14} />
+                        <span className="hidden sm:inline">{t.game.backToMenu}</span>
+                    </button>
+                    <div className="text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400 font-semibold">
+                        {t.start.settings}
+                    </div>
+                </div>
+            </div>
+
+            <main className="flex-grow w-full flex justify-center px-4 py-4 md:py-8">
+                <div className="w-full max-w-2xl">
+                    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 md:p-8 space-y-6 md:space-y-8">
+                        <div className="flex items-center gap-3 border-b border-gray-200 dark:border-gray-700 pb-4">
+                            <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
                                 {t.start.settings}
                             </h1>
                         </div>
@@ -176,16 +186,16 @@ export default function SettingsPage() {
                         <div className="space-y-6">
                             {/* Language Selection */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                <label className="block text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400 font-bold mb-2">
                                     {t.start.language}
                                 </label>
-                                <div className="flex gap-3">
+                                <div className="flex gap-2">
                                     {(['en', 'de', 'fr', 'it', 'pl'] as SupportedLanguage[]).map((lang) => (
                                         <button
                                             key={lang}
                                             onClick={() => setLanguage(lang)}
-                                            className={`px-4 py-2 rounded-lg border text-sm font-medium transition-all ${language === lang
-                                                    ? 'bg-blue-600 text-white border-blue-600 shadow-md'
+                                            className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${language === lang
+                                                    ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
                                                     : 'bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200'
                                                 }`}
                                         >
@@ -196,8 +206,8 @@ export default function SettingsPage() {
                             </div>
 
                             {/* API Key Input */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                                <label className="block text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400 font-bold mb-2">
                                     {t.start.apiKey}
                                 </label>
                                 <div className="space-y-3">
@@ -206,30 +216,30 @@ export default function SettingsPage() {
                                         value={apiKey}
                                         onChange={(e) => setApiKey(e.target.value)}
                                         placeholder={t.start.apiKeyPlaceholder}
-                                        className="w-full p-3 border rounded-lg dark:bg-gray-700 dark:border-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                        className="w-full p-2.5 border rounded-lg dark:bg-gray-700 dark:border-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none text-sm transition-all"
                                     />
 
                                     {/* Consent Checkbox */}
-                                    <div className="flex items-start gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                                    <div className="flex items-start gap-3 p-3 bg-blue-50 dark:bg-blue-900/10 rounded-lg border border-blue-100 dark:border-blue-900/30">
                                         <input
                                             type="checkbox"
                                             id="settings-consent-checkbox"
                                             checked={consentGiven}
                                             onChange={(e) => setConsentGiven(e.target.checked)}
-                                            className="mt-1 w-4 h-4 text-blue-600 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500"
+                                            className="mt-0.5 w-4 h-4 text-blue-600 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500"
                                         />
-                                        <label htmlFor="settings-consent-checkbox" className="text-sm text-gray-800 dark:text-gray-200 cursor-pointer">
+                                        <label htmlFor="settings-consent-checkbox" className="text-xs text-gray-700 dark:text-gray-300 cursor-pointer leading-snug">
                                             {t.onboarding.api.consentLabel}
                                         </label>
                                     </div>
 
                                     {showConsentError && (
-                                        <p className="text-sm text-red-600 dark:text-red-400 font-medium">
+                                        <p className="text-xs text-red-600 dark:text-red-400 font-bold uppercase tracking-tight">
                                             {t.onboarding.api.consentRequired}
                                         </p>
                                     )}
 
-                                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                                    <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-tight">
                                         {t.start.apiKeyRequired} <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">{t.start.getApiKey}</a>
                                     </p>
                                 </div>
@@ -237,14 +247,14 @@ export default function SettingsPage() {
 
                             {/* Gemini Model Selection */}
                             <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                <label className="block text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400 font-bold mb-2">
                                     {t.start.geminiModel}
                                 </label>
-                                <div className="space-y-3">
+                                <div className="space-y-2">
                                     <select
                                         value={modelId}
                                         onChange={(e) => setModelId(e.target.value)}
-                                        className="w-full p-3 border rounded-lg dark:bg-gray-700 dark:border-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                        className="w-full p-2.5 border rounded-lg dark:bg-gray-700 dark:border-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none text-sm transition-all"
                                     >
                                         {availableModels.map((m) => (
                                             <option key={m} value={m}>
@@ -255,7 +265,7 @@ export default function SettingsPage() {
                                             <option value={modelId}>{modelId}</option>
                                         )}
                                     </select>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                                    <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-tight">
                                         {t.start.geminiModelDescription}
                                     </p>
                                 </div>
@@ -263,17 +273,17 @@ export default function SettingsPage() {
 
                             {/* Online Platform Usernames */}
                             <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-                                <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                                <h2 className="text-xs font-bold text-gray-900 dark:text-white mb-2 uppercase tracking-wider">
                                     Online Platform Integration
                                 </h2>
-                                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                                <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-4 leading-snug">
                                     Save your usernames to quickly import games from Chess.com and Lichess in the Analysis page.
                                 </p>
 
                                 <div className="space-y-4">
                                     {/* Chess.com Username */}
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                        <label className="block text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400 font-bold mb-1.5">
                                             Chess.com Username
                                         </label>
                                         <input
@@ -281,13 +291,13 @@ export default function SettingsPage() {
                                             value={chesscomUsername}
                                             onChange={(e) => setChesscomUsername(e.target.value)}
                                             placeholder="Enter your Chess.com username"
-                                            className="w-full p-3 border rounded-lg dark:bg-gray-700 dark:border-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 outline-none transition-all"
+                                            className="w-full p-2.5 border rounded-lg dark:bg-gray-700 dark:border-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 outline-none text-sm transition-all"
                                         />
                                     </div>
 
                                     {/* Lichess Username */}
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                        <label className="block text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400 font-bold mb-1.5">
                                             Lichess Username
                                         </label>
                                         <input
@@ -295,7 +305,7 @@ export default function SettingsPage() {
                                             value={lichessUsername}
                                             onChange={(e) => setLichessUsername(e.target.value)}
                                             placeholder="Enter your Lichess username"
-                                            className="w-full p-3 border rounded-lg dark:bg-gray-700 dark:border-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                            className="w-full p-2.5 border rounded-lg dark:bg-gray-700 dark:border-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none text-sm transition-all"
                                         />
                                     </div>
                                 </div>
@@ -303,31 +313,31 @@ export default function SettingsPage() {
 
                             {/* Data Management */}
                             <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
-                                <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                                <h2 className="text-xs font-bold text-gray-900 dark:text-white mb-1 uppercase tracking-wider">
                                     Data Management
                                 </h2>
-                                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                                <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-3 leading-snug">
                                     {t.common.clearWikipediaCacheDescription}
                                 </p>
-                                <div className="flex flex-wrap gap-3">
+                                <div className="flex flex-wrap gap-2">
                                     <button
                                         onClick={handleClearWikipediaCache}
-                                        className="flex items-center gap-2 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 font-medium transition-all"
+                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 font-medium text-xs transition-all"
                                     >
-                                        <Trash2 size={18} />
+                                        <Trash2 size={14} />
                                         {t.common.clearWikipediaCache}
                                     </button>
                                     <button
                                         onClick={handleRebuildWikipediaCache}
                                         disabled={isRebuilding}
-                                        className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all border ${isRebuilding 
-                                            ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 border-gray-200 dark:border-gray-700 cursor-not-allowed'
-                                            : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800/50 border-blue-200 dark:border-blue-800'}`}
+                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium text-xs transition-all border ${isRebuilding 
+                                            ? 'bg-gray-50 dark:bg-gray-800 text-gray-400 dark:text-gray-500 border-gray-100 dark:border-gray-700 cursor-not-allowed'
+                                            : 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-800/50 border-blue-100 dark:border-blue-800'}`}
                                     >
                                         {isRebuilding ? (
-                                            <Loader2 size={18} className="animate-spin" />
+                                            <Loader2 size={14} className="animate-spin" />
                                         ) : (
-                                            <RefreshCw size={18} />
+                                            <RefreshCw size={14} />
                                         )}
                                         {t.common.rebuildWikipediaCache}
                                     </button>
@@ -335,18 +345,18 @@ export default function SettingsPage() {
                             </div>
 
                             {/* Danger Zone - Clear All Data */}
-                            <div className="pt-6 border-t border-red-200 dark:border-red-800">
-                                <h2 className="text-lg font-semibold text-red-600 dark:text-red-400 mb-2">
+                            <div className="pt-6 border-t border-red-100 dark:border-red-900/50">
+                                <h2 className="text-xs font-bold text-red-600 dark:text-red-400 mb-1 uppercase tracking-wider">
                                     Danger Zone
                                 </h2>
-                                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                                <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-3 leading-snug">
                                     {t.common.clearAllDataDescription}
                                 </p>
                                 <button
                                     onClick={handleClearAllData}
-                                    className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium shadow-md transition-all"
+                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium text-xs shadow-sm transition-all"
                                 >
-                                    <Trash2 size={18} />
+                                    <Trash2 size={14} />
                                     {t.common.clearAllData}
                                 </button>
                             </div>
@@ -355,15 +365,15 @@ export default function SettingsPage() {
                         <div className="pt-6 border-t border-gray-200 dark:border-gray-700 flex justify-end">
                             <button
                                 onClick={handleSave}
-                                className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium shadow-md transition-transform transform hover:scale-[1.02]"
+                                className="flex items-center gap-2 px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold shadow-md transition-all active:scale-95"
                             >
-                                <Save size={20} />
+                                <Save size={18} />
                                 {t.common?.save || "Save Settings"}
                             </button>
                         </div>
                     </div>
                 </div>
-            </div>
-        </>
+            </main>
+        </div>
     );
 }

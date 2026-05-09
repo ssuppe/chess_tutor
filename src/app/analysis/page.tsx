@@ -409,44 +409,47 @@ INSTRUCTIONS:
 
     return (
         <div className="flex flex-col min-h-screen bg-gray-100 dark:bg-gray-900">
-            <Header language={language} />
-
-            {/* Back Button */}
-            <div className="w-full px-4 pt-4">
-                <div className="max-w-6xl mx-auto">
+            {/* Slim Navigation Row */}
+            <div className="w-full px-4 pt-2">
+                <div className="max-w-6xl mx-auto flex justify-between items-center py-1">
                     <button
                         onClick={() => router.push('/')}
-                        className="p-2 md:px-4 md:py-2 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 text-sm font-medium transition-colors"
+                        className="flex items-center gap-1.5 px-2 py-1 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md text-xs font-medium transition-all"
                         aria-label={t.game.backToMenu}
                     >
-                        <span className="hidden md:inline">{t.game.backToMenu}</span>
-                        <ArrowLeft className="md:hidden" size={20} />
+                        <ArrowLeft size={14} />
+                        <span className="hidden sm:inline">{t.game.backToMenu}</span>
                     </button>
+                    {steps.length > 0 && (
+                        <div className="text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400 font-semibold">
+                            {t.analysis.title} • {currentIndex} / {steps.length}
+                        </div>
+                    )}
                 </div>
             </div>
 
-            <main className="flex-grow w-full flex justify-center px-4 py-8">
-                <div className="w-full max-w-6xl space-y-8">
+            <main className="flex-grow w-full flex justify-center px-4 py-4 md:py-8">
+                <div className="w-full max-w-6xl space-y-4 md:space-y-8">
                     {/* Phase 1: Import View - shown when no game is loaded */}
                     {steps.length === 0 && (
-                        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 md:p-8 border border-gray-200 dark:border-gray-700">
+                        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-4 md:p-8 border border-gray-200 dark:border-gray-700">
                             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                                 <div>
-                                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                                        <Brain className="text-purple-600" /> {t.analysis.modeTitle}
+                                    <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                        <Brain className="text-purple-600" size={24} /> {t.analysis.modeTitle}
                                     </h1>
-                                    <p className="text-gray-600 dark:text-gray-300 mt-2">{t.analysis.modeDescription}</p>
+                                    <p className="text-sm md:text-base text-gray-600 dark:text-gray-300 mt-1 md:mt-2">{t.analysis.modeDescription}</p>
                                 </div>
                             </div>
 
-                            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="mt-4 md:mt-6 grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                                 <div className="space-y-4">
                                     <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">{t.analysis.pasteLabel}</label>
                                     <textarea
                                         value={input}
                                         onChange={(e) => handleInputChange(e.target.value)}
                                         placeholder={t.analysis.pastePlaceholder}
-                                        className="w-full p-3 border rounded-lg dark:bg-gray-700 dark:border-gray-600 font-mono text-sm min-h-[180px]"
+                                        className="w-full p-3 border rounded-lg dark:bg-gray-700 dark:border-gray-600 font-mono text-sm min-h-[150px] md:min-h-[180px]"
                                     />
                                     {detectedFormat && (
                                         <p className="text-xs text-gray-500">Detected: {detectedFormat.toUpperCase()}</p>
@@ -459,41 +462,41 @@ INSTRUCTIONS:
                                                 <button
                                                     key={p.id}
                                                     onClick={() => setSelectedPersonality(p)}
-                                                    className={`p-3 rounded-lg border flex items-center gap-2 ${selectedPersonality.id === p.id
+                                                    className={`p-2 md:p-3 rounded-lg border flex items-center gap-2 transition-colors ${selectedPersonality.id === p.id
                                                         ? "border-purple-500 bg-purple-50 dark:bg-purple-900/20"
-                                                        : "border-gray-200 dark:border-gray-700"}`}
+                                                        : "border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50"}`}
                                                 >
-                                                    <span className="text-xl">{p.image}</span>
-                                                    <span className="text-sm text-left text-gray-800 dark:text-gray-100">{p.name}</span>
+                                                    <span className="text-lg md:text-xl">{p.image}</span>
+                                                    <span className="text-xs md:text-sm text-left text-gray-800 dark:text-gray-100">{p.name}</span>
                                                 </button>
                                             ))}
                                         </div>
                                     </div>
                                     <button
                                         onClick={handleLoadGame}
-                                        className="w-full py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 font-semibold shadow-lg"
+                                        className="w-full py-2.5 md:py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 font-semibold shadow-lg transition-colors"
                                     >
                                         {t.analysis.startButton}
                                     </button>
 
                                     {/* Import from Online Platforms */}
                                     <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-                                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 text-center">
+                                        <p className="text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-2 text-center font-bold">
                                             Or import from online platforms
                                         </p>
                                         <div className="grid grid-cols-2 gap-2">
                                             <button
                                                 onClick={() => setShowImportModal(true)}
-                                                className="py-2 px-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium text-sm flex items-center justify-center gap-2 shadow"
+                                                className="py-2 px-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium text-xs md:text-sm flex items-center justify-center gap-2 shadow transition-colors"
                                             >
-                                                <Download size={16} />
+                                                <Download size={14} />
                                                 Chess.com
                                             </button>
                                             <button
                                                 onClick={() => setShowImportModal(true)}
-                                                className="py-2 px-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm flex items-center justify-center gap-2 shadow"
+                                                className="py-2 px-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-xs md:text-sm flex items-center justify-center gap-2 shadow transition-colors"
                                             >
-                                                <Download size={16} />
+                                                <Download size={14} />
                                                 Lichess
                                             </button>
                                         </div>
@@ -501,7 +504,7 @@ INSTRUCTIONS:
                                 </div>
 
                                 <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-4 flex flex-col items-center justify-center border border-gray-200 dark:border-gray-700">
-                                    <div className="w-full max-w-md">
+                                    <div className="w-full max-w-sm">
                                         <Chessboard
                                             options={{
                                                 position: currentFen,
@@ -510,11 +513,11 @@ INSTRUCTIONS:
                                                 darkSquareStyle: { backgroundColor: '#779954' },
                                                 lightSquareStyle: { backgroundColor: '#e9edcc' },
                                                 animationDurationInMs: 200,
-                                                boardStyle: { borderRadius: "12px", boxShadow: "0 8px 30px rgba(0,0,0,0.12)" }
+                                                boardStyle: { borderRadius: "8px", boxShadow: "0 4px 20px rgba(0,0,0,0.1)" }
                                             }}
                                         />
                                     </div>
-                                    <p className="mt-4 text-sm text-gray-500 dark:text-gray-400 text-center">
+                                    <p className="mt-3 text-xs text-gray-500 dark:text-gray-400 text-center uppercase tracking-wider font-bold">
                                         {t.analysis.currentPosition}
                                     </p>
                                 </div>
@@ -524,25 +527,25 @@ INSTRUCTIONS:
 
                     {/* Phase 2: Analysis View - shown when game is loaded */}
                     {steps.length > 0 && (
-                        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 md:p-8 border border-gray-200 dark:border-gray-700">
-                            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-                                <div className="flex items-center gap-3">
-                                    <span className="text-2xl">{selectedPersonality.image}</span>
+                        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-3 md:p-6 border border-gray-200 dark:border-gray-700">
+                            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xl">{selectedPersonality.image}</span>
                                     <div>
-                                        <h1 className="text-xl font-bold text-gray-900 dark:text-white">
+                                        <h1 className="text-base font-bold text-gray-900 dark:text-white leading-none">
                                             {t.analysis.modeTitle}
                                         </h1>
-                                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                                        <p className="text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500 font-bold mt-1">
                                             Coach: {selectedPersonality.name}
                                         </p>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-2">
                                     <button
                                         onClick={handleResetAnalysis}
-                                        className="px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center gap-2"
+                                        className="px-2 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center gap-1.5 transition-colors"
                                     >
-                                        <RotateCcw size={16} />
+                                        <RotateCcw size={14} />
                                         <span>{t.analysis.loadNewGame}</span>
                                     </button>
                                     <button
@@ -550,15 +553,15 @@ INSTRUCTIONS:
                                             setPlayColor(orientation);
                                             setShowPlayModal(true);
                                         }}
-                                        className="px-3 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 flex items-center gap-2 shadow-sm transition-colors"
+                                        className="px-2 py-1.5 text-xs font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 flex items-center gap-1.5 shadow-sm transition-colors"
                                     >
-                                        <PlayCircle size={16} />
+                                        <PlayCircle size={14} />
                                         <span>Play</span>
                                     </button>
                                     <select
                                         value={orientation}
                                         onChange={(e) => setOrientation(e.target.value as "white" | "black")}
-                                        className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm"
+                                        className="p-1.5 rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-xs"
                                     >
                                         <option value="white">White</option>
                                         <option value="black">Black</option>
@@ -566,8 +569,8 @@ INSTRUCTIONS:
                                 </div>
                             </div>
 
-                            <div className="flex flex-col items-center gap-4">
-                                <div className="w-full max-w-lg">
+                            <div className="flex flex-col items-center gap-3">
+                                <div className="w-full max-w-md">
                                     <Chessboard
                                         options={{
                                             position: currentFen,
@@ -576,29 +579,29 @@ INSTRUCTIONS:
                                             darkSquareStyle: { backgroundColor: '#779954' },
                                             lightSquareStyle: { backgroundColor: '#e9edcc' },
                                             animationDurationInMs: 200,
-                                            boardStyle: { borderRadius: "12px", boxShadow: "0 8px 30px rgba(0,0,0,0.12)" }
+                                            boardStyle: { borderRadius: "8px", boxShadow: "0 4px 20px rgba(0,0,0,0.1)" }
                                         }}
                                     />
                                 </div>
                                 <div className="flex items-center gap-4">
                                     <button
                                         onClick={() => setCurrentIndex(i => Math.max(0, i - 1))}
-                                        className="p-2 rounded-lg bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 disabled:opacity-50"
+                                        className="p-1.5 rounded-lg bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 disabled:opacity-50 transition-colors"
                                         disabled={currentIndex === 0}
                                         aria-label={t.analysis.previous}
                                     >
-                                        <ChevronLeft size={20} />
+                                        <ChevronLeft size={18} />
                                     </button>
-                                    <div className="text-sm text-gray-600 dark:text-gray-300 min-w-[100px] text-center">
-                                        {t.analysis.step} {currentIndex} / {steps.length}
+                                    <div className="text-xs font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 min-w-[80px] text-center">
+                                        {currentIndex} / {steps.length}
                                     </div>
                                     <button
                                         onClick={() => setCurrentIndex(i => Math.min(steps.length, i + 1))}
-                                        className="p-2 rounded-lg bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 disabled:opacity-50"
+                                        className="p-1.5 rounded-lg bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 disabled:opacity-50 transition-colors"
                                         disabled={currentIndex >= steps.length}
                                         aria-label={t.analysis.next}
                                     >
-                                        <ChevronRight size={20} />
+                                        <ChevronRight size={18} />
                                     </button>
                                 </div>
                             </div>
@@ -607,72 +610,17 @@ INSTRUCTIONS:
 
                     {/* Analysis Panels - only shown when game is loaded */}
                     {steps.length > 0 && (
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                            <div className="lg:col-span-2 order-2 lg:order-1 bg-white dark:bg-gray-800 rounded-2xl shadow border border-gray-200 dark:border-gray-700 p-6 space-y-4">
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
+                            {/* AI Analysis Panel - Swapped to top/first */}
+                            <div className="order-1 lg:col-span-1 bg-white dark:bg-gray-800 rounded-2xl shadow border border-gray-200 dark:border-gray-700 p-4 md:p-6 space-y-3">
                                 <div className="flex items-center justify-between">
-                                    <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t.analysis.title}</h2>
-                                    {possibleOpenings.length > 0 && (
-                                        <button
-                                            onClick={() => setShowOpeningsModal(true)}
-                                            className="text-sm text-blue-700 dark:text-blue-300 hover:text-blue-900 dark:hover:text-blue-100 hover:underline cursor-pointer transition-colors"
-                                        >
-                                            {t.analysis.opening}: {possibleOpenings.length === 1
-                                                ? `${possibleOpenings[0].name} (${possibleOpenings[0].eco})`
-                                                : `${possibleOpenings.length} ${t.analysis.possibleOpenings}`
-                                            }
-                                        </button>
-                                    )}
+                                    <h2 className="text-lg font-bold text-gray-900 dark:text-white">{t.analysis.aiAnalysis}</h2>
+                                    <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Move {currentIndex}</div>
                                 </div>
-                                {currentIndex === 0 ? (
-                                    <p className="text-gray-600 dark:text-gray-300">{t.analysis.currentPosition}</p>
-                                ) : (
-                                    <div className="space-y-3">
-                                        <div className="flex flex-wrap gap-4 text-sm text-gray-700 dark:text-gray-200">
-                                            <div>
-                                                <div className="font-semibold">{t.analysis.step} {currentIndex}</div>
-                                                <div>{steps[currentIndex - 1]?.san}</div>
-                                            </div>
-                                            <div>
-                                                <div className="font-semibold">{t.analysis.evaluation}</div>
-                                                <div>{formatEval(currentDetails?.evalAfter)}</div>
-                                            </div>
-                                            <div>
-                                                <div className="font-semibold">{t.analysis.cpLoss}</div>
-                                                <div>{formatCpLoss(currentDetails?.cpLoss)}</div>
-                                            </div>
-                                            <div>
-                                                <div className="font-semibold">{t.analysis.bestMove}</div>
-                                                <div>{currentDetails?.bestMoveSan || t.analysis.enginePending}</div>
-                                            </div>
-                                        </div>
-
-                                        <div>
-                                            <div className="font-semibold text-gray-800 dark:text-gray-100 mb-2">{t.analysis.missedTactics}</div>
-                                            {tacticSummary.length === 0 && (
-                                                <p className="text-sm text-gray-600 dark:text-gray-400">{t.analysis.none}</p>
-                                            )}
-                                            {tacticSummary.length > 0 && (
-                                                <ul className="list-disc pl-5 space-y-1 text-sm text-gray-700 dark:text-gray-300">
-                                                    {tacticSummary.map((tactic, idx) => (
-                                                        <li key={`${tactic.move}-${idx}`}>
-                                                            {tactic.tactic_type}
-                                                            {tactic.material_delta ? ` (~${(tactic.material_delta / 100).toFixed(1)} pawns)` : ""}
-                                                            {tactic.affected_squares ? ` on ${tactic.affected_squares.join(", ")}` : ""}
-                                                        </li>
-                                                    ))}
-                                                </ul>
-                                            )}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="order-1 lg:order-2 bg-white dark:bg-gray-800 rounded-2xl shadow border border-gray-200 dark:border-gray-700 p-6 space-y-4">
-                                <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t.analysis.aiAnalysis}</h2>
 
                                 {/* Horizontal Evaluation Bar */}
                                 {currentIndex > 0 && currentDetails?.evalAfter && (
-                                    <div className="w-full mb-4">
+                                    <div className="w-full mb-3">
                                         <EvaluationBar
                                             score={currentDetails.evalAfter.score}
                                             mate={currentDetails.evalAfter.mate}
@@ -683,27 +631,93 @@ INSTRUCTIONS:
                                 )}
 
                                 {!apiKey && (
-                                    <p className="text-sm text-gray-600 dark:text-gray-400">Please add an API key in settings to receive commentary.</p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">Please add an API key in settings to receive commentary.</p>
                                 )}
                                 {currentIndex === 0 && (
-                                    <p className="text-sm text-gray-600 dark:text-gray-400">{t.analysis.currentPosition}</p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-widest font-bold text-center py-4">{t.analysis.currentPosition}</p>
                                 )}
                                 {currentIndex > 0 && (
-                                    <div className="min-h-[140px]">
+                                    <div className="min-h-[100px]">
                                         {isCommenting && (
-                                            <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
-                                                <Loader2 className="animate-spin" size={18} />
+                                            <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 text-xs">
+                                                <Loader2 className="animate-spin" size={14} />
                                                 <span>{t.analysis.coachPending}</span>
                                             </div>
                                         )}
                                         {!isCommenting && comments[currentIndex] && (
-                                            <div className="prose prose-sm dark:prose-invert max-w-none">
-                                                <ReactMarkdown>{comments[currentIndex]}</ReactMarkdown>
+                                            <div className="prose prose-sm dark:prose-invert max-w-none text-sm leading-snug">
+                                                <ReactMarkdown
+                                                    components={{
+                                                        p: ({ children }) => <p className="mb-1.5 last:mb-0 leading-snug">{children}</p>,
+                                                    }}
+                                                >
+                                                    {comments[currentIndex]}
+                                                </ReactMarkdown>
                                             </div>
                                         )}
                                         {!isCommenting && !comments[currentIndex] && (
-                                            <p className="text-sm text-gray-600 dark:text-gray-400">{t.analysis.coachPending}</p>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 text-center py-4 uppercase tracking-widest font-bold">{t.analysis.coachPending}</p>
                                         )}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Technical Stats Panel - Swapped to second */}
+                            <div className="lg:col-span-2 order-2 bg-white dark:bg-gray-800 rounded-2xl shadow border border-gray-200 dark:border-gray-700 p-4 md:p-6 space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <h2 className="text-lg font-bold text-gray-900 dark:text-white">{t.analysis.title}</h2>
+                                    {possibleOpenings.length > 0 && (
+                                        <button
+                                            onClick={() => setShowOpeningsModal(true)}
+                                            className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 font-bold transition-colors"
+                                        >
+                                            {t.analysis.opening}: {possibleOpenings.length === 1
+                                                ? `${possibleOpenings[0].name} (${possibleOpenings[0].eco})`
+                                                : `${possibleOpenings.length} ${t.analysis.possibleOpenings}`
+                                            }
+                                        </button>
+                                    )}
+                                </div>
+                                {currentIndex === 0 ? (
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-widest font-bold text-center py-8">{t.analysis.currentPosition}</p>
+                                ) : (
+                                    <div className="space-y-4">
+                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+                                            <div className="bg-gray-50 dark:bg-gray-900 p-2 rounded-lg border border-gray-100 dark:border-gray-800">
+                                                <div className="font-bold text-gray-400 uppercase tracking-widest mb-1">{t.analysis.step}</div>
+                                                <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">#{currentIndex} - {steps[currentIndex - 1]?.san}</div>
+                                            </div>
+                                            <div className="bg-gray-50 dark:bg-gray-900 p-2 rounded-lg border border-gray-100 dark:border-gray-800">
+                                                <div className="font-bold text-gray-400 uppercase tracking-widest mb-1">{t.analysis.evaluation}</div>
+                                                <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{formatEval(currentDetails?.evalAfter)}</div>
+                                            </div>
+                                            <div className="bg-gray-50 dark:bg-gray-900 p-2 rounded-lg border border-gray-100 dark:border-gray-800">
+                                                <div className="font-bold text-gray-400 uppercase tracking-widest mb-1">{t.analysis.cpLoss}</div>
+                                                <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{formatCpLoss(currentDetails?.cpLoss)}</div>
+                                            </div>
+                                            <div className="bg-gray-50 dark:bg-gray-900 p-2 rounded-lg border border-gray-100 dark:border-gray-800">
+                                                <div className="font-bold text-gray-400 uppercase tracking-widest mb-1">{t.analysis.bestMove}</div>
+                                                <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{currentDetails?.bestMoveSan || t.analysis.enginePending}</div>
+                                            </div>
+                                        </div>
+
+                                        <div className="bg-gray-50 dark:bg-gray-900 p-3 rounded-lg border border-gray-100 dark:border-gray-800">
+                                            <div className="font-bold text-gray-400 uppercase tracking-widest mb-2 text-[10px]">{t.analysis.missedTactics}</div>
+                                            {tacticSummary.length === 0 && (
+                                                <p className="text-xs text-gray-500 italic">{t.analysis.none}</p>
+                                            )}
+                                            {tacticSummary.length > 0 && (
+                                                <ul className="list-disc pl-5 space-y-1 text-xs text-gray-700 dark:text-gray-300">
+                                                    {tacticSummary.map((tactic, idx) => (
+                                                        <li key={`${tactic.move}-${idx}`} className="leading-snug">
+                                                            <span className="font-bold">{tactic.tactic_type}</span>
+                                                            {tactic.material_delta ? <span className="text-gray-500 ml-1"> (~{(tactic.material_delta / 100).toFixed(1)} pawns)</span> : ""}
+                                                            {tactic.affected_squares ? <span className="text-gray-400 text-[10px] ml-1"> on {tactic.affected_squares.join(", ")}</span> : ""}
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            )}
+                                        </div>
                                     </div>
                                 )}
                             </div>
