@@ -45,15 +45,7 @@ export default function OpeningTrainingPage() {
 
   const t = useTranslation(language);
 
-  useEffect(() => {
-    if (mounted) {
-      loadOpening();
-    }
-  }, [openingId, mounted]);
-
-  const loadOpening = () => {
-    setIsLoading(true);
-
+  const loadOpening = useCallback(() => {
     // Find opening by ECO code
     const foundOpening = getOpeningByEco(openingId);
 
@@ -65,7 +57,13 @@ export default function OpeningTrainingPage() {
 
     setOpening(foundOpening);
     setIsLoading(false);
-  };
+  }, [openingId, router]);
+
+  useEffect(() => {
+    if (mounted) {
+      loadOpening();
+    }
+  }, [mounted, loadOpening]);
 
   if (!mounted) return null;
 

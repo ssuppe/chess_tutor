@@ -26,7 +26,12 @@ interface StartScreenProps {
 
 export default function StartScreen({ onStartGame, onResumeGame, savedGames, onDeleteSavedGame }: StartScreenProps) {
     const router = useRouter();
-    const [language, setLanguage] = useState<SupportedLanguage>('en');
+    const [language, setLanguage] = useState<SupportedLanguage>(() => {
+        if (typeof window !== "undefined") {
+            return (localStorage.getItem("chess_tutor_language") as SupportedLanguage) || "en";
+        }
+        return "en";
+    });
     const [showNewGameOptions, setShowNewGameOptions] = useState(false);
     const [importInput, setImportInput] = useState("");
     const [detectedFormat, setDetectedFormat] = useState<ChessFormat | null>(null);
@@ -36,8 +41,6 @@ export default function StartScreen({ onStartGame, onResumeGame, savedGames, onD
     const hasSavedGames = savedGames.length > 0;
 
     useEffect(() => {
-        const storedLang = localStorage.getItem("chess_tutor_language");
-        if (storedLang) setLanguage(storedLang as SupportedLanguage);
         setMounted(true);
     }, []);
 

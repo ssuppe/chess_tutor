@@ -54,15 +54,7 @@ export default function FamilyTrainingPage() {
 
   const t = useTranslation(language);
 
-  useEffect(() => {
-    if (mounted) {
-      loadFamilyVariations();
-    }
-  }, [familyName, mounted]);
-
-  const loadFamilyVariations = () => {
-    setIsLoading(true);
-
+  const loadFamilyVariations = useCallback(() => {
     // Get all variations for this family
     const familyVariations = getOpeningsByFamily(familyName);
 
@@ -79,7 +71,13 @@ export default function FamilyTrainingPage() {
     setVariationTree(tree);
 
     setIsLoading(false);
-  };
+  }, [familyName, router]);
+
+  useEffect(() => {
+    if (mounted) {
+      loadFamilyVariations();
+    }
+  }, [mounted, loadFamilyVariations]);
 
   // Create a "representative" opening for the family
   // Uses the first ECO code and combines info from all variations

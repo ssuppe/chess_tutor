@@ -13,13 +13,12 @@ export function APIKeyInput({ onKeySubmit }: APIKeyInputProps) {
     const storedKey = typeof window !== "undefined" ? localStorage.getItem("gemini_api_key") : null;
     const resolvedKey = envKey || storedKey;
     const [isOpen, setIsOpen] = useState(() => !resolvedKey);
-    const [consentGiven, setConsentGiven] = useState(false);
+    const [consentGiven, setConsentGiven] = useState(() => !!resolvedKey);
     const [error, setError] = useState("");
 
     useEffect(() => {
         if (resolvedKey) {
             onKeySubmit(resolvedKey);
-            setConsentGiven(true);
         }
     }, [onKeySubmit, resolvedKey]);
 
@@ -82,7 +81,7 @@ export function APIKeyInput({ onKeySubmit }: APIKeyInputProps) {
                             className="mt-0.5 w-4 h-4 text-blue-600 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500"
                         />
                         <label htmlFor="api-key-consent-checkbox" className="text-xs text-gray-800 dark:text-gray-200 cursor-pointer">
-                            I understand and agree that my API key will be stored in my browser's local storage
+                            I understand and agree that my API key will be stored in my browser&apos;s local storage
                         </label>
                     </div>
 
