@@ -36,6 +36,22 @@ const defaultProps = {
 };
 
 describe("Mobile Chat Overlay (Bottom Sheet)", () => {
+    beforeEach(() => {
+        // Mock localStorage
+        const localStorageMock = (function() {
+            let store: Record<string, string> = {
+                "gemini_api_key": "test-api-key"
+            };
+            return {
+                getItem: function(key: string) { return store[key] || null; },
+                setItem: function(key: string, value: string) { store[key] = value.toString(); },
+                clear: function() { store = {}; },
+                removeItem: function(key: string) { delete store[key]; }
+            };
+        })();
+        Object.defineProperty(window, 'localStorage', { value: localStorageMock });
+    });
+
     const renderGame = () => render(
         <DebugProvider>
             <ChessGame {...defaultProps} />

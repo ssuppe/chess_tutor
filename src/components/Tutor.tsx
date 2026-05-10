@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { StockfishEvaluation } from "@/lib/stockfish";
 import { ChessEngine } from "@/lib/engine";
 import { Chess, Move } from "chess.js";
 import { getGenAIModel } from "@/lib/gemini";
 import { ChatSession } from "@google/generative-ai";
-import { Send, User as UserIcon, Loader2, Lightbulb, Trophy } from "lucide-react";
+import { Send, Bot, User as UserIcon, Loader2, Lightbulb, Trophy, ArrowUp } from "lucide-react";
 import clsx from "clsx";
 import { Personality } from "@/lib/personalities";
 import { OpeningMetadata } from "@/lib/openings";
@@ -106,7 +106,7 @@ interface Message {
 
 export function Tutor({ game, currentFen, userMove, computerMove, stockfish, evalP0, evalP2, openingData, missedTactics, onAnalysisComplete, apiKey, personality, language, playerColor, onCheckComputerMove, isReviewing, resignationContext, openingContext, tacticalPracticeMode, openingPracticeMode, onJumpToBoard, onChatFocus, onChatBlur }: TutorProps) {
     const [messages, setMessages] = useState<Message[]>([]);
-    const [chatInput, setChatInput] = useState("");
+    const [input, setInput] = useState("");
     const [isFocused, setIsFocused] = useState(false);
 
     const handleFocus = () => {
@@ -147,16 +147,6 @@ export function Tutor({ game, currentFen, userMove, computerMove, stockfish, eva
     // Track last opening moves to detect when new moves are made
     const lastUserMoveRef = useRef<string | null>(null);
     const lastTutorMoveRef = useRef<string | null>(null);
-
-    // Extract stable values for opening practice commentary
-    const lastUserMoveSan = openingPracticeMode?.lastUserMove?.san;
-    const lastTutorMoveSan = openingPracticeMode?.lastTutorMove?.san;
-    const currentMoveIndex = openingPracticeMode?.currentMoveIndex ?? 0;
-    const isInTheory = openingPracticeMode?.isInTheory ?? true;
-    const currentFeedback = openingPracticeMode?.currentFeedback;
-    const repertoireMovesLength = openingPracticeMode?.repertoireMoves?.length ?? 0;
-    const isFamilyMode = openingPracticeMode?.isFamilyMode ?? false;
-    const variationInfo = openingPracticeMode?.variationInfo;
 
     // Initialize chat session with Personality System Prompt (only once per pattern type)
     useEffect(() => {
@@ -296,7 +286,7 @@ CRITICAL RULES:
                 
 CURRENT POSITION:
 - FEN: ${currentFen}
-- CURRENT PIECE POSITIONS: ${currentPieceList}
+- PIECE POSITIONS: ${currentPieceList}
 - LAST MOVE PLAYED: ${history[history.length - 1]}
 
 INSTRUCTIONS:
@@ -354,6 +344,7 @@ Keep your response to 3-4 sentences, be engaging, and respond in ${language}.`
             });
         }
     }, [apiKey, personality, language, playerColor, patternName, openingName, wikipediaSummary]);
+    // NOTE: Removed solutionMoveKey from dependencies - we don't want to reset chat when puzzle changes
 
     // Notify tutor about new puzzle (without resetting chat)
     useEffect(() => {
@@ -404,24 +395,50 @@ Acknowledge this new puzzle briefly (1 sentence) and encourage the student to fi
         });
     }, [solutionMoveKey, chatSession, tacticalPracticeMode, currentFen, language]);
 
+    // Extract stable values for opening practice commentary
+    const lastUserMoveSan = openingPracticeMode?.lastUserMove?.san;
+    const lastTutorMoveSan = openingPracticeMode?.lastTutorMove?.san;
+    const currentMoveIndex = openingPracticeMode?.currentMoveIndex ?? 0;
+    const isInTheory = openingPracticeMode?.isInTheory ?? true;
+    const currentFeedback = openingPracticeMode?.currentFeedback;
+    const repertoireMovesLength = openingPracticeMode?.repertoireMoves?.length ?? 0;
+    const isFamilyMode = openingPracticeMode?.isFamilyMode ?? false;
+    const variationInfo = openingPracticeMode?.variationInfo;
+
+    // Track last analyzed exchange in opening practice to avoid duplicates
+    const lastOpeningExchangeRef = useRef<string | null>(null);
+
     // Automatic commentary for opening practice mode
     useEffect(() => {
         if (!chatSession || !openingName) return;
 
+        // Guardrail: Check if tutor is allowed to speak
         const shouldSpeak = openingPracticeMode?.shouldTutorSpeak ?? true;
-        if (!shouldSpeak) return;
+        if (!shouldSpeak) {
+            console.log('[Tutor] Guardrail: Not allowed to speak yet');
+            return;
+        }
 
+        // Create a unique key for this opening exchange
+        // If it's the start, tutorMove might be null. If user just moved, tutorMove might still be null.
+        // We want to analyze whenever the "current state" of the opening progresses.
         const openingKey = `opening-${currentMoveIndex}-${lastUserMoveSan || 'none'}-${lastTutorMoveSan || 'none'}`;
+
+        // Prevent double analysis of the same opening state
         if (lastOpeningExchangeRef.current === openingKey) return;
 
+        // Implementation of debounced messaging
         const debounceDelay = isReviewing ? 3000 : 0;
         const timer = setTimeout(() => {
+            // Re-check key after debounce
             if (lastOpeningExchangeRef.current === openingKey) return;
             lastOpeningExchangeRef.current = openingKey;
 
+            // 1. Case: Tutor just moved (usually in response to user move)
             if (lastTutorMoveSan && lastTutorMoveRef.current !== `${lastTutorMoveSan}-${currentMoveIndex}`) {
                 lastTutorMoveRef.current = `${lastTutorMoveSan}-${currentMoveIndex}`;
                 
+                // If user also just moved, we analyze BOTH in one go
                 const userJustMoved = lastUserMoveSan && lastUserMoveRef.current !== `${lastUserMoveSan}-${currentMoveIndex}`;
                 if (userJustMoved) {
                     lastUserMoveRef.current = `${lastUserMoveSan}-${currentMoveIndex}`;
@@ -474,9 +491,11 @@ ${userJustMoved
                     if (isGeminiError(err)) setGeminiError(parseGeminiError(err));
                 });
             }
+            // 2. Case: ONLY user just moved (e.g. they deviated or it's the end of repertoire)
             else if (lastUserMoveSan && lastUserMoveRef.current !== `${lastUserMoveSan}-${currentMoveIndex}`) {
                 lastUserMoveRef.current = `${lastUserMoveSan}-${currentMoveIndex}`;
 
+                // Build variation context for family mode
                 const variationContext = isFamilyMode && variationInfo ? `
 Variation info:
 - Matching variations: ${variationInfo.matchingVariations}
@@ -517,9 +536,23 @@ ${isInTheory
         }, debounceDelay);
 
         return () => clearTimeout(timer);
-    }, [chatSession, lastUserMoveSan, lastTutorMoveSan, currentMoveIndex, isInTheory, currentFen, language, openingName, currentFeedback, repertoireMovesLength, isFamilyMode, variationInfo, isReviewing]);
+    }, [
+        chatSession,
+        lastUserMoveSan,
+        lastTutorMoveSan,
+        currentMoveIndex,
+        isInTheory,
+        currentFen,
+        language,
+        openingName,
+        currentFeedback,
+        repertoireMovesLength,
+        isFamilyMode,
+        variationInfo,
+        isReviewing
+    ]);
 
-    // Scroll chat container to bottom
+    // Scroll chat container to bottom (not the whole page)
     useEffect(() => {
         if (messagesContainerRef.current) {
             messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
@@ -527,149 +560,37 @@ ${isInTheory
     }, [messages]);
 
     const lastAnalyzedMoveRef = useRef<string | null>(null);
-    const lastOpeningExchangeRef = useRef<string | null>(null);
 
-    const evaluateCurrentPosition = async () => {
-        if (!stockfish) return null;
+    const evaluateCurrentPosition = useCallback(async () => {
+        if (!stockfish) {
+            return null;
+        }
         try {
-            return await stockfish.evaluate(game.fen(), 15);
+            const currentFen = game.fen();
+            const evaluation = await stockfish.evaluate(currentFen, 15);
+            return evaluation;
         } catch (error) {
             console.error("Error evaluating position:", error);
             return null;
         }
-    };
+    }, [game, stockfish]);
 
-    const analyzeExchange = useCallback(async () => {
-        if (!chatSession || !userMove || !computerMove || !evalP0 || !evalP2) return;
-
-        const exchangeKey = `${userMove.san}-${computerMove.san}-${currentFen}`;
-        if (lastAnalyzedMoveRef.current === exchangeKey) return;
-        lastAnalyzedMoveRef.current = exchangeKey;
-
-        setIsLoading(true);
-
-        try {
-            const preEval = evalP0.score;
-            const postEval = evalP2.score;
-            const preMate = evalP0.mate;
-            const postMate = evalP2.mate;
-
-            const delta = postEval - preEval;
-
-            let evalInstruction = "";
-            let preEvalStr = preMate !== null ? `Mate in ${preMate}` : `${preEval} cp`;
-            let postEvalStr = postMate !== null ? `Mate in ${postMate}` : `${postEval} cp`;
-
-            if (Math.abs(delta) < 30) {
-                evalInstruction = "The evaluation is stable. React as if the game is progressing normally.";
-            } else if (delta > 100) {
-                evalInstruction = playerColor === 'white' 
-                    ? "The position has improved significantly for the User. Acknowledge their strong play, even if you're frustrated." 
-                    : "The position has improved for me. Be confident and perhaps a bit boastful.";
-            } else if (delta < -100) {
-                evalInstruction = playerColor === 'white'
-                    ? "The position has worsened for the User. Point out their mistake and offer a hint about what went wrong."
-                    : "The position has worsened for me. Be frustrated or worried about the User's counterplay.";
-            }
-
-            let openingInstruction = "";
-            if (openingData && openingData.length > 0) {
-                openingInstruction = `We are in the ${openingData[0].name} (${openingData[0].eco}) opening. Briefly mention the opening context if appropriate.`;
-            }
-
-            let tacticalInstruction = "";
-            if (missedTactics && missedTactics.length > 0) {
-                const meaningfulTactics = filterMeaningfulTactics(missedTactics);
-                if (meaningfulTactics.length > 0) {
-                    const tacticDescriptions = meaningfulTactics.map(t => {
-                        let desc = `- Theme: ${t.tactic_name.replace(/_/g, ' ')}`;
-                        if (t.piece_roles && t.piece_roles.length > 0) {
-                            desc += ` involving ${t.piece_roles.join(' and ')}`;
-                        }
-                        if (t.material_delta) {
-                            desc += ` (worth ~${t.material_delta} centipawns)`;
-                        }
-                        if (t.affected_squares && t.affected_squares.length > 0) {
-                            desc += ` on squares ${t.affected_squares.join(', ')}`;
-                        }
-                        return desc;
-                    }).join('\n');
-
-                    tacticalInstruction = `
-TACTICAL OPPORTUNITY MISSED:
-The User just played ${userMove.san}, but there was a better tactical opportunity available.
-The analysis engine identified the following tactical themes that could have been exploited:
-
-${tacticDescriptions}
-
-IMPORTANT CONTEXT:
-- This tactical data comes from analyzing what WOULD HAVE HAPPENED if the User had played the best move instead.
-- You should explain this missed opportunity in your characteristic style.
-- Point out what the User could have done (e.g., "You missed a fork with Nf3!" or "There was a pin available with Bb5!").
-- Be educational but stay in character - if you're sarcastic, be sarcastic about the miss; if you're encouraging, be supportive.
-- Do NOT mention "the engine" or "the computer" - present this as YOUR analysis as the opponent/tutor.
-- Only mention this if the evaluation change was significant enough to warrant it.
-                    `;
-                }
-            }
-
-            const currentPieceList = generateHumanReadableBoard(currentFen);
-
-            const prompt = `
-[SYSTEM TRIGGER: move_exchange]
-User (${playerColorName}) Move: ${userMove.san}
-My (${tutorColorName}) Reply: ${computerMove.san}
-
-Position Context:
-- FEN after my reply (current position): ${currentFen}
-- CURRENT PIECE POSITIONS: ${currentPieceList}
-
-My Internal Thoughts (Data):
-- Pre-Eval (Before User Move): ${preEvalStr}
-- Post-Eval (After My Reply): ${postEvalStr}
-${preMate === null && postMate === null ? `- Delta: ${delta} cp` : ''}
-(Note: Scores are from White's perspective. Positive = White advantage, Negative = Black advantage. "Mate in X" means forced mate in X moves.)
-
-${tacticalInstruction}
-
-INSTRUCTIONS:
-1. ${evalInstruction}
-2. ${openingInstruction}
-3. ${tacticalInstruction ? 'If tactical opportunities were missed (see above), explain them in your style.' : ''}
-4. Use the FEN data and CURRENT PIECE POSITIONS above to understand exactly where all pieces are located on the board and verify positions before speaking.
-5. Respond in ${language}.
-
-React to this exchange as the player.
-            `;
-
-            await sendMessageToChat(prompt, true);
-        } catch (e) {
-            console.error(e);
-        } finally {
-            setIsLoading(false);
-            onAnalysisComplete();
-        }
-    }, [chatSession, userMove, computerMove, evalP0, evalP2, currentFen, language, openingData, missedTactics, playerColor, playerColorName, tutorColorName, onAnalysisComplete]);
-
-    useEffect(() => {
-        const debounceDelay = isReviewing ? 3000 : 0;
-        const timer = setTimeout(() => {
-            analyzeExchange();
-        }, debounceDelay);
-
-        return () => clearTimeout(timer);
-    }, [analyzeExchange, isReviewing]);
-
-    const sendMessageToChat = async (text: string, isSystemMessage: boolean = false) => {
+    const sendMessageToChat = useCallback(async (text: string, isSystemMessage: boolean = false) => {
         if (!chatSession) return;
+
         if (!isSystemMessage) {
             setMessages(prev => [...prev, { role: "user", text, timestamp: Date.now() }]);
         }
+
         setIsLoading(true);
+
         try {
+            // Determine mode based on user text if it's not a system message
             let finalPrompt = text;
             if (!isSystemMessage) {
                 const lower = text.toLowerCase();
+
+                // In tactical practice mode, use the solution move instead of Stockfish
                 const evaluation = tacticalPracticeMode ? null : await evaluateCurrentPosition();
                 const bestMoveForHint = tacticalPracticeMode
                     ? `${tacticalPracticeMode.solutionMove.from}${tacticalPracticeMode.solutionMove.to}${tacticalPracticeMode.solutionMove.promotion || ''}`
@@ -702,6 +623,20 @@ ${tacticalPracticeMode ? `- Explain how this move creates the ${tacticalPractice
 - Keep it concise but informative`;
 
                 } else if (lower.includes("hint") || lower.includes("tip") || lower.includes("help")) {
+                    // Calculate progress for multi-move puzzles
+                    let progressInfo = '';
+                    if (tacticalPracticeMode?.moves && tacticalPracticeMode.moves.length > 0) {
+                        const totalPlayerMoves = tacticalPracticeMode.moves.filter(m => m.player).length;
+                        const currentPlayerMove = Math.floor((tacticalPracticeMode.currentMoveIndex || 0) / 2) + 1;
+                        progressInfo = `\n- Puzzle Progress: Move ${currentPlayerMove} of ${totalPlayerMoves}`;
+
+                        // Show next expected move
+                        const nextMove = tacticalPracticeMode.moves[tacticalPracticeMode.currentMoveIndex || 0];
+                        if (nextMove && nextMove.player) {
+                            progressInfo += `\n- Next Move to Find: ${nextMove.san} (${nextMove.uci})`;
+                        }
+                    }
+
                     finalPrompt = `[SYSTEM TRIGGER: hint]
 
 TEACHING MODE ACTIVATED:
@@ -717,56 +652,320 @@ Current Position Data:
 - Evaluation: ${evaluation?.score ?? 'N/A'} centipawns ${evaluation?.score !== undefined ? (evaluation.score > 0 ? '(White is better)' : evaluation.score < 0 ? '(Black is better)' : '(Equal)') : ''}
 - Mate in: ${evaluation?.mate || 'None'}
 - Possible Openings: ${openingData && openingData.length > 0 ? openingData.map(o => `${o.name} (${o.eco})`).join(', ') : 'Unknown/Midgame'}
-${tacticalPracticeMode ? `- Tactical Pattern: ${tacticalPracticeMode.patternName}` : ''}
+${tacticalPracticeMode ? `- Tactical Pattern: ${tacticalPracticeMode.patternName}${progressInfo}` : ''}
 
 INSTRUCTIONS:
 - Give a HELPFUL hint without revealing the exact move (unless they specifically ask for it)
 - Point them toward what to look for: tactics, threats, piece placement, weaknesses
 ${tacticalPracticeMode ? `- Guide them to find the ${tacticalPracticeMode.patternName} pattern` : ''}
+${tacticalPracticeMode?.moves && tacticalPracticeMode.moves.length > 1 ? '- This is a multi-move puzzle - guide them through the sequence step by step' : ''}
+- Examples: "Look at your knight on f3", "There's a tactic involving the bishop and queen", "Your king is vulnerable"
 - Stay in your personality style, but be HELPFUL and EDUCATIONAL
 - Do NOT refuse to help - teaching is your core role
-- Keep it concise but encouraging`;
+- Do NOT just say the move - guide them to find it themselves`;
                 } else {
-                    finalPrompt = `User Question: ${text}
+                    // General question - include full position context
+                    finalPrompt = `
+User Question: ${text}
 
-(INTERNAL DATA FOR CONTEXT):
-- Current FEN: ${currentFen}
-- Piece Positions: ${generateHumanReadableBoard(currentFen)}
-- Current opening: ${openingData && openingData.length > 0 ? openingData[0].name : 'Unknown/Midgame'}
-- Evaluation: ${evaluation?.score ?? 'N/A'}
+Current Position Context:
+- FEN: ${currentFen}
+- Evaluation: ${evaluation?.score ?? 'N/A'} centipawns ${evaluation?.score !== undefined ? (evaluation.score > 0 ? '(White is better)' : evaluation.score < 0 ? '(Black is better)' : '(Equal)') : ''}
+- Best Move: ${bestMoveForHint ?? 'N/A'}
+- Mate in: ${evaluation?.mate || 'None'}
+- Possible Openings: ${openingData && openingData.length > 0 ? openingData.map(o => `${o.name} (${o.eco})`).join(', ') : 'Unknown/Midgame'}
+${tacticalPracticeMode ? `- Tactical Pattern: ${tacticalPracticeMode.patternName}` : ''}
 
 INSTRUCTIONS:
-- Answer the user's question in ${language.toUpperCase()} while staying strictly in character (${personality.name}).
-- Maintain your dual role as opponent and coach.
-- Use the provided FEN and piece list to ensure your comments about the board are accurate.
-- Be concise (2-4 sentences).`;
+- Answer the user's question based on the CURRENT position data above
+- Use the FEN to understand exactly where all pieces are located
+- Stay in character and maintain your personality
+- Be helpful and educational
+- Respond in ${language}`;
                 }
             }
+
             const result = await chatSession.sendMessage(finalPrompt);
             const response = await result.response;
             const textResponse = response.text();
-            addEntry({ type: 'tutor', action: isSystemMessage ? "Move Analysis" : "User Question", prompt: finalPrompt, response: textResponse, metadata: { fen: currentFen, personality: personality.name, language } });
+
+            // Track debug entry
+            const actionType = isSystemMessage ? "Move Analysis" :
+                              text.toLowerCase().includes("best move") ? "Best Move Request" :
+                              text.toLowerCase().includes("hint") ? "Hint Request" :
+                              "General Question";
+
+            addEntry({
+                type: 'tutor',
+                action: actionType,
+                prompt: finalPrompt,
+                response: textResponse,
+                metadata: {
+                    fen: currentFen,
+                    personality: personality.name,
+                    language,
+                }
+            });
+
             setMessages(prev => [...prev, { role: "model", text: textResponse, timestamp: Date.now() }]);
         } catch (error) {
             console.error("Chat Error:", error);
-            if (isGeminiError(error)) setGeminiError(parseGeminiError(error));
+
+            // Check if it's a Gemini API error
+            if (isGeminiError(error)) {
+                const errorInfo = parseGeminiError(error);
+                setGeminiError(errorInfo);
+
+                // Show a brief error message in chat
+                if (errorInfo.isQuotaError) {
+                    setMessages(prev => [...prev, {
+                        role: "model",
+                        text: "⚠️ API quota exceeded. Please check the error message for details.",
+                        timestamp: Date.now()
+                    }]);
+                } else {
+                    setMessages(prev => [...prev, {
+                        role: "model",
+                        text: "⚠️ I encountered an error. Please try again.",
+                        timestamp: Date.now()
+                    }]);
+                }
+            } else {
+                setMessages(prev => [...prev, {
+                    role: "model",
+                    text: "Sorry, I encountered an error.",
+                    timestamp: Date.now()
+                }]);
+            }
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [chatSession, evaluateCurrentPosition, currentFen, openingData, tacticalPracticeMode, personality.name, language, addEntry]);
+
+    // Stage 1: Automatic Reaction after COMPUTER Move (so we see the full exchange)
+    // Create a unique key for this exchange
+    const exchangeKey = userMove && computerMove ? `${userMove.lan}-${computerMove.lan}` : null;
+
+    // We trigger this when computerMove changes (meaning the exchange is complete)
+    const analyzeExchange = useCallback(async () => {
+        if (!chatSession || !userMove || !computerMove || !evalP0 || !evalP2 || !exchangeKey) return;
+
+        // Prevent double analysis
+        if (lastAnalyzedMoveRef.current === exchangeKey) return;
+
+        // Prevent double analysis - lock the move immediately
+        lastAnalyzedMoveRef.current = exchangeKey;
+
+        const playerColorName = playerColor === 'white' ? 'White' : 'Black';
+        const tutorColorName = playerColor === 'white' ? 'Black' : 'White';
+            
+            setIsLoading(true);
+            try {
+                // Calculate Evaluation Change (Delta)
+                // evalP0: Before User Move (White's perspective)
+                // evalP2: After Bot Move (White's perspective)
+                // Delta = evalP2 - evalP0
+
+                const preScore = evalP0.score;
+                const postScore = evalP2.score;
+                const preMate = evalP0.mate;
+                const postMate = evalP2.mate;
+
+                const delta = postScore - preScore;
+
+                // Format evaluation strings for display
+                let preEvalStr = "";
+                let postEvalStr = "";
+
+                if (preMate !== null) {
+                    preEvalStr = `Mate in ${preMate}`;
+                } else {
+                    preEvalStr = `${preScore} cp`;
+                }
+
+                if (postMate !== null) {
+                    postEvalStr = `Mate in ${postMate}`;
+                } else {
+                    postEvalStr = `${postScore} cp`;
+                }
+
+                // Check for significant change
+                let isSignificant = false;
+
+                if (preMate !== null || postMate !== null) {
+                    isSignificant = true; // Any mate involvement is significant
+                } else if (Math.abs(delta) >= 50) {
+                    isSignificant = true; // > 0.5 pawn change
+                }
+
+                let evalInstruction = "";
+                if (isSignificant) {
+                    if (preMate !== null || postMate !== null) {
+                        // Mate situation - explain the mate threat
+                        evalInstruction = `The evaluation involves MATE. You MUST comment on this critical situation and what caused it.`;
+                    } else {
+                        // Regular significant change
+                        evalInstruction = `The evaluation changed SIGNIFICANTLY (Delta: ${delta} cp). You MUST comment on this shift in power and what caused it.`;
+                    }
+                } else {
+                    evalInstruction = "The evaluation change is MINOR/INSIGNIFICANT. Do NOT mention the score, 'advantage', or who is winning. Focus ONLY on the strategic purpose of the moves.";
+                }
+
+                // Opening Instruction
+                let openingInstruction = "";
+                if (openingData && openingData.length > 0) {
+                    if (openingData.length === 1) {
+                        // Single opening identified
+                        const opening = openingData[0];
+                        openingInstruction = `
+OPENING IDENTIFIED: ${opening.name} (${opening.eco}).
+You can confidently reference this opening and its typical plans.
+You can use this metadata to explain the position:
+- Strengths (White): ${opening.meta?.strengths_white?.join(", ") || 'N/A'}
+- Weaknesses (White): ${opening.meta?.weaknesses_white?.join(", ") || 'N/A'}
+- Strengths (Black): ${opening.meta?.strengths_black?.join(", ") || 'N/A'}
+- Weaknesses (Black): ${opening.meta?.weaknesses_black?.join(", ") || 'N/A'}
+                        `;
+                    } else {
+                        // Multiple possible openings
+                        const openingList = openingData.map(o => `- ${o.name} (${o.eco})`).join('\n');
+                        openingInstruction = `
+OPENING CONTEXT:
+Multiple openings are possible from this position:
+${openingList}
+
+INSTRUCTIONS:
+- Do NOT claim a specific opening is being played yet
+- You may mention "this could lead to..." or "typical of openings like..."
+- Focus on general principles rather than specific opening theory
+                        `;
+                    }
+                } else {
+                    openingInstruction = "NO specific opening identified from database. Do NOT invent an opening name. Focus on the position.";
+                }
+
+                // Tactical Analysis Instruction
+                let tacticalInstruction = "";
+                if (missedTactics && missedTactics.length > 0) {
+                    const meaningfulTactics = filterMeaningfulTactics(missedTactics);
+                    if (meaningfulTactics.length > 0) {
+                        const tacticDescriptions = meaningfulTactics.map(t => {
+                            let desc = `- ${t.tactic_type.toUpperCase()}`;
+                            if (t.piece_roles && t.piece_roles.length > 0) {
+                                desc += ` involving ${t.piece_roles.join(' and ')}`;
+                            }
+                            if (t.material_delta) {
+                                desc += ` (worth ~${t.material_delta} centipawns)`;
+                            }
+                            if (t.affected_squares && t.affected_squares.length > 0) {
+                                desc += ` on squares ${t.affected_squares.join(', ')}`;
+                            }
+                            return desc;
+                        }).join('\n');
+
+                        tacticalInstruction = `
+TACTICAL OPPORTUNITY MISSED:
+The User just played ${userMove.san}, but there was a better tactical opportunity available.
+The analysis engine identified the following tactical themes that could have been exploited:
+
+${tacticDescriptions}
+
+IMPORTANT CONTEXT:
+- This tactical data comes from analyzing what WOULD HAVE HAPPENED if the User had played the best move instead.
+- You should explain this missed opportunity in your characteristic style.
+- Point out what the User could have done (e.g., "You missed a fork with Nf3!" or "There was a pin available with Bb5!").
+- Be educational but stay in character - if you're sarcastic, be sarcastic about the miss; if you're encouraging, be supportive.
+- Do NOT mention "the engine" or "the computer" - present this as YOUR analysis as the opponent/tutor.
+- Only mention this if the evaluation change was significant enough to warrant it.
+                        `;
+                    }
+                }
+
+                // Get FEN before user's move (need to undo both moves)
+                // We need to use the game object which has the full move history
+                const history = game.history({ verbose: true });
+
+                // Current position is after both user and computer moves
+                // To get FEN after user move, we need to undo the computer move
+                const tempGame1 = new Chess();
+                tempGame1.loadPgn(game.pgn());
+                tempGame1.undo(); // Undo computer move
+                const fenAfterUserMove = tempGame1.fen();
+
+                // To get FEN before user move, we need to undo both moves
+                const tempGame2 = new Chess();
+                tempGame2.loadPgn(game.pgn());
+                tempGame2.undo(); // Undo computer move
+                tempGame2.undo(); // Undo user move
+                const fenBeforeUserMove = tempGame2.fen();
+                
+                const currentPieceList = generateHumanReadableBoard(currentFen);
+
+                const prompt = `
+[SYSTEM TRIGGER: move_exchange]
+User (${playerColorName}) Move: ${userMove.san}
+My (${tutorColorName}) Reply: ${computerMove.san}
+
+Position Context:
+- FEN before user's move: ${fenBeforeUserMove}
+- FEN after user's move: ${fenAfterUserMove}
+- FEN after my reply (current position): ${currentFen}
+- CURRENT PIECE POSITIONS: ${currentPieceList}
+
+My Internal Thoughts (Data):
+- Pre-Eval (Before User Move): ${preEvalStr}
+- Post-Eval (After My Reply): ${postEvalStr}
+${preMate === null && postMate === null ? `- Delta: ${delta} cp` : ''}
+(Note: Scores are from White's perspective. Positive = White advantage, Negative = Black advantage. "Mate in X" means forced mate in X moves.)
+
+${tacticalInstruction}
+
+INSTRUCTIONS:
+1. ${evalInstruction}
+2. ${openingInstruction}
+3. ${tacticalInstruction ? 'If tactical opportunities were missed (see above), explain them in your style.' : ''}
+4. Use the FEN data and CURRENT PIECE POSITIONS above to understand exactly where all pieces are located on the board and verify positions before speaking.
+5. Respond in ${language}.
+
+React to this exchange as the player.
+                `;
+
+            await sendMessageToChat(prompt, true);
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setIsLoading(false);
+            onAnalysisComplete();
+        }
+    }, [chatSession, userMove, computerMove, evalP0, evalP2, exchangeKey, sendMessageToChat, onAnalysisComplete, playerColor, currentFen, language, openingData, missedTactics]);
+
+    useEffect(() => {
+        const debounceDelay = isReviewing ? 3000 : 0;
+        const timer = setTimeout(() => {
+            analyzeExchange();
+        }, debounceDelay);
+
+        return () => clearTimeout(timer);
+    }, [analyzeExchange, isReviewing]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!chatInput.trim() || !chatSession) return;
-        sendMessageToChat(chatInput);
-        setChatInput("");
-        setTimeout(() => onCheckComputerMove(), 100);
+        if (!input.trim() || !chatSession) return;
+        sendMessageToChat(input);
+        setInput("");
+
+        // Safety check: Ensure computer makes a move if it's their turn
+        // This handles race conditions where the player moved before evalP0 was ready
+        setTimeout(() => {
+            onCheckComputerMove();
+        }, 100);
     };
 
     useEffect(() => {
         const handleResignationMessage = async () => {
             if (!resignationContext || !chatSession) return;
             setIsLoading(true);
+
             try {
                 let evaluation = resignationContext.evaluation;
 
@@ -806,13 +1005,21 @@ INSTRUCTIONS:
                 setIsLoading(false);
             }
         };
+
         handleResignationMessage();
     }, [chatSession, language, personality.name, resignationContext?.trigger, resignationContext?.evaluation, resignationContext?.fen, resignationContext?.result, resignationContext?.winner, stockfish]);
 
+    // Opening Context Message (when transitioning from opening trainer to game mode)
     useEffect(() => {
         const handleOpeningContextMessage = async () => {
-            if (!openingContext || !chatSession || messages.length > 1) return;
+            if (!openingContext || !chatSession) return;
+
+            // Only send this message once when the context is first loaded
+            // We can check if messages array is still just the greeting
+            if (messages.length > 1) return;
+
             setIsLoading(true);
+
             try {
                 let evaluation = null;
                 if (stockfish) {
@@ -844,7 +1051,9 @@ INSTRUCTIONS:
 - Encourage them to apply what they've learned
 - Keep it concise (3-4 sentences max)
 - Respond in ${language.toUpperCase()}
-                `;
+- Stay in your personality (${personality.name})
+                `.trim();
+
                 await sendMessageToChat(prompt, true);
             } catch (error) {
                 console.error("Failed to send opening context message", error);
@@ -852,8 +1061,11 @@ INSTRUCTIONS:
                 setIsLoading(false);
             }
         };
+
         handleOpeningContextMessage();
     }, [chatSession, openingContext, stockfish, currentFen, language, personality.name]);
+
+    if (!apiKey) return null;
 
     return (
         <div className="bg-white dark:bg-gray-800 md:rounded-lg shadow-lg border-x-0 md:border border-gray-200 dark:border-gray-700 h-full md:h-[600px] flex flex-col relative overflow-hidden">
@@ -880,12 +1092,7 @@ INSTRUCTIONS:
                                 <UserIcon size={8} />
                             </div>
                         )}
-                        <div className={clsx(
-                            "p-2 px-3 rounded-lg text-base leading-snug",
-                            msg.role === "user"
-                                ? "bg-blue-600 text-white rounded-tr-none"
-                                : "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-tl-none prose prose-sm dark:prose-invert max-w-none w-full"
-                        )}>
+                        <div className={clsx("p-2 px-3 rounded-lg text-base leading-snug", msg.role === "user" ? "bg-blue-600 text-white rounded-tr-none" : "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-tl-none prose prose-sm dark:prose-invert max-w-none w-full")}>
                             {msg.role === "user" ? (
                                 <p className="whitespace-pre-wrap">{msg.text}</p>
                             ) : (
@@ -925,12 +1132,14 @@ INSTRUCTIONS:
                 <div className="w-full">
                     <div className="relative flex items-end">
                         <textarea
-                            value={chatInput}
-                            onChange={(e) => setChatInput(e.target.value)}
+                            value={input}
+                            onChange={(e) => setInput(e.target.value)}
                             onKeyDown={(e) => {
                                 if (e.key === 'Enter' && !e.shiftKey) {
                                     e.preventDefault();
-                                    if (chatInput.trim() && !isLoading) handleSubmit(e as unknown as React.FormEvent);
+                                    if (input.trim() && !isLoading) {
+                                        handleSubmit(e as any);
+                                    }
                                 }
                             }}
                             placeholder={t.tutor.askCoach}
@@ -940,15 +1149,20 @@ INSTRUCTIONS:
                             onFocus={handleFocus}
                             onBlur={handleBlur}
                         />
-                        <button type="submit" disabled={isLoading || !chatInput.trim()} className="absolute right-1.5 bottom-1.5 p-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <button type="submit" disabled={isLoading || !input.trim()} className="absolute right-1.5 bottom-1.5 p-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
                             <Send size={16} />
                         </button>
                     </div>
                 </div>
             </form>
 
+            {/* Gemini Error Modal */}
             {geminiError && (
-                <GeminiErrorModal error={geminiError} apiKeyInfo={getApiKeyInfo()} onClose={() => setGeminiError(null)} />
+                <GeminiErrorModal
+                    error={geminiError}
+                    apiKeyInfo={getApiKeyInfo()}
+                    onClose={() => setGeminiError(null)}
+                />
             )}
         </div>
     );
