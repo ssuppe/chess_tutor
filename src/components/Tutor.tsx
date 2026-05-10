@@ -287,7 +287,25 @@ CRITICAL RULES:
             setChatSession(session);
 
             // Get initial greeting in the selected language
-            const greetingPrompt = openingName
+            const history = game.history();
+            const isResumed = history.length > 0;
+            const currentPieceList = generateHumanReadableBoard(currentFen);
+
+            const greetingPrompt = isResumed
+                ? `We are resuming a chess game that is already in progress. 
+                
+CURRENT POSITION:
+- FEN: ${currentFen}
+- CURRENT PIECE POSITIONS: ${currentPieceList}
+- LAST MOVE PLAYED: ${history[history.length - 1]}
+
+INSTRUCTIONS:
+- Briefly acknowledge that we are continuing our game.
+- Refer to the current board state or the last move made.
+- Offer your services as my coach for the remainder of the match.
+- Do NOT greet me as if it's a new game.
+- Keep it to 2-3 sentences and respond in ${language}.`
+                : openingName
                 ? `Welcome the student to learn the ${openingName}.
 
 ${wikipediaSummary ? `OPENING CONTEXT (from Wikipedia):
