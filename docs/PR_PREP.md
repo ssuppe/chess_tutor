@@ -81,84 +81,37 @@ Rapidly navigating through move history (scrubbing) triggered instantaneous API 
 
 ---
 
-# Pull Request Preparation: High-Density UI Refactoring
+# Pull Request Preparation: Mobile UX & High-Density Gameplay
 
 ## Context
-Mobile users were experiencing excessive vertical scrolling during gameplay, often losing sight of the board when the AI Coach spoke. The UI also felt inconsistent, with bulky headers and redundant labels competing for screen real-estate.
+Mobile users faced significant ergonomic friction due to a vertical layout that required constant scrolling between the chessboard and the AI coach. The on-screen keyboard also frequently shifted the board off-screen, breaking the game's mental flow.
 
 ## Changes
 
-### 1. Minimalist Navigation & Breadcrumbs
-- **Standardized Navigation:** Replaced the global page header with a minimalist "Breadcrumb" row across **all pages** (Analysis, Settings, Learning Area, and Informational pages).
-- **Page Header Removal:** Removed the bulky site-wide header from active gameplay and analysis modes, reclaiming ~80px of vertical space.
-- **Concise Controls:** Converted the "Back to Menu" button into a subtle ghost-button with a smaller icon (14px) and text.
+### 1. Smart Split Architecture (Unified Pattern)
+- **Permanent Horizontal Split**: Replaced the long-scroll vertical layout with a stable 35/65 side-by-side split on mobile. This pattern was porting from the main Gameplay mode to both the **Analysis Page** and **Opening Trainer**.
+- **Adaptive Resizing**: Users can now **tap the board column** to toggle its width between **35% (Mini)** and **55% (Focus)** in all training modes.
+- **Interaction Overlay**: Implemented a transparent overlay over the board area to ensure taps are reliably caught without being swallowed by the chessboard component.
+- **Stable Visual Anchor**: The chessboard is now pinned to the left column, providing a constant view of the game state while chatting.
+- **Viewport Tracking**: Integrated the `window.visualViewport` API to track real-time available height. The UI now anchors to the `offsetTop` and uses precise pixel heights to prevent the browser from 'shifting' the board off-screen when the keyboard opens.
 
-### 2. High-Density Layout Standardization
-- **Responsive Padding:** Halved the board container padding on mobile (`p-4` -> `p-2`) to maximize the chessboard size.
-- **Utility UI Styling:** Unified all secondary labels, headers, and statistics to use a high-density `text-[10px]` uppercase, tracking-wider style.
-- **Compressed Controls:** Repositioned board controls (Undo, Resign, Level) to the top of the tile and shrunk captured piece icons to `text-xl` to keep them tightly anchored to the board.
-- **Refined Chat UI:** Increased chat bubbles to `92%` width, shrunk avatars to `24px`, and synchronized line-height (`leading-snug`) for better information density.
+### 2. AI Coach Intelligence Restoration
+- **Full Prompt Fidelity**: Restored the high-detail original system prompts (Move Help, Resignation, Opening Training) that had been accidentally shortened during UI refactoring.
+- **Tactical Oversight**: Re-implemented the `analyzeExchange` logic in `Tutor.tsx`, restoring the coach's ability to identify missed forks, pins, and skewers.
+- **Positional Grounding**: Integrated `generateHumanReadableBoard` across all system triggers, ensuring the coach maintains perfect awareness of piece locations to prevent hallucinations.
+- **Game Resumption**: Restored logic to detect existing game history, allowing the coach to greet players with a context-aware "continuation" message instead of a generic welcome.
 
-### 3. Integrated Utility Bar
-- **New Component:** Created `TopUtilityLinks.tsx` to house "Tip" and "GitHub" links in a minimalist format.
-- **Strategic Placement:** These links now appear only in management/setup views (Start Screen, Settings) and are hidden during active matches to maintain focus.
+### 3. High-Density UI Polish
+- **Minified Avatars**: Removed coach icons from individual bubbles and shrunk user avatars to `w-3 h-3` to reclaim horizontal space for text.
+- **Focus-Aware Density**: Implemented a minimalist 'Chatting with Coach' header and auto-hiding 'Quick Actions' (Hint/Best Move) when the input is focused, maximizing room for the conversation above the keyboard.
+- **Game Context Strip**: Clustered opponent material, horizontal Evaluation Bar, and Last Move labels into a high-density vertical strip beside the mini-board.
+- **Contrast Strategy**: Implemented dynamic backgrounds for captured piece trays to ensure 100% legibility across all themes.
 
----
+### 4. Technical Refinements
+- **Unified Navigation**: Standardized the "Back to Menu" button as a high-visibility text-link.
+- **Anti-Flicker Logic**: Muted CSS transitions and implemented `will-change: height, top` hints to ensure fluid keyboard animations.
+- **React Safety**: Wrapped `ReactMarkdown` in styled containers to resolve `className` deprecation warnings and ensure consistent typography.
 
-# Pull Request Preparation: AI Positional Integrity & Stability Suite
-
-## Context
-The AI Coach frequently "lost track" of piece positions during long games. Additionally, the application suffered from random "Invalid Move" crashes during history reconstruction and occasionally sent duplicate commentary bubbles.
-
-## Changes
-
-### 1. AI Positional Anchors (GROUNDING)
-- **Human-Readable Board Utility:** Implemented `generateHumanReadableBoard` in `src/lib/gameState.ts` which converts complex FEN strings into simple text lists (e.g., "White: King on e1, Knight on f3").
-- **Prompt Injection:** This list is now injected into **every** AI interaction as a "Source of Truth." The AI is explicitly instructed to verify piece locations against this list before speaking, effectively eliminating hallucinations.
-
-### 2. Architectural Stability Fixes
-- **Ref-to-State Migration:** Refactored the core board management in `ChessGame.tsx` from mutable `useRef` to reactive `useState`. This ensures the visual board and internal logic are always deterministically synchronized, fixing the "Invalid Move" crashes.
-- **Resumption Awareness:** Refactored PGN loading to happen during state initialization. The AI Tutor now detects resumed games and provides a specialized "Resume Greeting" that acknowledges the current board state instead of greeting as a new game.
-- **Commentary De-duplication:** Implemented immediate "Ref-locking" in `Tutor.tsx`. The moment an LLM call starts, a lock is placed to ignore all secondary triggers from React re-renders, ensuring "One Exchange = One Response."
-
-### 3. Type Safety & Lint Resolution
-- **Lint Cleanup:** Resolved over **40 critical React errors**, including cascading renders (setting state in useEffect without guards) and "accessing refs during render" violations.
-- **'any' Elimination:** Systematically replaced the `any` type with specific interfaces or `unknown` in `Tutor.tsx`, `OpeningTrainer.tsx`, and `geminiErrorHandler.ts` for professional-grade type safety.
-
-### 4. Testing
-- Updated analysis tests to support the new high-density breadcrumb labels and multi-element tactical badges.
-- **Final Result:** 100% pass rate across all **238 workspace tests**.
-
----
-
-# Pull Request Preparation: Move Square Highlighting
-
-## Context
-Users were having difficulty tracking moves made by the opponent (AI) and themselves, especially during rapid gameplay or historical navigation. The application lacked a visual "trail" showing the origin and destination of the most recent move.
-
-## Changes
-
-### 1. Centralized UI Styles & Utilities
-- **New Utility (`src/lib/chessStyles.ts`):** Created a centralized location for shared chessboard styles.
-- **Theme Unification:** Consolidated all hardcoded colors (`#779954`, `#e9edcc`) and animation settings into a global `CHESSBOARD_THEME` object.
-- **Robust Helper:** Implemented `getMoveHighlight()` which handles multiple move data formats including Move objects, coordinate objects, and raw UCI strings.
-
-### 2. Visibility & API Correctness
-- **API Resolution:** Corrected a critical mismatch with `react-chessboard` v5. Moves the highlighting prop from `customSquareStyles` (v4) to `squareStyles` and ensures it is correctly nested within the `options` object.
-- **Layering Guarantee:** Switched from `backgroundColor` to `inset boxShadow` for highlights. This ensures that the highlight renders "on top" of the square's opaque background and is not obscured by piece images or board themes.
-
-### 3. Application-Wide Integration
-- **Game Mode:** Added live highlighting for user and computer moves, with automatic clearing on "Undo" or "New Game."
-- **Analysis Mode:** Implemented history-aware highlighting that updates dynamically as the user navigates forward or backward through a game.
-- **Opening Trainer:** Added navigation-aware highlighting that stays synchronized with the user's current position in the repertoire.
-- **Tactical Practice:** Implemented highlighting for both the player's attempts and the AI's puzzle responses.
-
-### 4. Testing
-- **New Logic Tests:** Created `src/lib/__tests__/chessStyles.test.ts` with 100% coverage for the highlight generation logic.
-- **Enhanced UI Tests:** Created comprehensive move highlighting tests for `ChessGame` and `AnalysisPage` covering:
-    - Successful piece drops.
-    - Async pre-analysis safeguards.
-    - Multi-step history navigation.
-    - State resets (Undo).
-- **Final Result:** All **241 workspace tests** are passing.
-
+## Testing & Validation
+- **Multi-Mode Test Suite**: Verified stability with `MobileChatOverlay.test.tsx` (Gameplay), `page.test.tsx` (Analysis), and `Tutor.test.tsx`.
+- **Final Result**: All **247 workspace tests** are passing.

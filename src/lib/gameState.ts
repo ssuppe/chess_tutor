@@ -115,10 +115,7 @@ export function buildMoveHistoryItem(args: BuildMoveHistoryItemArgs): {
     };
 }
 
-/**
- * Converts a FEN string into a human-readable list of piece positions.
- * This is used to ground the LLM's positional awareness.
- */
+
 export function generateHumanReadableBoard(fen: string): string {
     const chess = new Chess(fen);
     const board = chess.board();
@@ -152,4 +149,3 @@ export function generateHumanReadableBoard(fen: string): string {
 
     return `White pieces: ${whitePieces.join(", ")}. Black pieces: ${blackPieces.join(", ")}.`;
 }
-

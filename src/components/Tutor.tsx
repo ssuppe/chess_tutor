@@ -39,6 +39,8 @@ interface TutorProps {
     playerColor: 'white' | 'black';
     onCheckComputerMove: () => void;
     onJumpToBoard?: () => void;
+    onChatFocus?: () => void;
+    onChatBlur?: () => void;
     isReviewing?: boolean;
     resignationContext?: {
         trigger: number;
@@ -102,13 +104,25 @@ interface Message {
     timestamp: number;
 }
 
-export function Tutor({ game, currentFen, userMove, computerMove, stockfish, evalP0, evalP2, openingData, missedTactics, onAnalysisComplete, apiKey, personality, language, playerColor, onCheckComputerMove, isReviewing, resignationContext, openingContext, tacticalPracticeMode, openingPracticeMode, onJumpToBoard }: TutorProps) {
+export function Tutor({ game, currentFen, userMove, computerMove, stockfish, evalP0, evalP2, openingData, missedTactics, onAnalysisComplete, apiKey, personality, language, playerColor, onCheckComputerMove, isReviewing, resignationContext, openingContext, tacticalPracticeMode, openingPracticeMode, onJumpToBoard, onChatFocus, onChatBlur }: TutorProps) {
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState("");
+    const [isFocused, setIsFocused] = useState(false);
+
+    const handleFocus = () => {
+        setIsFocused(true);
+        onChatFocus?.();
+    };
+
+    const handleBlur = () => {
+        setIsFocused(false);
+        onChatBlur?.();
+    };
     const [isLoading, setIsLoading] = useState(false);
     const [chatSession, setChatSession] = useState<ChatSession | null>(null);
     const [geminiError, setGeminiError] = useState<GeminiErrorInfo | null>(null);
     const messagesContainerRef = useRef<HTMLDivElement>(null);
+    const messagesEndRef = useRef<HTMLDivElement>(null);
     const { addEntry } = useDebug();
 
     const t = useTranslation(language);
@@ -1054,97 +1068,68 @@ INSTRUCTIONS:
     if (!apiKey) return null;
 
     return (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 h-[400px] md:h-[600px] flex flex-col">
+        <div className="bg-white dark:bg-gray-800 md:rounded-lg shadow-lg border-x-0 md:border border-gray-200 dark:border-gray-700 h-full md:h-[600px] flex flex-col relative overflow-hidden">
+            {/* Mobile Drag Handle */}
+            <div className="md:hidden flex justify-center pt-2 pb-1">
+                <div className="w-10 h-1 bg-gray-300 dark:bg-gray-600 rounded-full" />
+            </div>
+
             {/* Header */}
-            <div className="p-1 px-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between bg-gray-50 dark:bg-gray-900 rounded-t-lg">
+            <div className="p-1 px-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between bg-gray-50 dark:bg-gray-900 md:rounded-t-lg flex-shrink-0">
                 <div className="flex items-center gap-1.5">
-                    <div className="text-base">{personality.image}</div>
-                    <h2 className="font-medium text-xs text-gray-500 dark:text-gray-400 leading-none">{personality.name}</h2>
+                    {!isFocused && <div className="text-base">{personality.image}</div>}
+                    {!isFocused && <h2 className="font-medium text-xs text-gray-500 dark:text-gray-400 leading-none">{personality.name}</h2>}
+                    {isFocused && <h2 className="font-medium text-[10px] text-blue-600 dark:text-blue-400 leading-none uppercase tracking-wider">Chatting with Coach</h2>}
                 </div>
-                {onJumpToBoard && (
-                    <button
-                        onClick={onJumpToBoard}
-                        className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
-                        title="Jump to board"
-                    >
-                        <ArrowUp size={12} />
-                    </button>
-                )}
             </div>
 
             {/* Messages Area */}
-            <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-2 md:p-4 space-y-3">
+            <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-2 pb-24 md:p-4 space-y-3">
                 {messages.map((msg, idx) => (
-                    <div key={idx} className={clsx(
-                        "flex gap-2 max-w-[92%]",
-                        msg.role === "user" ? "ml-auto flex-row-reverse" : ""
-                    )}>
-                        <div className={clsx(
-                            "w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-xs",
-                            msg.role === "user" ? "bg-blue-600 text-white" : "bg-gray-200 dark:bg-gray-700"
-                        )}>
-                            {msg.role === "user" ? <UserIcon size={12} /> : personality.image}
-                        </div>
-                        <div className={clsx(
-                            "p-2 px-3 rounded-lg text-base leading-snug",
-                            msg.role === "user"
-                                ? "bg-blue-600 text-white rounded-tr-none"
-                                : "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-tl-none prose prose-sm dark:prose-invert max-w-none"
-                        )}>
+                    <div key={idx} className={clsx("flex gap-2 max-w-[92%]", msg.role === "user" ? "ml-auto flex-row-reverse" : "")}>
+                        {msg.role === "user" && (
+                            <div className="w-3 h-3 rounded-full bg-blue-600 text-white flex items-center justify-center flex-shrink-0 text-[6px]">
+                                <UserIcon size={8} />
+                            </div>
+                        )}
+                        <div className={clsx("p-2 px-3 rounded-lg text-base leading-snug", msg.role === "user" ? "bg-blue-600 text-white rounded-tr-none" : "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-tl-none prose prose-sm dark:prose-invert max-w-none w-full")}>
                             {msg.role === "user" ? (
                                 <p className="whitespace-pre-wrap">{msg.text}</p>
                             ) : (
-                                <ReactMarkdown
-                                    components={{
-                                        p: ({ children }) => <p className="mb-1 last:mb-0 leading-snug">{children}</p>,
-                                        strong: ({ children }) => <strong className="font-bold text-gray-900 dark:text-white">{children}</strong>,
-                                        em: ({ children }) => <em className="italic">{children}</em>,
-                                        ul: ({ children }) => <ul className="list-disc list-inside mb-1 last:mb-0 space-y-0.5">{children}</ul>,
-                                        ol: ({ children }) => <ol className="list-decimal list-inside mb-1 last:mb-0 space-y-0.5">{children}</ol>,
-                                        li: ({ children }) => <li className="ml-2">{children}</li>,
-                                        code: ({ children }) => <code className="bg-gray-200 dark:bg-gray-600 px-1 py-0.5 rounded text-sm font-mono">{children}</code>,
-                                        h1: ({ children }) => <h1 className="text-lg font-bold mb-1">{children}</h1>,
-                                        h2: ({ children }) => <h2 className="text-base font-bold mb-1">{children}</h2>,
-                                        h3: ({ children }) => <h3 className="text-sm font-bold mb-0.5">{children}</h3>,
-                                    }}
-                                >
-                                    {msg.text}
-                                </ReactMarkdown>
+                                <div className="prose dark:prose-invert prose-xs leading-relaxed break-words">
+                                    <ReactMarkdown>{msg.text}</ReactMarkdown>
+                                </div>
                             )}
                         </div>
                     </div>
                 ))}
                 {isLoading && (
                     <div className="flex gap-2">
-                        <div className="w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center flex-shrink-0 text-xs">
-                            {personality.image}
-                        </div>
                         <div className="bg-gray-100 dark:bg-gray-700 p-2 px-3 rounded-lg rounded-tl-none flex items-center">
                             <Loader2 className="animate-spin text-gray-500" size={14} />
                         </div>
                     </div>
                 )}
+                <div ref={messagesEndRef} />
             </div>
 
-            {/* Quick Actions */}
-            <div className="px-2 md:px-4 py-1.5 flex gap-2 overflow-x-auto">
-                <button
-                    onClick={() => sendMessageToChat("Give me a hint")}
-                    className="flex items-center gap-1 px-3 py-1 text-xs bg-yellow-100 text-yellow-800 rounded-full hover:bg-yellow-200 dark:bg-yellow-900 dark:text-yellow-200 flex-shrink-0"
-                >
-                    <Lightbulb size={12} /> {t.tutor.hint}
-                </button>
-                <button
-                    onClick={() => sendMessageToChat("What is the best move?")}
-                    className="flex items-center gap-1 px-3 py-1 text-xs bg-green-100 text-green-800 rounded-full hover:bg-green-200 dark:bg-green-900 dark:text-green-200 flex-shrink-0"
-                >
-                    <Trophy size={12} /> {t.tutor.bestMove}
-                </button>
-            </div>
+            {/* Quick Actions - Hidden when typing */}
+            {!isFocused && (
+                <div className="px-3 py-1 flex flex-wrap gap-1.5 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border-t border-gray-100 dark:border-gray-700/50 flex-shrink-0">
+                    <button onClick={() => sendMessageToChat("Give me a hint")} className="flex items-center gap-1 px-2 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded text-[10px] font-medium border border-blue-100 dark:border-blue-900/40 shadow-sm transition-all"><Lightbulb size={12} /> Hint</button>
+                    <button onClick={() => sendMessageToChat("What is the best move?")} className="flex items-center gap-1 px-2 py-1 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded text-[10px] font-medium border border-green-100 dark:border-green-900/40 shadow-sm transition-all"><Trophy size={12} /> Best Move</button>
+                </div>
+            )}
 
             {/* Input Area */}
-            <form onSubmit={handleSubmit} className="p-2 md:p-4 border-t border-gray-200 dark:border-gray-700">
-                <div className="mx-8">
+            <form 
+                onSubmit={handleSubmit} 
+                className={clsx(
+                    "border-t border-gray-200 dark:border-gray-700 transition-all duration-200 bg-gray-50 dark:bg-gray-900 flex-shrink-0",
+                    isFocused ? "p-0 pb-0" : "p-2 md:p-4 pb-safe"
+                )}
+            >
+                <div className="w-full">
                     <div className="relative flex items-end">
                         <textarea
                             value={input}
@@ -1158,15 +1143,13 @@ INSTRUCTIONS:
                                 }
                             }}
                             placeholder={t.tutor.askCoach}
-                            rows={3}
-                            className="flex-1 p-1.5 px-3 pr-10 border rounded-lg dark:bg-gray-700 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-base resize-none"
+                            rows={isFocused ? 2 : 3}
+                            className="flex-1 p-2 px-3 pr-10 border-x-0 md:border border-gray-200 dark:border-gray-700 md:rounded-lg dark:bg-gray-800 focus:outline-none focus:ring-0 md:focus:ring-2 focus:ring-blue-500 text-base resize-none transition-all duration-200"
                             disabled={isLoading}
+                            onFocus={handleFocus}
+                            onBlur={handleBlur}
                         />
-                        <button
-                            type="submit"
-                            disabled={isLoading || !input.trim()}
-                            className="absolute right-1.5 bottom-1.5 p-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
+                        <button type="submit" disabled={isLoading || !input.trim()} className="absolute right-1.5 bottom-1.5 p-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
                             <Send size={16} />
                         </button>
                     </div>
