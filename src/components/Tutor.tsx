@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { StockfishEvaluation } from "@/lib/stockfish";
 import { ChessEngine } from "@/lib/engine";
 import { Chess, Move } from "chess.js";
@@ -17,6 +17,7 @@ import { SupportedLanguage } from '@/lib/i18n/translations';
 import { DetectedTactic, filterMeaningfulTactics } from '@/lib/tacticDetection';
 import { useDebug } from '@/contexts/DebugContext';
 import { MoveHistoryItem } from './GameOverModal';
+import { generateHumanReadableBoard } from '@/lib/gameState';
 import { parseGeminiError, GeminiErrorInfo, isGeminiError } from '@/lib/geminiErrorHandler';
 import { GeminiErrorModal } from './GeminiErrorModal';
 import { getApiKeyInfo } from '@/lib/apiKeyHelper';
@@ -415,6 +416,7 @@ Move category: ${currentFeedback?.category || 'unknown'}
 Position status: ${isInTheory ? 'In theory' : 'Deviated from repertoire'}` : ''}
 I just replied with: ${lastTutorMoveSan}
 Current position FEN: ${currentFen}
+CURRENT PIECE POSITIONS: ${generateHumanReadableBoard(currentFen)}
 Progress: ${currentMoveIndex}/${repertoireMovesLength} moves in ${openingName}
 
 INSTRUCTIONS:
@@ -440,6 +442,7 @@ ${userJustMoved
     : `- Explain WHY I played my move (${lastTutorMoveSan}) and what it accomplishes
 - Mention the key goal for ${playerColorName} in this stage of the ${openingName}`
 }
+- Use the CURRENT PIECE POSITIONS list to verify exactly where all pieces are before you speak.
 - Keep it conversational, in character, and concise (3-5 sentences max).
 - Stay in ${language}.
 `.trim();
@@ -468,6 +471,7 @@ ${variationInfo.isEndOfLine ? '- This is the end of this variation line' : ''}` 
 The student just played: ${lastUserMoveSan}
 Move category: ${currentFeedback?.category || 'unknown'}
 Position status: ${isInTheory ? 'In theory' : 'Deviated from repertoire'}
+CURRENT PIECE POSITIONS: ${generateHumanReadableBoard(currentFen)}
 ${currentFeedback?.evaluationChange !== undefined ? `Evaluation change: ${currentFeedback.evaluationChange.toFixed(2)}` : ''}
 ${variationContext}
 
@@ -478,6 +482,7 @@ ${isInTheory
     : `- The student deviated from ${openingName} theory.
 - Gently point out what the repertoire move was (${currentFeedback?.theoreticalAlternatives?.join(' or ') || 'the main line'}).
 - Explain why the theory move is preferred and ask if they want to try again.`}
+- Use the CURRENT PIECE POSITIONS list to verify exactly where all pieces are before you speak.
 - Keep it concise (2-3 sentences max).
 - Stay in ${language} and maintain your personality.
 `.trim();
@@ -516,6 +521,127 @@ ${isInTheory
         }
     };
 
+    const analyzeExchange = useCallback(async () => {
+        if (!chatSession || !userMove || !computerMove || !evalP0 || !evalP2) return;
+
+        const exchangeKey = `${userMove.san}-${computerMove.san}-${currentFen}`;
+        if (lastAnalyzedMoveRef.current === exchangeKey) return;
+        lastAnalyzedMoveRef.current = exchangeKey;
+
+        setIsLoading(true);
+
+        try {
+            const preEval = evalP0.score;
+            const postEval = evalP2.score;
+            const preMate = evalP0.mate;
+            const postMate = evalP2.mate;
+
+            const delta = postEval - preEval;
+
+            let evalInstruction = "";
+            let preEvalStr = preMate !== null ? `Mate in ${preMate}` : `${preEval} cp`;
+            let postEvalStr = postMate !== null ? `Mate in ${postMate}` : `${postEval} cp`;
+
+            if (Math.abs(delta) < 30) {
+                evalInstruction = "The evaluation is stable. React as if the game is progressing normally.";
+            } else if (delta > 100) {
+                evalInstruction = playerColor === 'white' 
+                    ? "The position has improved significantly for the User. Acknowledge their strong play, even if you're frustrated." 
+                    : "The position has improved for me. Be confident and perhaps a bit boastful.";
+            } else if (delta < -100) {
+                evalInstruction = playerColor === 'white'
+                    ? "The position has worsened for the User. Point out their mistake and offer a hint about what went wrong."
+                    : "The position has worsened for me. Be frustrated or worried about the User's counterplay.";
+            }
+
+            let openingInstruction = "";
+            if (openingData && openingData.length > 0) {
+                openingInstruction = `We are in the ${openingData[0].name} (${openingData[0].eco}) opening. Briefly mention the opening context if appropriate.`;
+            }
+
+            let tacticalInstruction = "";
+            if (missedTactics && missedTactics.length > 0) {
+                const meaningfulTactics = filterMeaningfulTactics(missedTactics);
+                if (meaningfulTactics.length > 0) {
+                    const tacticDescriptions = meaningfulTactics.map(t => {
+                        let desc = `- Theme: ${t.tactic_name.replace(/_/g, ' ')}`;
+                        if (t.piece_roles && t.piece_roles.length > 0) {
+                            desc += ` involving ${t.piece_roles.join(' and ')}`;
+                        }
+                        if (t.material_delta) {
+                            desc += ` (worth ~${t.material_delta} centipawns)`;
+                        }
+                        if (t.affected_squares && t.affected_squares.length > 0) {
+                            desc += ` on squares ${t.affected_squares.join(', ')}`;
+                        }
+                        return desc;
+                    }).join('\n');
+
+                    tacticalInstruction = `
+TACTICAL OPPORTUNITY MISSED:
+The User just played ${userMove.san}, but there was a better tactical opportunity available.
+The analysis engine identified the following tactical themes that could have been exploited:
+
+${tacticDescriptions}
+
+IMPORTANT CONTEXT:
+- This tactical data comes from analyzing what WOULD HAVE HAPPENED if the User had played the best move instead.
+- You should explain this missed opportunity in your characteristic style.
+- Point out what the User could have done (e.g., "You missed a fork with Nf3!" or "There was a pin available with Bb5!").
+- Be educational but stay in character - if you're sarcastic, be sarcastic about the miss; if you're encouraging, be supportive.
+- Do NOT mention "the engine" or "the computer" - present this as YOUR analysis as the opponent/tutor.
+- Only mention this if the evaluation change was significant enough to warrant it.
+                    `;
+                }
+            }
+
+            const currentPieceList = generateHumanReadableBoard(currentFen);
+
+            const prompt = `
+[SYSTEM TRIGGER: move_exchange]
+User (${playerColorName}) Move: ${userMove.san}
+My (${tutorColorName}) Reply: ${computerMove.san}
+
+Position Context:
+- FEN after my reply (current position): ${currentFen}
+- CURRENT PIECE POSITIONS: ${currentPieceList}
+
+My Internal Thoughts (Data):
+- Pre-Eval (Before User Move): ${preEvalStr}
+- Post-Eval (After My Reply): ${postEvalStr}
+${preMate === null && postMate === null ? `- Delta: ${delta} cp` : ''}
+(Note: Scores are from White's perspective. Positive = White advantage, Negative = Black advantage. "Mate in X" means forced mate in X moves.)
+
+${tacticalInstruction}
+
+INSTRUCTIONS:
+1. ${evalInstruction}
+2. ${openingInstruction}
+3. ${tacticalInstruction ? 'If tactical opportunities were missed (see above), explain them in your style.' : ''}
+4. Use the FEN data and CURRENT PIECE POSITIONS above to understand exactly where all pieces are located on the board and verify positions before speaking.
+5. Respond in ${language}.
+
+React to this exchange as the player.
+            `;
+
+            await sendMessageToChat(prompt, true);
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setIsLoading(false);
+            onAnalysisComplete();
+        }
+    }, [chatSession, userMove, computerMove, evalP0, evalP2, currentFen, language, openingData, missedTactics, playerColor, playerColorName, tutorColorName, onAnalysisComplete]);
+
+    useEffect(() => {
+        const debounceDelay = isReviewing ? 3000 : 0;
+        const timer = setTimeout(() => {
+            analyzeExchange();
+        }, debounceDelay);
+
+        return () => clearTimeout(timer);
+    }, [analyzeExchange, isReviewing]);
+
     const sendMessageToChat = async (text: string, isSystemMessage: boolean = false) => {
         if (!chatSession) return;
         if (!isSystemMessage) {
@@ -532,11 +658,70 @@ ${isInTheory
                     : evaluation?.bestMove;
 
                 if (lower.includes("best move") || lower.includes("solution") || lower.includes("tell me")) {
-                    finalPrompt = `[SYSTEM TRIGGER: exact_move]... (TEACHING MODE instructions) ... User Question: ${text} ... position data ...`;
+                    finalPrompt = `[SYSTEM TRIGGER: exact_move]
+
+TEACHING MODE ACTIVATED:
+The User is asking for the exact best move. This is a learning moment.
+As their TUTOR, you MUST help them - this is your primary purpose.
+Even though you are their opponent, teaching them is more important than hiding information.
+
+User Question: ${text}
+
+Current Position Data:
+- FEN: ${currentFen}
+- Best Move: ${bestMoveForHint || 'N/A'}
+- Evaluation: ${evaluation?.score ?? 'N/A'} centipawns ${evaluation?.score !== undefined ? (evaluation.score > 0 ? '(White is better)' : evaluation.score < 0 ? '(Black is better)' : '(Equal)') : ''}
+- Mate in: ${evaluation?.mate || 'None'}
+- Possible Openings: ${openingData && openingData.length > 0 ? openingData.map(o => `${o.name} (${o.eco})`).join(', ') : 'Unknown/Midgame'}
+${tacticalPracticeMode ? `- Tactical Pattern: ${tacticalPracticeMode.patternName}` : ''}
+
+INSTRUCTIONS:
+- Tell them the best move clearly (e.g., "The best move is e2-e4" or "You should play Nf3")
+- Explain WHY it's the best move (tactics, threats, positional ideas)
+${tacticalPracticeMode ? `- Explain how this move creates the ${tacticalPracticeMode.patternName} pattern` : ''}
+- Stay in your personality style, but be HELPFUL and EDUCATIONAL
+- Do NOT refuse to help - teaching is your core role
+- Keep it concise but informative`;
+
                 } else if (lower.includes("hint") || lower.includes("tip") || lower.includes("help")) {
-                    finalPrompt = `[SYSTEM TRIGGER: hint]... (HINT MODE instructions) ... User Question: ${text} ... position data ...`;
+                    finalPrompt = `[SYSTEM TRIGGER: hint]
+
+TEACHING MODE ACTIVATED:
+The User is asking for a hint. This is a learning moment.
+As their TUTOR, you MUST help them - this is your primary purpose.
+Even though you are their opponent, teaching them is more important than winning.
+
+User Question: ${text}
+
+Current Position Data:
+- FEN: ${currentFen}
+- Best Move: ${bestMoveForHint || 'N/A'}
+- Evaluation: ${evaluation?.score ?? 'N/A'} centipawns ${evaluation?.score !== undefined ? (evaluation.score > 0 ? '(White is better)' : evaluation.score < 0 ? '(Black is better)' : '(Equal)') : ''}
+- Mate in: ${evaluation?.mate || 'None'}
+- Possible Openings: ${openingData && openingData.length > 0 ? openingData.map(o => `${o.name} (${o.eco})`).join(', ') : 'Unknown/Midgame'}
+${tacticalPracticeMode ? `- Tactical Pattern: ${tacticalPracticeMode.patternName}` : ''}
+
+INSTRUCTIONS:
+- Give a HELPFUL hint without revealing the exact move (unless they specifically ask for it)
+- Point them toward what to look for: tactics, threats, piece placement, weaknesses
+${tacticalPracticeMode ? `- Guide them to find the ${tacticalPracticeMode.patternName} pattern` : ''}
+- Stay in your personality style, but be HELPFUL and EDUCATIONAL
+- Do NOT refuse to help - teaching is your core role
+- Keep it concise but encouraging`;
                 } else {
-                    finalPrompt = `User Question: ${text} ... (GENERAL instructions) ...`;
+                    finalPrompt = `User Question: ${text}
+
+(INTERNAL DATA FOR CONTEXT):
+- Current FEN: ${currentFen}
+- Piece Positions: ${generateHumanReadableBoard(currentFen)}
+- Current opening: ${openingData && openingData.length > 0 ? openingData[0].name : 'Unknown/Midgame'}
+- Evaluation: ${evaluation?.score ?? 'N/A'}
+
+INSTRUCTIONS:
+- Answer the user's question in ${language.toUpperCase()} while staying strictly in character (${personality.name}).
+- Maintain your dual role as opponent and coach.
+- Use the provided FEN and piece list to ensure your comments about the board are accurate.
+- Be concise (2-4 sentences).`;
                 }
             }
             const result = await chatSession.sendMessage(finalPrompt);
@@ -566,9 +751,36 @@ ${isInTheory
             setIsLoading(true);
             try {
                 let evaluation = resignationContext.evaluation;
-                if (!evaluation && stockfish) evaluation = await stockfish.evaluate(resignationContext.fen, 15);
+
+                if (!evaluation && stockfish) {
+                    evaluation = await stockfish.evaluate(resignationContext.fen, 15);
+                }
+
                 const transcript = messages.map(msg => `${msg.role === "user" ? "User" : personality.name}: ${msg.text}`).join("\n");
-                const prompt = `[SYSTEM TRIGGER: resignation] ... RESULT: ${resignationContext.result} ... EVAL: ... TRANSCRIPT: ${transcript} ... INSTRUCTIONS ...`;
+                const currentPieceList = generateHumanReadableBoard(resignationContext.fen);
+                const whiteEval = evaluation ? `${evaluation.score} cp${evaluation.mate ? ` (mate in ${evaluation.mate})` : ''}` : "N/A";
+                const blackEval = evaluation ? `${-evaluation.score} cp${evaluation.mate ? ` (mate in ${-evaluation.mate})` : ''}` : "N/A";
+
+                const prompt = `
+[SYSTEM TRIGGER: resignation]
+The user just resigned. Provide a final, in-character message that acknowledges the resignation and offers a brief next step.
+
+RESULT: ${resignationContext.result} (${resignationContext.winner})
+CURRENT POSITION FEN: ${resignationContext.fen}
+CURRENT PIECE POSITIONS: ${currentPieceList}
+ENGINE EVALUATION: White ${whiteEval}, Black ${blackEval}
+
+RECENT CONVERSATION:
+${transcript || 'No prior conversation.'}
+
+INSTRUCTIONS:
+- Respond in ${language.toUpperCase()} and stay true to your personality (${personality.name}).
+- React naturally to the resignation (sarcastic, encouraging, etc. based on personality).
+- Offer a quick suggestion: either invite a rematch or suggest analyzing the game.
+- Use the CURRENT PIECE POSITIONS to understand exactly how the game ended.
+- Keep it concise (2-3 sentences).
+                `;
+
                 await sendMessageToChat(prompt, true);
             } catch (error) {
                 console.error("Failed to send resignation message", error);
@@ -585,8 +797,36 @@ ${isInTheory
             setIsLoading(true);
             try {
                 let evaluation = null;
-                if (stockfish) evaluation = await stockfish.evaluate(currentFen, 15);
-                const prompt = `[SYSTEM TRIGGER: opening_training_transition] ... OPENING: ${openingContext.openingName} ... INSTRUCTIONS ...`;
+                if (stockfish) {
+                    evaluation = await stockfish.evaluate(currentFen, 15);
+                }
+
+                const whiteEval = evaluation ? `${evaluation.score} cp${evaluation.mate ? ` (mate in ${evaluation.mate})` : ''}` : "N/A";
+                const blackEval = evaluation ? `${-evaluation.score} cp${evaluation.mate ? ` (mate in ${-evaluation.mate})` : ''}` : "N/A";
+
+                const prompt = `
+[SYSTEM TRIGGER: opening_training_transition]
+The student has just transitioned from opening training to a real game.
+
+OPENING TRAINING CONTEXT:
+- Opening Studied: ${openingContext.openingName} (${openingContext.openingEco})
+- Moves Completed in Training: ${openingContext.movesCompleted}
+${openingContext.wikipediaSummary ? `- Opening Background: ${openingContext.wikipediaSummary}` : ''}
+
+CURRENT POSITION:
+- FEN: ${currentFen}
+- CURRENT PIECE POSITIONS: ${generateHumanReadableBoard(currentFen)}
+- ENGINE EVALUATION: White ${whiteEval}, Black ${blackEval}
+
+INSTRUCTIONS:
+- Welcome the student to the game continuation
+- Acknowledge that they've studied the ${openingContext.openingName} up to move ${openingContext.movesCompleted}
+- Use the CURRENT PIECE POSITIONS to understand the current tactical landscape.
+- Briefly mention what to focus on next (based on the opening's typical plans)
+- Encourage them to apply what they've learned
+- Keep it concise (3-4 sentences max)
+- Respond in ${language.toUpperCase()}
+                `;
                 await sendMessageToChat(prompt, true);
             } catch (error) {
                 console.error("Failed to send opening context message", error);
