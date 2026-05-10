@@ -81,26 +81,50 @@ Rapidly navigating through move history (scrubbing) triggered instantaneous API 
 
 ---
 
-# Pull Request Preparation: Analysis Mobile Layout Improvements
+# Pull Request Preparation: High-Density UI Refactoring
 
 ## Context
-The game analysis page on mobile devices had a suboptimal layout where technical "Position Analysis" took precedence over the "AI Analysis" (coach commentary). Additionally, the "Play from here" button was located below the board, requiring scrolling and cluttering the main interaction area.
+Mobile users were experiencing excessive vertical scrolling during gameplay, often losing sight of the board when the AI Coach spoke. The UI also felt inconsistent, with bulky headers and redundant labels competing for screen real-estate.
 
 ## Changes
 
-### 1. Mobile-First Layout Reordering
-- **AI-First Priority:** Swapped the vertical order of the Analysis Tiles on mobile. The **AI Analysis** (coach commentary) now appears above the **Position Analysis** (technical stats) to prioritize the "Tutor" experience on smaller screens.
-- **Responsive Grid:** Used Tailwind `order` classes to maintain the side-by-side layout on desktop while controlling the stacking order on mobile.
+### 1. Minimalist Navigation & Breadcrumbs
+- **Standardized Navigation:** Replaced the global page header with a minimalist "Breadcrumb" row across **all pages** (Analysis, Settings, Learning Area, and Informational pages).
+- **Page Header Removal:** Removed the bulky site-wide header from active gameplay and analysis modes, reclaiming ~80px of vertical space.
+- **Concise Controls:** Converted the "Back to Menu" button into a subtle ghost-button with a smaller icon (14px) and text.
 
-### 2. Header Interaction Improvements
-- **Play Button Relocation:** Moved the "Play from here" button from below the chessboard to the analysis header (top-right), placing it next to the orientation selector.
-- **Label Simplification:** Shortened the button label to **"Play"** to save horizontal space while retaining its clear intent via the `PlayCircle` icon.
-- **Consistency:** The "Load New Game" button was also moved to the header, centralizing all game-level actions in one row.
+### 2. High-Density Layout Standardization
+- **Responsive Padding:** Halved the board container padding on mobile (`p-4` -> `p-2`) to maximize the chessboard size.
+- **Utility UI Styling:** Unified all secondary labels, headers, and statistics to use a high-density `text-[10px]` uppercase, tracking-wider style.
+- **Compressed Controls:** Repositioned board controls (Undo, Resign, Level) to the top of the tile and shrunk captured piece icons to `text-xl` to keep them tightly anchored to the board.
+- **Refined Chat UI:** Increased chat bubbles to `92%` width, shrunk avatars to `24px`, and synchronized line-height (`leading-snug`) for better information density.
 
-### 3. UI Refinements
-- **Icon Visibility:** Ensured that both "Load New Game" and "Play" buttons include their descriptive text alongside icons for accessibility and clarity.
-- **Orientation Select:** Positioned the board orientation selector (White/Black) as the rightmost element in the action row for easy thumb access.
+### 3. Integrated Utility Bar
+- **New Component:** Created `TopUtilityLinks.tsx` to house "Tip" and "GitHub" links in a minimalist format.
+- **Strategic Placement:** These links now appear only in management/setup views (Start Screen, Settings) and are hidden during active matches to maintain focus.
 
-### 4. Testing & Validation
-- Verified the layout across multiple breakpoints using browser developer tools (Mobile S/M/L and Desktop).
-- Confirmed that "Play" functionality still correctly triggers the game setup modal and transition to gameplay.
+---
+
+# Pull Request Preparation: AI Positional Integrity & Stability Suite
+
+## Context
+The AI Coach frequently "lost track" of piece positions during long games. Additionally, the application suffered from random "Invalid Move" crashes during history reconstruction and occasionally sent duplicate commentary bubbles.
+
+## Changes
+
+### 1. AI Positional Anchors (GROUNDING)
+- **Human-Readable Board Utility:** Implemented `generateHumanReadableBoard` in `src/lib/gameState.ts` which converts complex FEN strings into simple text lists (e.g., "White: King on e1, Knight on f3").
+- **Prompt Injection:** This list is now injected into **every** AI interaction as a "Source of Truth." The AI is explicitly instructed to verify piece locations against this list before speaking, effectively eliminating hallucinations.
+
+### 2. Architectural Stability Fixes
+- **Ref-to-State Migration:** Refactored the core board management in `ChessGame.tsx` from mutable `useRef` to reactive `useState`. This ensures the visual board and internal logic are always deterministically synchronized, fixing the "Invalid Move" crashes.
+- **Resumption Awareness:** Refactored PGN loading to happen during state initialization. The AI Tutor now detects resumed games and provides a specialized "Resume Greeting" that acknowledges the current board state instead of greeting as a new game.
+- **Commentary De-duplication:** Implemented immediate "Ref-locking" in `Tutor.tsx`. The moment an LLM call starts, a lock is placed to ignore all secondary triggers from React re-renders, ensuring "One Exchange = One Response."
+
+### 3. Type Safety & Lint Resolution
+- **Lint Cleanup:** Resolved over **40 critical React errors**, including cascading renders (setting state in useEffect without guards) and "accessing refs during render" violations.
+- **'any' Elimination:** Systematically replaced the `any` type with specific interfaces or `unknown` in `Tutor.tsx`, `OpeningTrainer.tsx`, and `geminiErrorHandler.ts` for professional-grade type safety.
+
+### 4. Testing
+- Updated analysis tests to support the new high-density breadcrumb labels and multi-element tactical badges.
+- **Final Result:** 100% pass rate across all **238 workspace tests**.
