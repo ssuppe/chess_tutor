@@ -81,32 +81,6 @@ Rapidly navigating through move history (scrubbing) triggered instantaneous API 
 
 ---
 
-# Pull Request Preparation: Analysis Mobile Layout Improvements
-
-## Context
-The game analysis page on mobile devices had a suboptimal layout where technical "Position Analysis" took precedence over the "AI Analysis" (coach commentary). Additionally, the "Play from here" button was located below the board, requiring scrolling and cluttering the main interaction area.
-
-## Changes
-
-### 1. Mobile-First Layout Reordering
-- **AI-First Priority:** Swapped the vertical order of the Analysis Tiles on mobile. The **AI Analysis** (coach commentary) now appears above the **Position Analysis** (technical stats) to prioritize the "Tutor" experience on smaller screens.
-- **Responsive Grid:** Used Tailwind `order` classes to maintain the side-by-side layout on desktop while controlling the stacking order on mobile.
-
-### 2. Header Interaction Improvements
-- **Play Button Relocation:** Moved the "Play from here" button from below the chessboard to the analysis header (top-right), placing it next to the orientation selector.
-- **Label Simplification:** Shortened the button label to **"Play"** to save horizontal space while retaining its clear intent via the `PlayCircle` icon.
-- **Consistency:** The "Load New Game" button was also moved to the header, centralizing all game-level actions in one row.
-
-### 3. UI Refinements
-- **Icon Visibility:** Ensured that both "Load New Game" and "Play" buttons include their descriptive text alongside icons for accessibility and clarity.
-- **Orientation Select:** Positioned the board orientation selector (White/Black) as the rightmost element in the action row for easy thumb access.
-
-### 4. Testing & Validation
-- Verified the layout across multiple breakpoints using browser developer tools (Mobile S/M/L and Desktop).
-- Confirmed that "Play" functionality still correctly triggers the game setup modal and transition to gameplay.
-
----
-
 # Pull Request Preparation: Mobile UX & High-Density Gameplay
 
 ## Context
@@ -114,29 +88,30 @@ Mobile users faced significant ergonomic friction due to a vertical layout that 
 
 ## Changes
 
-### 1. Smart Split Architecture
-- **Permanent Horizontal Split**: Replaced the long-scroll vertical layout with a stable 35/65 side-by-side split on mobile.
-- **Adaptive Resizing**: Users can now **tap the board column** to toggle its width between **35% (Mini)** and **55% (Focus)**.
+### 1. Smart Split Architecture (Unified Pattern)
+- **Permanent Horizontal Split**: Replaced the long-scroll vertical layout with a stable 35/65 side-by-side split on mobile. This pattern was porting from the main Gameplay mode to both the **Analysis Page** and **Opening Trainer**.
+- **Adaptive Resizing**: Users can now **tap the board column** to toggle its width between **35% (Mini)** and **55% (Focus)** in all training modes.
 - **Interaction Overlay**: Implemented a transparent overlay over the board area to ensure taps are reliably caught without being swallowed by the chessboard component.
 - **Stable Visual Anchor**: The chessboard is now pinned to the left column, providing a constant view of the game state while chatting.
-- **Viewport Tracking**: Integrated the \`window.visualViewport\` API to track real-time available height. The UI now anchors to the \`offsetTop\` and uses precise pixel heights to prevent the browser from 'shifting' the board off-screen when the keyboard opens.
+- **Viewport Tracking**: Integrated the `window.visualViewport` API to track real-time available height. The UI now anchors to the `offsetTop` and uses precise pixel heights to prevent the browser from 'shifting' the board off-screen when the keyboard opens.
 
-### 2. High-Density Game Context Strip
-- **Vertical Clustering**: Eliminated 'dead space' by clustering all game metadata tightly around the mini-board in the narrow left column.
-- **Top Cluster**: Displays opponent's captured pieces and a **dynamic horizontal Evaluation Bar** (matching the desktop engine experience).
-- **Bottom Cluster**: Shows a subtle **Last Move text label** (e.g., 'Last move (White): Nf3') and the user's captured pieces.
-- **High-Contrast Trays**: Implemented dynamic backgrounds for captured pieces (light blue for black pieces, dark for white) to ensure 100% legibility in all themes.
+### 2. AI Coach Intelligence Restoration
+- **Full Prompt Fidelity**: Restored the high-detail original system prompts (Move Help, Resignation, Opening Training) that had been accidentally shortened during UI refactoring.
+- **Tactical Oversight**: Re-implemented the `analyzeExchange` logic in `Tutor.tsx`, restoring the coach's ability to identify missed forks, pins, and skewers.
+- **Positional Grounding**: Integrated `generateHumanReadableBoard` across all system triggers, ensuring the coach maintains perfect awareness of piece locations to prevent hallucinations.
+- **Game Resumption**: Restored logic to detect existing game history, allowing the coach to greet players with a context-aware "continuation" message instead of a generic welcome.
 
-### 3. Unified FAB Interaction
-- **Graceful Toggle**: Created a single, fixed-position Floating Action Button (FAB) that serves as the unified entry and exit for the chat.
-- **Visual States**: The FAB transitions from an 'Avatar + Coach Chat' badge to a minimalist 'Close (X)' icon.
-- **FAB Relocation**: When chat is active, the FAB automatically raises (to \`bottom-40\`) to clear the chat input and 'Send' button, ensuring zero overlap and perfect ergonomics.
+### 3. High-Density UI Polish
+- **Minified Avatars**: Removed coach icons from individual bubbles and shrunk user avatars to `w-3 h-3` to reclaim horizontal space for text.
+- **Focus-Aware Density**: Implemented a minimalist 'Chatting with Coach' header and auto-hiding 'Quick Actions' (Hint/Best Move) when the input is focused, maximizing room for the conversation above the keyboard.
+- **Game Context Strip**: Clustered opponent material, horizontal Evaluation Bar, and Last Move labels into a high-density vertical strip beside the mini-board.
+- **Contrast Strategy**: Implemented dynamic backgrounds for captured piece trays to ensure 100% legibility across all themes.
 
-### 4. Technical Performance
-- **Anti-Flicker Logic**: Muted CSS transitions and implemented \`will-change: height, top\` hints to ensure the layout resizes fluidly with the native keyboard animation.
-- **Edge-to-Edge Design**: Optimized the \`Tutor\` component to 'bleed' to the screen edges on mobile, removing margins and rounding to reclaim every pixel for text.
-- **Keyboard-Safe Zones**: Implemented dynamic padding (\`pb-24\`) in the message list to ensure the raised FAB never obscures the latest coach commentary.
+### 4. Technical Refinements
+- **Unified Navigation**: Standardized the "Back to Menu" button as a high-visibility text-link.
+- **Anti-Flicker Logic**: Muted CSS transitions and implemented `will-change: height, top` hints to ensure fluid keyboard animations.
+- **React Safety**: Wrapped `ReactMarkdown` in styled containers to resolve `className` deprecation warnings and ensure consistent typography.
 
 ## Testing & Validation
-- **New Mobile Test Suite**: Created \`src/components/__tests__/MobileChatOverlay.test.tsx\` to verify side-by-side transitions and input persistence.
+- **Multi-Mode Test Suite**: Verified stability with `MobileChatOverlay.test.tsx` (Gameplay), `page.test.tsx` (Analysis), and `Tutor.test.tsx`.
 - **Final Result**: All **247 workspace tests** are passing.
