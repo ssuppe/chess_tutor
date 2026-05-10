@@ -116,6 +116,8 @@ Mobile users faced significant ergonomic friction due to a vertical layout that 
 
 ### 1. Smart Split Architecture
 - **Permanent Horizontal Split**: Replaced the long-scroll vertical layout with a stable 35/65 side-by-side split on mobile.
+- **Adaptive Resizing**: Users can now **tap the board column** to toggle its width between **35% (Mini)** and **55% (Focus)**.
+- **Interaction Overlay**: Implemented a transparent overlay over the board area to ensure taps are reliably caught without being swallowed by the chessboard component.
 - **Stable Visual Anchor**: The chessboard is now pinned to the left column, providing a constant view of the game state while chatting.
 - **Viewport Tracking**: Integrated the \`window.visualViewport\` API to track real-time available height. The UI now anchors to the \`offsetTop\` and uses precise pixel heights to prevent the browser from 'shifting' the board off-screen when the keyboard opens.
 

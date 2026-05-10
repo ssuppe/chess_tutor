@@ -124,4 +124,30 @@ describe("Mobile Chat Overlay (Bottom Sheet)", () => {
         // Input should still be there
         expect(screen.getByPlaceholderText(/Ask/i)).toHaveValue("Hello Coach");
     });
+
+    it("should toggle the board width between 35% and 55% when the board area is clicked", () => {
+        renderGame();
+        
+        // Open chat
+        fireEvent.click(screen.getByLabelText(/Open Chat/i));
+        
+        const boardArea = screen.getByTestId("board-area");
+        const tutorContainer = screen.getByTestId("tutor-container");
+        
+        // Initial state: Mini (35%)
+        expect(boardArea).toHaveClass("w-[35%]");
+        expect(tutorContainer).not.toHaveClass("translate-y-full");
+
+        // Click board to expand (Focus mode: 55%)
+        fireEvent.click(boardArea);
+        expect(boardArea).toHaveClass("w-[55%]");
+        expect(boardArea).not.toHaveClass("w-[35%]");
+        expect(tutorContainer).not.toHaveClass("translate-y-full"); // Chat should remain open
+
+        // Click board again to shrink (Mini mode: 35%)
+        fireEvent.click(boardArea);
+        expect(boardArea).toHaveClass("w-[35%]");
+        expect(boardArea).not.toHaveClass("w-[55%]");
+        expect(tutorContainer).not.toHaveClass("translate-y-full"); // Chat should remain open
+    });
 });

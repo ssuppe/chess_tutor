@@ -684,10 +684,17 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
                     ref={boardAreaRef} 
                     className={clsx(
                         "md:col-span-2 bg-white dark:bg-gray-800 p-1 md:p-4 rounded-lg shadow-lg flex flex-col md:flex-row gap-2 md:gap-8 relative overflow-hidden",
-                        isMobileChatOpen ? "w-[35%] h-full rounded-none border-r border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-900 items-center justify-center gap-4 py-4 px-1" : "md:relative md:h-auto transition-all duration-300"
+                        isMobileChatOpen 
+                            ? (isMobileBoardExpanded ? "w-[55%]" : "w-[35%]") 
+                            : "md:relative md:h-auto transition-all duration-300",
+                        isMobileChatOpen && "h-full rounded-none border-r border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-900 items-center justify-center gap-4 py-4 px-1"
                     )}
-                    onClick={() => isMobileChatOpen && setIsMobileChatOpen(false)}
+                    onClick={() => isMobileChatOpen && setIsMobileBoardExpanded(!isMobileBoardExpanded)}
                 >
+                    {/* Interaction Overlay to catch taps on mobile even over the board */}
+                    {isMobileChatOpen && (
+                        <div className="absolute inset-0 z-10 cursor-pointer" aria-hidden="true" />
+                    )}
                     {/* Top Cluster: Opponent Material + Eval Bar (Mobile Chat Mode only) */}
                     {isMobileChatOpen && (
                         <div className="w-full flex flex-col items-center gap-2 flex-shrink-0 scale-90">
