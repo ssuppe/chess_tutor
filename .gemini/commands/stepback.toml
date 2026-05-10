@@ -1,0 +1,4 @@
+description = "take a step back"
+prompt = """
+Hold on, take a step back. you seem to be stuck. what is the goal you're trying to accomplish? take a look at the bigger picture. use Google search or context7 if you need better more up to date information.
+"""

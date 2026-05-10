@@ -74,5 +74,3 @@ __pycache__/
 /android/
 
 # Gemini CLI
-.gemini/
-.geminiignore

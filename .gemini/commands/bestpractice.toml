@@ -1,0 +1,4 @@
+description = "check if what we are doing is best practice"
+prompt = """
+Use Google search and context7 to ensure you have the most up to date documentation and discussion. Then tell me, is what we are doing best practice? what are the options, pros and cons? be concise.
+"""

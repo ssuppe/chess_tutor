@@ -1,0 +1,4 @@
+description = "check test coverage"
+prompt = """
+Review all of the tests. do we have sufficient code coverage? have we tested all the important scenarios? have we run into any recent issues that should be detected in tests?
+"""
