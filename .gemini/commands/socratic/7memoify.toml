@@ -1,7 +1,0 @@
-description = "Recall all the mistakes/changes we made, and update the documentation."
-prompt = """
-Can you look back over this conversation history and enumerate all the things that were unspecified in the original plan, assumptions in the original plan we had to fix, tests we added, new things we did, and list them out in detail here?
-
-Then, for all these items, can you make sure they are mentioned as appropriate in the relevant documentation in README.md or the docs/ directory, and the task document we just implemented?
-"""
-
