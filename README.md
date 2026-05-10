@@ -1,4 +1,18 @@
-# AI Chess Tutor
+# AI Chess Tutor (Enhanced Fork)
+
+This repository is a community fork of the excellent [AI Chess Tutor](https://github.com/stefan-kp/chess_tutor) by stefan-kp. It consolidates a comprehensive suite of stability, performance, and user experience enhancements.
+
+### Key Enhancements in this Fork:
+- **Move Highlighting**: Visual tracking of piece origin and destination squares across all game modes.
+- **AI Stability**: Advanced positional grounding and architectural fixes to ensure the coach always maintains perfect spatial awareness.
+- **Model Migration**: Upgraded support for latest Gemini models (including 3.1-Flash-Lite) with user-selectable model options.
+- **Performance**: Integrated server-side Wikipedia caching and LLM request debouncing to eliminate API throttling and reduce latency.
+- **UI Optimization**: High-density mobile-first layout with streamlined navigation and reclaimed screen real-estate.
+- **Expanded Support**: Full Polish language translation and comprehensive UI string refinements for a cleaner look.
+
+---
+
+# AI Chess Tutor (Original)
 
 ## The Story
 I always wanted to implement an AI-based chess tutor because I like playing chess, although to be honest, I actually suck at it. I didn't find the existing tutors or big apps useful enough for my needs, so I decided to build my own approach.
