@@ -79,6 +79,13 @@ interface ExchangeContext {
 *   Create a utility function `getHumanReadableBoard(fen: string)` that returns a simple text list of piece positions.
 *   Include this in the system instructions for the LLM.
 
+### Step 5: Fix Resumption Awareness
+*   **Problem:** AI Tutor greets the user as a new game even when resuming.
+*   **Solution:** 
+    *   Load PGN during `useState` initialization in `ChessGame.tsx` so `game.history()` is populated on the first render.
+    *   In `Tutor.tsx`, check `game.history().length > 0` during initialization.
+    *   Provide a specialized "Resume Game" prompt to the AI that includes the current piece list and the last move played.
+
 ---
 
 ## 5. Risk Assessment

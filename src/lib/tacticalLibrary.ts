@@ -712,7 +712,7 @@ export function identifyGambit(movesSan: string[]): GambitMatch | null {
 }
 
 export function listPossibleGambits(movesSan: string[]): GambitMatch[] {
-  const definitions = (gambitDefinitions as any).gambits as GambleDefinition[];
+  const definitions = (gambitDefinitions as { gambits: GambleDefinition[] }).gambits;
   const matches: GambitMatch[] = [];
   for (const gambit of definitions) {
     let matched = 0;
@@ -733,11 +733,26 @@ export function listPossibleGambits(movesSan: string[]): GambitMatch[] {
   return matches.sort((a, b) => b.matchedMoves - a.matchedMoves);
 }
 
+interface TacticFixtureCase {
+  id: string;
+  sideToMove: Color;
+  initialFen: string;
+  bestMove: { uci: string };
+  resultingFen: string;
+  expectedPattern: { type: string; side: string; attackerSquares: string[]; targetSquares: string[] };
+  rating?: number;
+  moves?: PuzzleMove[];
+}
+
+interface TacticFixture {
+  cases: TacticFixtureCase[];
+}
+
 export function generateTacticExercise(params: TacticExerciseParams): TacticExercise {
-  const dataset = tacticalFixtures[params.patternType];
+  const dataset = tacticalFixtures[params.patternType] as TacticFixture;
 
   // Filter by side
-  let cases = dataset.cases.filter((c: any) => c.sideToMove === params.side);
+  let cases = dataset.cases.filter((c: TacticFixtureCase) => c.sideToMove === params.side);
 
   // Filter by difficulty if specified
   if (params.difficulty) {
@@ -747,7 +762,7 @@ export function generateTacticExercise(params: TacticExerciseParams): TacticExer
       hard: { min: 1800, max: 2200 },
     };
     const range = difficultyRanges[params.difficulty];
-    cases = cases.filter((c: any) => {
+    cases = cases.filter((c: TacticFixtureCase) => {
       const rating = c.rating || 1500; // Default to medium if no rating
       return rating >= range.min && rating < range.max;
     });
@@ -776,14 +791,14 @@ export function generateTacticExercise(params: TacticExerciseParams): TacticExer
   };
 }
 
-function pickFixtureCase(patternType: TacticalPatternType, options: GenerateOptions = {}) {
-  const dataset = tacticalFixtures[patternType];
+function pickFixtureCase(patternType: TacticalPatternType, options: GenerateOptions = {}): TacticFixtureCase {
+  const dataset = tacticalFixtures[patternType] as TacticFixture;
   if (!dataset?.cases) {
     throw new Error(`No fixtures registered for pattern ${patternType}`);
   }
 
-  const filtered = options.side ? dataset.cases.filter((c: any) => c.sideToMove === options.side) : dataset.cases;
-  const match = options.caseId ? filtered.find((c: any) => c.id === options.caseId) : null;
+  const filtered = options.side ? dataset.cases.filter((c: TacticFixtureCase) => c.sideToMove === options.side) : dataset.cases;
+  const match = options.caseId ? filtered.find((c: TacticFixtureCase) => c.id === options.caseId) : null;
   const pool = filtered.length > 0 ? filtered : dataset.cases;
   if (pool.length === 0) {
     throw new Error(`No cases available for pattern ${patternType}`);

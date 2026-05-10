@@ -77,9 +77,14 @@ async function getLocalWikipediaCacheBySlug(
 
     const data = await response.json();
 
+    interface WikiSection {
+      title: string;
+      text: string;
+    }
+
     // Convert local cache format to WikipediaSummary format
-    const extract = data.sections
-      .map((s: any) => {
+    const extract = (data.sections as WikiSection[])
+      .map((s: WikiSection) => {
         if (s.title === 'Introduction') {
           return s.text;
         }

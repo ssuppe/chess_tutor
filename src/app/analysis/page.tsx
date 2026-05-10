@@ -173,7 +173,7 @@ IMPORTANT:
         loadGameFromPgnOrFen(trimmed);
     };
 
-    const loadGameFromPgnOrFen = (notation: string) => {
+    const loadGameFromPgnOrFen = useCallback((notation: string) => {
         const trimmed = notation.trim();
         const format = detectChessFormat(trimmed);
 
@@ -234,15 +234,15 @@ IMPORTANT:
             console.error("Failed to load game", e);
             setError(t.analysis.importError);
         }
-    };
+    }, [t.analysis.importError, ensureEvaluation]);
 
-    const handleImportGame = (pgn: string) => {
+    const handleImportGame = useCallback((pgn: string) => {
         setInput(pgn);
         setDetectedFormat(detectChessFormat(pgn));
         loadGameFromPgnOrFen(pgn);
-    };
+    }, [loadGameFromPgnOrFen]);
 
-    const handleResetAnalysis = () => {
+    const handleResetAnalysis = useCallback(() => {
         setInput("");
         setDetectedFormat(null);
         setSteps([]);
@@ -253,9 +253,9 @@ IMPORTANT:
         evaluationCache.current = {};
         setEvaluationVersion(v => v + 1);
         setError(null);
-    };
+    }, []);
 
-    const handleStartGameFromPosition = () => {
+    const handleStartGameFromPosition = useCallback(() => {
         const payload = {
             fen: currentFen,
             personalityId: playPersonality.id,
@@ -265,7 +265,7 @@ IMPORTANT:
 
         localStorage.setItem("chess_tutor_pending_game", JSON.stringify(payload));
         router.push("/");
-    };
+    }, [currentFen, playPersonality.id, playColor, playStrength, router]);
 
     useEffect(() => {
         if (!stockfish || !currentFen) return;
@@ -393,7 +393,7 @@ INSTRUCTIONS:
             clearTimeout(timeout);
             setIsCommenting(false);
         };
-    }, [chatSession, currentIndex, stepDetails, steps, comments, possibleOpenings]);
+    }, [chatSession, currentIndex, stepDetails, steps, comments, possibleOpenings, addEntry, selectedPersonality.name, language]);
 
     const formatEval = (evaluation?: StockfishEvaluation) => {
         if (!evaluation) return t.analysis.enginePending;

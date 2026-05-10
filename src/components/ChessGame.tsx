@@ -47,8 +47,18 @@ const PIECE_VALUES: Record<string, number> = {
 const DEFAULT_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
 export default function ChessGame({ gameId, initialFen, initialPgn, initialPersonality, initialColor, initialStockfishDepth, openingContext, onBack }: ChessGameProps) {
-    const [game] = useState(() => new Chess(initialFen || DEFAULT_FEN));
-    const [fen, setFen] = useState(initialFen || DEFAULT_FEN);
+    const [game] = useState(() => {
+        const g = new Chess(initialFen || DEFAULT_FEN);
+        if (initialPgn) {
+            try {
+                g.loadPgn(initialPgn);
+            } catch (e) {
+                console.error("Failed to load initial PGN:", e);
+            }
+        }
+        return g;
+    });
+    const [fen, setFen] = useState(() => game.fen());
     const [stockfish, setStockfish] = useState<Stockfish | null>(null);
 
     // Analysis States
@@ -64,11 +74,20 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
     const [userMove, setUserMove] = useState<Move | null>(null);
     const [computerMove, setComputerMove] = useState<Move | null>(null);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
-    const [apiKey, setApiKey] = useState<string | null>(null);
+    const [apiKey, setApiKey] = useState<string | null>(() => {
+        if (typeof window !== "undefined") return localStorage.getItem("gemini_api_key");
+        return null;
+    });
     const [stockfishDepth, setStockfishDepth] = useState(initialStockfishDepth ?? 15);
 
     // Settings
-    const [language, setLanguage] = useState<SupportedLanguage>('en');
+    const [language, setLanguage] = useState<SupportedLanguage>(() => {
+        if (typeof window !== "undefined") {
+            const stored = localStorage.getItem("chess_tutor_language");
+            return (stored as SupportedLanguage) || 'en';
+        }
+        return 'en';
+    });
 
     // Game State
     const [playerColor, setPlayerColor] = useState<'white' | 'black'>(initialColor);
@@ -169,146 +188,133 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
         }
     }, [initialStockfishDepth]);
 
-    useEffect(() => {
+    const rebuildHistoryFromPgn = useCallback(async () => {
         if (!initialPgn || !stockfish) return;
         if (moveHistory.length > 0 || hasRebuiltHistoryRef.current) return;
 
-        let isCancelled = false;
         hasRebuiltHistoryRef.current = true;
 
-        const rebuildHistoryFromPgn = async () => {
-            try {
-                const setupFen = initialFen || undefined;
-                const parsingGame = new Chess(setupFen);
-                parsingGame.loadPgn(initialPgn);
-                const verboseMoves = parsingGame.history({ verbose: true });
+        try {
+            const setupFen = initialFen || undefined;
+            const parsingGame = new Chess(setupFen);
+            parsingGame.loadPgn(initialPgn);
+            const verboseMoves = parsingGame.history({ verbose: true });
 
-                if (verboseMoves.length === 0) {
-                    setMoveHistory([]);
-                    return;
-                }
+            if (verboseMoves.length === 0) {
+                setMoveHistory([]);
+                return;
+            }
 
-                // Initialize from the actual starting position of this move sequence
-                const startFen = verboseMoves[0].before;
-                const replayGame = new Chess(startFen);
-                const playerTurnColor = playerColor === 'white' ? 'w' : 'b';
-                const rebuiltHistory: MoveHistoryItem[] = [];
+            // Initialize from the actual starting position of this move sequence
+            const startFen = verboseMoves[0].before;
+            const replayGame = new Chess(startFen);
+            const playerTurnColor = playerColor === 'white' ? 'w' : 'b';
+            const rebuiltHistory: MoveHistoryItem[] = [];
 
-                for (let i = 0; i < verboseMoves.length; i++) {
-                    const move = verboseMoves[i];
+            for (let i = 0; i < verboseMoves.length; i++) {
+                const move = verboseMoves[i];
 
-                    // Play through opponent moves until it's the player's turn
-                    if (move.color !== playerTurnColor) {
-                        try {
-                            replayGame.move(move.lan);
-                        } catch (e) {
-                            console.error("Invalid opponent move in history:", move.lan, e);
-                            break;
-                        }
-                        continue;
-                    }
-
-                    const moveNumber = Math.floor(i / 2) + 1;
-                    const fenBeforePlayerMove = replayGame.fen();
-                    const evalBeforePlayerMove = await stockfish.evaluate(fenBeforePlayerMove, stockfishDepth);
-
-                    let playerMoveResult;
+                // Play through opponent moves until it's the player's turn
+                if (move.color !== playerTurnColor) {
                     try {
-                        playerMoveResult = replayGame.move(move.lan);
-                        if (!playerMoveResult) break;
+                        replayGame.move(move.lan);
                     } catch (e) {
-                        console.error("Invalid player move in history:", move.lan, e);
+                        console.error("Invalid opponent move in history:", move.lan, e);
                         break;
                     }
+                    continue;
+                }
 
-                    const fenAfterPlayerMove = replayGame.fen();
-                    const evalAfterPlayerMove = await stockfish.evaluate(fenAfterPlayerMove, stockfishDepth);
+                const moveNumber = Math.floor(i / 2) + 1;
+                const fenBeforePlayerMove = replayGame.fen();
+                const evalBeforePlayerMove = await stockfish.evaluate(fenBeforePlayerMove, stockfishDepth);
 
-                    let computerMoveSan = '';
-                    let fenAfterComputerMove = fenAfterPlayerMove;
-                    let evalAfterComputerMove = evalAfterPlayerMove;
+                let playerMoveResult;
+                try {
+                    playerMoveResult = replayGame.move(move.lan);
+                    if (!playerMoveResult) break;
+                } catch (e) {
+                    console.error("Invalid player move in history:", move.lan, e);
+                    break;
+                }
 
-                    if (i + 1 < verboseMoves.length && verboseMoves[i + 1].color !== move.color) {
-                        const computerMove = verboseMoves[i + 1];
-                        try {
-                            const computerMoveResult = replayGame.move(computerMove.lan);
-                            if (computerMoveResult) {
-                                computerMoveSan = computerMoveResult.san;
-                                fenAfterComputerMove = replayGame.fen();
-                                evalAfterComputerMove = await stockfish.evaluate(fenAfterComputerMove, stockfishDepth);
-                                i++; // Skip the computer move we just processed
-                            }
-                        } catch (e) {
-                            console.error("Invalid computer move in history:", computerMove.lan, e);
-                            // We don't break here, we just stop processing this specific computer move
+                const fenAfterPlayerMove = replayGame.fen();
+                const evalAfterPlayerMove = await stockfish.evaluate(fenAfterPlayerMove, stockfishDepth);
+
+                let computerMoveSan = '';
+                let fenAfterComputerMove = fenAfterPlayerMove;
+                let evalAfterComputerMove = evalAfterPlayerMove;
+
+                if (i + 1 < verboseMoves.length && verboseMoves[i + 1].color !== move.color) {
+                    const computerMove = verboseMoves[i + 1];
+                    try {
+                        const computerMoveResult = replayGame.move(computerMove.lan);
+                        if (computerMoveResult) {
+                            computerMoveSan = computerMoveResult.san;
+                            fenAfterComputerMove = replayGame.fen();
+                            evalAfterComputerMove = await stockfish.evaluate(fenAfterComputerMove, stockfishDepth);
+                            i++; // Skip the computer move we just processed
                         }
+                    } catch (e) {
+                        console.error("Invalid computer move in history:", computerMove.lan, e);
+                        // We don't break here, we just stop processing this specific computer move
                     }
-
-                    const isWhite = playerColor === 'white';
-                    const evalBeforePerspective = isWhite ? evalBeforePlayerMove.score : -evalBeforePlayerMove.score;
-                    const evalAfterPerspective = isWhite ? -evalAfterPlayerMove.score : evalAfterPlayerMove.score;
-                    const cpLoss = evalBeforePerspective - evalAfterPerspective;
-
-                    const bestMoveUci = evalBeforePlayerMove.bestMove;
-                    const bestMoveSan = bestMoveUci ? uciToSan(fenBeforePlayerMove, bestMoveUci) : null;
-                    const missedTactics = bestMoveUci ? detectMissedTactics({
-                        fen: fenBeforePlayerMove,
-                        playerColor,
-                        playerMoveSan: playerMoveResult.san,
-                        bestMoveUci,
-                        cpLoss,
-                    }) : undefined;
-
-                    const currentPgn = replayGame.pgn();
-                    const moveSequence = extractMoveSequenceFromPGN(currentPgn);
-                    const possibleOpenings = lookupPossibleOpenings(moveSequence, 5);
-
-                    rebuiltHistory.push({
-                        moveNumber,
-                        playerMove: playerMoveResult.san,
-                        playerColor,
-                        fenBeforePlayerMove,
-                        evalBeforePlayerMove,
-                        fenAfterPlayerMove,
-                        evalAfterPlayerMove,
-                        computerMove: computerMoveSan || '...',
-                        fenAfterComputerMove,
-                        evalAfterComputerMove,
-                        opening: possibleOpenings.length > 0 ? possibleOpenings[0].name : undefined,
-                        move: playerMoveResult.san,
-                        evalBefore: evalBeforePlayerMove.score,
-                        evalAfter: evalAfterPlayerMove.score,
-                        bestMove: evalBeforePlayerMove.bestMove,
-                        bestMoveSan,
-                        cpLoss,
-                        missedTactics,
-                    });
                 }
 
-                if (!isCancelled) {
-                    setMoveHistory(rebuiltHistory);
-                }
-            } catch (error) {
-                console.error('Failed to rebuild move history from PGN', error);
-                hasRebuiltHistoryRef.current = false;
+                const isWhite = playerColor === 'white';
+                const evalBeforePerspective = isWhite ? evalBeforePlayerMove.score : -evalBeforePlayerMove.score;
+                const evalAfterPerspective = isWhite ? -evalAfterPlayerMove.score : evalAfterPlayerMove.score;
+                const cpLoss = evalBeforePerspective - evalAfterPerspective;
+
+                const bestMoveUci = evalBeforePlayerMove.bestMove;
+                const bestMoveSan = bestMoveUci ? uciToSan(fenBeforePlayerMove, bestMoveUci) : null;
+                const missedTactics = bestMoveUci ? detectMissedTactics({
+                    fen: fenBeforePlayerMove,
+                    playerColor,
+                    playerMoveSan: playerMoveResult.san,
+                    bestMoveUci,
+                    cpLoss,
+                }) : undefined;
+
+                const currentPgn = replayGame.pgn();
+                const moveSequence = extractMoveSequenceFromPGN(currentPgn);
+                const possibleOpenings = lookupPossibleOpenings(moveSequence, 5);
+
+                rebuiltHistory.push({
+                    moveNumber,
+                    playerMove: playerMoveResult.san,
+                    playerColor,
+                    fenBeforePlayerMove,
+                    evalBeforePlayerMove,
+                    fenAfterPlayerMove,
+                    evalAfterPlayerMove,
+                    computerMove: computerMoveSan || '...',
+                    fenAfterComputerMove,
+                    evalAfterComputerMove,
+                    opening: possibleOpenings.length > 0 ? possibleOpenings[0].name : undefined,
+                    move: playerMoveResult.san,
+                    evalBefore: evalBeforePlayerMove.score,
+                    evalAfter: evalAfterComputerMove.score,
+                    bestMove: evalBeforePlayerMove.bestMove,
+                    bestMoveSan,
+                    cpLoss,
+                    missedTactics,
+                });
             }
-        };
 
-        rebuildHistoryFromPgn();
+            setMoveHistory(rebuiltHistory);
+        } catch (error) {
+            console.error('Failed to rebuild move history from PGN', error);
+            hasRebuiltHistoryRef.current = false;
+        }
+    }, [initialFen, initialPgn, playerColor, stockfish, stockfishDepth]);
 
-        return () => {
-            isCancelled = true;
-        };
-    }, [initialPgn, stockfish, playerColor, stockfishDepth, initialFen, moveHistory.length]);
-
-    // Load Settings & Initial State
     useEffect(() => {
-        const storedKey = localStorage.getItem("gemini_api_key");
-        const storedLang = localStorage.getItem("chess_tutor_language");
+        rebuildHistoryFromPgn();
+    }, [rebuildHistoryFromPgn]);
 
-        if (storedKey) setApiKey(storedKey);
-        if (storedLang) setLanguage(storedLang as SupportedLanguage);
-
+    // Game Initialization & Sync
+    useEffect(() => {
         // If initialFen is provided, ensure game is synced
         if (initialFen && initialFen !== game.fen()) {
             try {
@@ -320,21 +326,14 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
             }
         }
 
-        // If initialPgn is provided, load it to restore history
-        if (initialPgn) {
-            try {
-                game.loadPgn(initialPgn);
-                setFen(game.fen());
-                updateCapturedPieces();
-            } catch (e) {
-                console.error("Failed to load PGN:", e);
-            }
-        }
+        // Note: initialPgn is already loaded in the state initializer
 
-        // Check if it's the computer's turn and make a move if needed
-        // This handles both:
-        // 1. Standard new games where computer plays first (player is black)
-        // 2. Games starting from opening trainer with custom FEN where it might be computer's turn
+        // Update captured pieces for loaded game
+        updateCapturedPieces();
+    }, [initialFen, game, updateCapturedPieces]);
+
+    // Initial computer move detection
+    useEffect(() => {
         if (stockfish && game.history().length === 0) {
             // No moves have been made yet - check whose turn it is
             const currentTurn = game.turn(); // 'w' or 'b'
@@ -343,7 +342,7 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
             if (currentTurn === computerTurn) {
                 console.log('[ChessGame] Initial position - computer\'s turn, making move...');
                 // Small delay to ensure stockfish is ready
-                setTimeout(() => {
+                const timer = setTimeout(() => {
                     stockfish.evaluate(game.fen(), 10).then(evalResult => {
                         const computerMoveData = {
                             from: evalResult.bestMove.substring(0, 2),
@@ -355,10 +354,10 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
                         console.error('[ChessGame] Failed to make initial computer move:', err);
                     });
                 }, 1000);
+                return () => clearTimeout(timer);
             }
         }
-
-    }, [initialFen, initialColor, stockfish]); // Run when these change
+    }, [stockfish, initialColor, game, makeAMove]);
 
     // Save Game State on Change
     useEffect(() => {

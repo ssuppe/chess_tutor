@@ -13,8 +13,8 @@ export interface GeminiErrorInfo {
 /**
  * Parse a Gemini API error and extract useful information
  */
-export function parseGeminiError(error: any): GeminiErrorInfo {
-  const errorMessage = error?.message || error?.toString() || 'Unknown error';
+export function parseGeminiError(error: unknown): GeminiErrorInfo {
+  const errorMessage = error instanceof Error ? error.message : String(error);
 
   // Check for quota exceeded (429 error)
   const isQuotaError = errorMessage.includes('quota') ||
@@ -65,8 +65,8 @@ export function parseGeminiError(error: any): GeminiErrorInfo {
 /**
  * Check if an error is a Gemini API error
  */
-export function isGeminiError(error: any): boolean {
-  const message = error?.message || error?.toString() || '';
+export function isGeminiError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
   return message.includes('GoogleGenerativeAI') ||
          message.includes('generativelanguage.googleapis.com') ||
          message.includes('Gemini');

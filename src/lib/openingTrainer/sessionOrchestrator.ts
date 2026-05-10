@@ -28,7 +28,7 @@ export interface ProcessMoveResult {
 
 export class SessionOrchestrator {
   private stockfish: ChessEngine;
-  private pendingOperations: Set<Promise<any>> = new Set();
+  private pendingOperations: Set<Promise<void>> = new Set();
 
   constructor(stockfish: ChessEngine) {
     this.stockfish = stockfish;

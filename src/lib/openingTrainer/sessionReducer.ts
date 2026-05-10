@@ -209,7 +209,7 @@ export function sessionReducer(
 
     case 'RESET_SESSION': {
       // Reset to null - UI will handle re-initialization if needed
-      return null as any; // Return null to clear session completely
+      return null as unknown as SessionState; // Return null to clear session completely
     }
 
     // ------------------------------------------------------------------------

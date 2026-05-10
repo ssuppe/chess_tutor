@@ -65,7 +65,7 @@ export default function OpeningTrainer({
   const [isInitializing, setIsInitializing] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showRecoveryDialog, setShowRecoveryDialog] = useState(false);
-  const [existingSession, setExistingSession] = useState<any>(null);
+  const [existingSession, setExistingSession] = useState<unknown>(null);
   const [wikipediaSummary, setWikipediaSummary] = useState<WikipediaSummaryType | null>(null);
 
   // Tutor message control - track when tutor last spoke
@@ -443,7 +443,7 @@ export default function OpeningTrainer({
       flags: '',
       captured: undefined,
       promotion: lastUserMove.uci.length > 4 ? lastUserMove.uci[4] : undefined
-    } as any : null,
+    } : null,
     lastTutorMove: lastTutorMove ? {
       from: lastTutorMove.uci.substring(0, 2),
       to: lastTutorMove.uci.substring(2, 4),
@@ -453,7 +453,7 @@ export default function OpeningTrainer({
       flags: '',
       captured: undefined,
       promotion: lastTutorMove.uci.length > 4 ? lastTutorMove.uci[4] : undefined
-    } as any : null,
+    } : null,
     currentFeedback: currentFeedback ? {
       category: currentFeedback.classification.category,
       evaluationChange: currentFeedback.classification.evaluationChange,

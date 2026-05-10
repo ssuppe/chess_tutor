@@ -263,7 +263,25 @@ CRITICAL RULES:
             setChatSession(session);
 
             // Get initial greeting in the selected language
-            const greetingPrompt = openingName
+            const history = game.history();
+            const isResumed = history.length > 0;
+            const currentPieceList = generateHumanReadableBoard(currentFen);
+
+            const greetingPrompt = isResumed
+                ? `We are resuming a chess game that is already in progress. 
+                
+CURRENT POSITION:
+- FEN: ${currentFen}
+- PIECE POSITIONS: ${currentPieceList}
+- LAST MOVE PLAYED: ${history[history.length - 1]}
+
+INSTRUCTIONS:
+- Briefly acknowledge that we are continuing our game.
+- Refer to the current board state or the last move made.
+- Offer your services as my coach for the remainder of the match.
+- Do NOT greet me as if it's a new game.
+- Keep it to 2-3 sentences and respond in ${language}.`
+                : openingName
                 ? `Welcome the student to learn the ${openingName}.
 
 ${wikipediaSummary ? `OPENING CONTEXT (from Wikipedia):
@@ -530,19 +548,21 @@ ${isInTheory
     const lastAnalyzedMoveRef = useRef<string | null>(null);
 
     // Stage 1: Automatic Reaction after COMPUTER Move (so we see the full exchange)
-    useEffect(() => {
-        if (!userMove || !computerMove || !evalP0 || !evalP2 || !chatSession) return;
+    // Create a unique key for this exchange
+    const exchangeKey = userMove && computerMove ? `${userMove.lan}-${computerMove.lan}` : null;
 
-        // Create a unique key for this exchange
-        const exchangeKey = `${userMove.lan}-${computerMove.lan}`;
+    // We trigger this when computerMove changes (meaning the exchange is complete)
+    const analyzeExchange = useCallback(async () => {
+        if (!chatSession || !userMove || !computerMove || !evalP0 || !evalP2 || !exchangeKey) return;
 
         // Prevent double analysis
         if (lastAnalyzedMoveRef.current === exchangeKey) return;
 
-        // We trigger this when computerMove changes (meaning the exchange is complete)
-        const analyzeExchange = async () => {
-            // Prevent double analysis - lock the move immediately
-            lastAnalyzedMoveRef.current = exchangeKey;
+        // Prevent double analysis - lock the move immediately
+        lastAnalyzedMoveRef.current = exchangeKey;
+
+        const playerColorName = playerColor === 'white' ? 'White' : 'Black';
+        const tutorColorName = playerColor === 'white' ? 'Black' : 'White';
             
             setIsLoading(true);
             try {
@@ -715,24 +735,25 @@ INSTRUCTIONS:
 React to this exchange as the player.
                 `;
 
-                await sendMessageToChat(prompt, true);
-            } catch (e) {
-                console.error(e);
-            } finally {
-                setIsLoading(false);
-                onAnalysisComplete();
-            }
-        };
+            await sendMessageToChat(prompt, true);
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setIsLoading(false);
+            onAnalysisComplete();
+        }
+    }, [chatSession, userMove, computerMove, evalP0, evalP2, exchangeKey, sendMessageToChat, onAnalysisComplete, playerColor, currentFen, language, openingData, missedTactics]);
 
+    useEffect(() => {
         const debounceDelay = isReviewing ? 3000 : 0;
         const timer = setTimeout(() => {
             analyzeExchange();
         }, debounceDelay);
 
         return () => clearTimeout(timer);
-    }, [computerMove, chatSession, evalP0, evalP2, userMove, onAnalysisComplete, openingData, missedTactics, language, isReviewing]);
+    }, [analyzeExchange, isReviewing]);
 
-    const evaluateCurrentPosition = async () => {
+    const evaluateCurrentPosition = useCallback(async () => {
         if (!stockfish) {
             return null;
         }
@@ -744,9 +765,9 @@ React to this exchange as the player.
             console.error("Error evaluating position:", error);
             return null;
         }
-    };
+    }, [game, stockfish]);
 
-    const sendMessageToChat = async (text: string, isSystemMessage: boolean = false) => {
+    const sendMessageToChat = useCallback(async (text: string, isSystemMessage: boolean = false) => {
         if (!chatSession) return;
 
         if (!isSystemMessage) {
@@ -911,7 +932,7 @@ INSTRUCTIONS:
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [chatSession, evaluateCurrentPosition, currentFen, openingData, tacticalPracticeMode, personality.name, language, addEntry]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();

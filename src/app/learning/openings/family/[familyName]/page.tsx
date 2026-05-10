@@ -26,29 +26,31 @@ export default function FamilyTrainingPage() {
   const router = useRouter();
   const familyName = decodeURIComponent(params.familyName as string);
 
-  const [language, setLanguage] = useState<SupportedLanguage>('en');
+  const [language, setLanguage] = useState<SupportedLanguage>(() => {
+    if (typeof window !== 'undefined') {
+      return (localStorage.getItem('chess_tutor_language') as SupportedLanguage) || 'en';
+    }
+    return 'en';
+  });
   const [mounted, setMounted] = useState(false);
   const [variations, setVariations] = useState<OpeningMetadata[]>([]);
-  const [variationTree, setVariationTree] = useState<VariationTree | null>(null);
+  const [variationTree, setVariationTree] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedPersonality, setSelectedPersonality] = useState<Personality>(PERSONALITIES[0]);
-  const [apiKey, setApiKey] = useState<string>('');
+  const [selectedPersonality, setSelectedPersonality] = useState<Personality>(() => {
+    if (typeof window !== 'undefined') {
+      const storedId = localStorage.getItem('chess_tutor_personality');
+      return PERSONALITIES.find(p => p.id === storedId) || PERSONALITIES[0];
+    }
+    return PERSONALITIES[0];
+  });
+  const [apiKey, setApiKey] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('gemini_api_key') || '';
+    }
+    return '';
+  });
 
   useEffect(() => {
-    const storedLang = localStorage.getItem('chess_tutor_language');
-    if (storedLang) setLanguage(storedLang as SupportedLanguage);
-
-    // Load API key
-    const storedApiKey = localStorage.getItem('gemini_api_key');
-    if (storedApiKey) setApiKey(storedApiKey);
-
-    // Load personality
-    const storedPersonalityId = localStorage.getItem('chess_tutor_personality');
-    if (storedPersonalityId) {
-      const personality = PERSONALITIES.find(p => p.id === storedPersonalityId);
-      if (personality) setSelectedPersonality(personality);
-    }
-
     setMounted(true);
   }, []);
 
