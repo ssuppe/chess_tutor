@@ -1,4 +1,5 @@
 import React, { memo, useMemo } from 'react';
+import clsx from "clsx";
 
 interface CapturedPiecesProps {
     captured: string[]; // Array of piece types, e.g., ['p', 'n', 'q']
@@ -29,16 +30,34 @@ export const CapturedPieces = memo(function CapturedPieces({ captured, color, sc
     );
 
     return (
-        <div className="flex items-center h-6 gap-2 text-gray-600 dark:text-gray-300">
-            <div className="flex -space-x-1 text-xl leading-none select-none">
+        <div className="flex items-center h-6 gap-2">
+            <div className={clsx(
+                "flex -space-x-1.5 text-xl leading-none select-none px-2 py-1 rounded shadow-sm border",
+                color === 'w' 
+                    ? "bg-gray-800 border-gray-700 dark:bg-gray-950 dark:border-gray-900" // High-contrast dark tray for white pieces
+                    : "bg-blue-50 border-blue-200 dark:bg-blue-100 dark:border-blue-300" // Distinct light blue tray for black pieces
+            )}>
                 {sortedPieces.map((piece, index) => (
-                    <span key={index} className={color === 'w' ? "text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]" : "text-black"}>
+                    <span 
+                        key={index} 
+                        className={clsx(
+                            "transition-colors",
+                            color === 'w' 
+                                ? "text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.5)]" 
+                                : "text-gray-900 drop-shadow-[0_1px_0px_rgba(255,255,255,0.5)]"
+                        )}
+                    >
                         {PIECE_ICONS[piece.toLowerCase()] || piece}
                     </span>
                 ))}
             </div>
             {score && score > 0 && (
-                <span className="text-[10px] font-semibold bg-gray-200 dark:bg-gray-700 px-1 py-0 rounded text-gray-700 dark:text-gray-300">
+                <span className={clsx(
+                    "text-[10px] font-black px-1.5 py-0.5 rounded border shadow-sm tabular-nums",
+                    color === 'w'
+                        ? "bg-gray-100 text-gray-800 border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700"
+                        : "bg-blue-200 text-blue-800 border-blue-300 dark:bg-blue-900 dark:text-blue-200 dark:border-blue-800"
+                )}>
                     +{score}
                 </span>
             )}

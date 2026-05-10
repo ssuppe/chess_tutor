@@ -104,3 +104,37 @@ The game analysis page on mobile devices had a suboptimal layout where technical
 ### 4. Testing & Validation
 - Verified the layout across multiple breakpoints using browser developer tools (Mobile S/M/L and Desktop).
 - Confirmed that "Play" functionality still correctly triggers the game setup modal and transition to gameplay.
+
+---
+
+# Pull Request Preparation: Mobile UX & High-Density Gameplay
+
+## Context
+Mobile users faced significant ergonomic friction due to a vertical layout that required constant scrolling between the chessboard and the AI coach. The on-screen keyboard also frequently shifted the board off-screen, breaking the game's mental flow.
+
+## Changes
+
+### 1. Smart Split Architecture
+- **Permanent Horizontal Split**: Replaced the long-scroll vertical layout with a stable 35/65 side-by-side split on mobile.
+- **Stable Visual Anchor**: The chessboard is now pinned to the left column, providing a constant view of the game state while chatting.
+- **Viewport Tracking**: Integrated the \`window.visualViewport\` API to track real-time available height. The UI now anchors to the \`offsetTop\` and uses precise pixel heights to prevent the browser from 'shifting' the board off-screen when the keyboard opens.
+
+### 2. High-Density Game Context Strip
+- **Vertical Clustering**: Eliminated 'dead space' by clustering all game metadata tightly around the mini-board in the narrow left column.
+- **Top Cluster**: Displays opponent's captured pieces and a **dynamic horizontal Evaluation Bar** (matching the desktop engine experience).
+- **Bottom Cluster**: Shows a subtle **Last Move text label** (e.g., 'Last move (White): Nf3') and the user's captured pieces.
+- **High-Contrast Trays**: Implemented dynamic backgrounds for captured pieces (light blue for black pieces, dark for white) to ensure 100% legibility in all themes.
+
+### 3. Unified FAB Interaction
+- **Graceful Toggle**: Created a single, fixed-position Floating Action Button (FAB) that serves as the unified entry and exit for the chat.
+- **Visual States**: The FAB transitions from an 'Avatar + Coach Chat' badge to a minimalist 'Close (X)' icon.
+- **FAB Relocation**: When chat is active, the FAB automatically raises (to \`bottom-40\`) to clear the chat input and 'Send' button, ensuring zero overlap and perfect ergonomics.
+
+### 4. Technical Performance
+- **Anti-Flicker Logic**: Muted CSS transitions and implemented \`will-change: height, top\` hints to ensure the layout resizes fluidly with the native keyboard animation.
+- **Edge-to-Edge Design**: Optimized the \`Tutor\` component to 'bleed' to the screen edges on mobile, removing margins and rounding to reclaim every pixel for text.
+- **Keyboard-Safe Zones**: Implemented dynamic padding (\`pb-24\`) in the message list to ensure the raised FAB never obscures the latest coach commentary.
+
+## Testing & Validation
+- **New Mobile Test Suite**: Created \`src/components/__tests__/MobileChatOverlay.test.tsx\` to verify side-by-side transitions and input persistence.
+- **Final Result**: All **247 workspace tests** are passing.

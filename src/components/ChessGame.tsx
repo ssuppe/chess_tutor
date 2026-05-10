@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { Chess, Move } from "chess.js";
 import { Chessboard } from "react-chessboard";
 import { Stockfish, StockfishEvaluation } from "@/lib/stockfish";
 import { Tutor } from "./Tutor";
+import clsx from "clsx";
 import { EvaluationBar } from "./EvaluationBar";
 import { Personality } from "@/lib/personalities";
 import { useTranslation } from "@/lib/i18n/useTranslation";
@@ -12,11 +13,12 @@ import { SupportedLanguage } from "@/lib/i18n/translations";
 import { lookupOpening, lookupPossibleOpenings, extractMoveSequenceFromPGN, OpeningMetadata } from "@/lib/openings";
 import { GameAnalysisModal } from "./GameAnalysisModal";
 import { GameOverModal, MoveHistoryItem } from "./GameOverModal";
-import { Brain, ArrowLeft, Download, Flag, AlertTriangle, X, ChevronRight, ChevronDown } from "lucide-react";
+import { Brain, ArrowLeft, Download, Flag, AlertTriangle, X, ChevronRight, ChevronDown, MessageCircle } from "lucide-react";
 import { CapturedPieces } from "./CapturedPieces";
 import { detectMissedTactics, uciToSan, DetectedTactic } from "@/lib/tacticDetection";
 import { upsertSavedGame } from "@/lib/savedGames";
 import { useChessSounds } from "@/lib/hooks/useChessSounds";
+import { TopUtilityLinks } from "./TopUtilityLinks";
 
 interface ChessGameProps {
     gameId: string;
@@ -57,21 +59,87 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
 
     // Opening Data
     const [openingData, setOpeningData] = useState<OpeningMetadata[]>([]);
-
+    
     // Tactical Analysis Data
     const [latestMissedTactics, setLatestMissedTactics] = useState<DetectedTactic[] | null>(null);
 
     const [userMove, setUserMove] = useState<Move | null>(null);
     const [computerMove, setComputerMove] = useState<Move | null>(null);
+    const [isMobileChatOpen, setIsMobileChatOpen] = useState(false);
+    const [isMobileBoardExpanded, setIsMobileBoardExpanded] = useState(false);
+    const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+    const [viewportHeight, setViewportHeight] = useState<number | null>(null);
+    const [viewportOffset, setViewportOffset] = useState<number>(0);
+
+    // Track actual visual viewport height and offset for keyboard awareness
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+
+        const updateViewport = () => {
+            const height = window.visualViewport?.height || window.innerHeight;
+            const offset = window.visualViewport?.offsetTop || 0;
+            setViewportHeight(height);
+            setViewportOffset(offset);
+            
+            // Counteract browser auto-scroll
+            if (offset > 0) {
+                window.scrollTo(0, 0);
+            }
+        };
+
+        updateViewport();
+        window.visualViewport?.addEventListener('resize', updateViewport);
+        window.visualViewport?.addEventListener('scroll', updateViewport);
+        window.addEventListener('resize', updateViewport);
+
+        return () => {
+            window.visualViewport?.removeEventListener('resize', updateViewport);
+            window.visualViewport?.removeEventListener('scroll', updateViewport);
+            window.removeEventListener('resize', updateViewport);
+        };
+    }, []);
+
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [apiKey, setApiKey] = useState<string | null>(null);
     const [stockfishDepth, setStockfishDepth] = useState(initialStockfishDepth ?? 15);
+
+    // Lock body scroll and mute global keyboard padding when mobile chat is open
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            if (isMobileChatOpen) {
+                document.body.style.overflow = 'hidden';
+                document.body.style.overscrollBehavior = 'none';
+                document.documentElement.style.setProperty('--keyboard-height', '0px');
+            } else {
+                document.body.style.overflow = '';
+                document.body.style.overscrollBehavior = '';
+            }
+        }
+        return () => { 
+            if (typeof window !== 'undefined') {
+                document.body.style.overflow = '';
+                document.body.style.overscrollBehavior = '';
+            }
+        };
+    }, [isMobileChatOpen]);
+
+    const lastMoveHighlight = useMemo(() => {
+        const history = game.history({ verbose: true });
+        if (history.length === 0) return {};
+        const lastMove = history[history.length - 1];
+        return {
+            [lastMove.from]: { boxShadow: 'inset 0 0 0 4px rgba(255, 255, 0, 0.75)' },
+            [lastMove.to]: { boxShadow: 'inset 0 0 0 4px rgba(255, 255, 0, 0.75)' }
+        };
+    }, [game]);
 
     // Settings
     const [language, setLanguage] = useState<SupportedLanguage>('en');
 
     // Game State
     const [playerColor, setPlayerColor] = useState<'white' | 'black'>(initialColor);
+    const [showStrengthSlider, setShowStrengthSlider] = useState(false);
+    const [isHistoryExpanded, setIsHistoryExpanded] = useState(false);
     const [showAnalysisModal, setShowAnalysisModal] = useState(false);
     const [showDownloadModal, setShowDownloadModal] = useState(false);
     const [showResignConfirm, setShowResignConfirm] = useState(false);
@@ -91,14 +159,12 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
     const hasRebuiltHistoryRef = useRef(false);
 
     const handleJumpToBoard = () => {
+        setIsMobileChatOpen(false);
         boardAreaRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
 
     // Chess sounds hook
     const { playMoveSound, playCheck, playVictory, playDefeat } = useChessSounds();
-
-    // Removed auto-scroll to prevent page jumping when moves are added
-    // Users can manually scroll to see move history if needed
 
     // Captured Pieces State
     const [capturedWhitePieces, setCapturedWhitePieces] = useState<string[]>([]);
@@ -114,10 +180,10 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
 
         history.forEach(move => {
             if (move.captured) {
-                if (move.color === 'w') { // White moved, captured a black piece. So a black piece was lost.
+                if (move.color === 'w') {
                     blackPiecesLost.push(move.captured);
                     blackLostScore += PIECE_VALUES[move.captured] || 0;
-                } else { // Black moved, captured a white piece. So a white piece was lost.
+                } else {
                     whitePiecesLost.push(move.captured);
                     whiteLostScore += PIECE_VALUES[move.captured] || 0;
                 }
@@ -127,7 +193,7 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
         setCapturedWhitePieces(whitePiecesLost);
         setCapturedBlackPieces(blackPiecesLost);
         setMaterialScore({ white: whiteLostScore, black: blackLostScore });
-    }, []);
+    }, [game]);
 
     const makeAMove = useCallback(
         (move: { from: string; to: string; promotion?: string }) => {
@@ -188,7 +254,6 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
                     return;
                 }
 
-                // Initialize from the actual starting position of this move sequence
                 const startFen = verboseMoves[0].before;
                 const replayGame = new Chess(startFen);
                 const playerTurnColor = playerColor === 'white' ? 'w' : 'b';
@@ -196,15 +261,8 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
 
                 for (let i = 0; i < verboseMoves.length; i++) {
                     const move = verboseMoves[i];
-
-                    // Play through opponent moves until it's the player's turn
                     if (move.color !== playerTurnColor) {
-                        try {
-                            replayGame.move(move.lan);
-                        } catch (e) {
-                            console.error("Invalid opponent move in history:", move.lan, e);
-                            break;
-                        }
+                        try { replayGame.move(move.lan); } catch (e) { break; }
                         continue;
                     }
 
@@ -216,10 +274,7 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
                     try {
                         playerMoveResult = replayGame.move(move.lan);
                         if (!playerMoveResult) break;
-                    } catch (e) {
-                        console.error("Invalid player move in history:", move.lan, e);
-                        break;
-                    }
+                    } catch (e) { break; }
 
                     const fenAfterPlayerMove = replayGame.fen();
                     const evalAfterPlayerMove = await stockfish.evaluate(fenAfterPlayerMove, stockfishDepth);
@@ -236,12 +291,9 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
                                 computerMoveSan = computerMoveResult.san;
                                 fenAfterComputerMove = replayGame.fen();
                                 evalAfterComputerMove = await stockfish.evaluate(fenAfterComputerMove, stockfishDepth);
-                                i++; // Skip the computer move we just processed
+                                i++;
                             }
-                        } catch (e) {
-                            console.error("Invalid computer move in history:", computerMove.lan, e);
-                            // We don't break here, we just stop processing this specific computer move
-                        }
+                        } catch (e) {}
                     }
 
                     const isWhite = playerColor === 'white';
@@ -285,9 +337,7 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
                     });
                 }
 
-                if (!isCancelled) {
-                    setMoveHistory(rebuiltHistory);
-                }
+                if (!isCancelled) setMoveHistory(rebuiltHistory);
             } catch (error) {
                 console.error('Failed to rebuild move history from PGN', error);
                 hasRebuiltHistoryRef.current = false;
@@ -295,11 +345,8 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
         };
 
         rebuildHistoryFromPgn();
-
-        return () => {
-            isCancelled = true;
-        };
-    }, [initialPgn, stockfish, playerColor, stockfishDepth, initialFen, moveHistory.length]);
+        return () => { isCancelled = true; };
+    }, [initialPgn, stockfish, playerColor, stockfishDepth, initialFen]);
 
     // Load Settings & Initial State
     useEffect(() => {
@@ -309,40 +356,27 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
         if (storedKey) setApiKey(storedKey);
         if (storedLang) setLanguage(storedLang as SupportedLanguage);
 
-        // If initialFen is provided, ensure game is synced
         if (initialFen && initialFen !== game.fen()) {
             try {
                 game.load(initialFen);
                 setFen(initialFen);
-                updateCapturedPieces(); // Update captured pieces for loaded game
-            } catch (e) {
-                console.error("Failed to load initial FEN:", e);
-            }
+                updateCapturedPieces();
+            } catch (e) {}
         }
 
-        // If initialPgn is provided, load it to restore history
         if (initialPgn) {
             try {
                 game.loadPgn(initialPgn);
                 setFen(game.fen());
                 updateCapturedPieces();
-            } catch (e) {
-                console.error("Failed to load PGN:", e);
-            }
+            } catch (e) {}
         }
 
-        // Check if it's the computer's turn and make a move if needed
-        // This handles both:
-        // 1. Standard new games where computer plays first (player is black)
-        // 2. Games starting from opening trainer with custom FEN where it might be computer's turn
         if (stockfish && game.history().length === 0) {
-            // No moves have been made yet - check whose turn it is
-            const currentTurn = game.turn(); // 'w' or 'b'
+            const currentTurn = game.turn();
             const computerTurn = initialColor === 'white' ? 'b' : 'w';
 
             if (currentTurn === computerTurn) {
-                console.log('[ChessGame] Initial position - computer\'s turn, making move...');
-                // Small delay to ensure stockfish is ready
                 setTimeout(() => {
                     stockfish.evaluate(game.fen(), 10).then(evalResult => {
                         const computerMoveData = {
@@ -351,14 +385,11 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
                             promotion: evalResult.bestMove.length > 4 ? evalResult.bestMove.substring(4, 5) : "q"
                         };
                         makeAMove(computerMoveData);
-                    }).catch(err => {
-                        console.error('[ChessGame] Failed to make initial computer move:', err);
-                    });
+                    }).catch(() => {});
                 }, 1000);
             }
         }
-
-    }, [initialFen, initialColor, stockfish]); // Run when these change
+    }, [initialFen, initialColor, stockfish, game, initialPgn, makeAMove, updateCapturedPieces]);
 
     // Save Game State on Change
     useEffect(() => {
@@ -367,7 +398,7 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
             fen,
             language,
             selectedPersonality,
-            playerColor, // Save player color too
+            playerColor,
             pgn: game.pgn(),
             updatedAt: Date.now(),
             evaluation: evalP0 ? {
@@ -425,50 +456,24 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
 
     function onDrop({ sourceSquare, targetSquare }: { sourceSquare: string; targetSquare: string | null }) {
         if (!targetSquare || !stockfish || gameOverState) return false;
-
-        // Check if it's the player's turn
-        const currentTurn = game.turn(); // 'w' or 'b'
+        const currentTurn = game.turn();
         const playerTurn = playerColor === 'white' ? 'w' : 'b';
+        if (currentTurn !== playerTurn) return false;
+        if (!evalP0) return false;
 
-        if (currentTurn !== playerTurn) {
-            // Not the player's turn - prevent move
-            return false;
-        }
-
-        // Wait for pre-analysis (evalP0) to be available before allowing moves
-        // This ensures we can properly track move history with evaluations
-        if (!evalP0) {
-            console.log("Waiting for position analysis before move...");
-            return false;
-        }
-
-        const move = {
-            from: sourceSquare,
-            to: targetSquare,
-            promotion: "q",
-        };
-
-        // Capture FEN BEFORE player's move (P0)
+        const move = { from: sourceSquare, to: targetSquare, promotion: "q" };
         const fenP0 = game.fen();
-
-        // 1. User Move (P0 -> P1)
         const moveResult = makeAMove(move);
-
         if (!moveResult) return false;
 
         setUserMove(moveResult.result);
-
-        // Reset Computer State
         setComputerMove(null);
         setEvalP2(null);
         setOpeningData([]);
-
         setIsAnalyzing(true);
         const { newFen: fenP1 } = moveResult;
 
-        // 2. Bot Move (P1 -> P2)
         stockfish.evaluate(fenP1, stockfishDepth).then(p1Eval => {
-            // Store partial history data if evalP0 is available
             const partialHistoryItem = evalP0 ? {
                 moveNumber: game.moveNumber(),
                 playerMove: moveResult.result.san,
@@ -479,7 +484,6 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
                 evalAfterPlayerMove: p1Eval,
             } : null;
 
-            // Computer should ALWAYS move, even if evalP0 is missing
             setTimeout(() => {
                 const computerMoveData = {
                     from: p1Eval.bestMove.substring(0, 2),
@@ -492,17 +496,13 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
                     setComputerMove(compResult.result);
                     const { newFen: fenP2 } = compResult;
 
-                    // 3. Post-Eval (P2)
                     stockfish.evaluate(fenP2, stockfishDepth).then(p2Eval => {
                         setEvalP2(p2Eval);
-
-                        // 4. Opening Lookup - Get multiple possible openings
                         const currentPgn = game.pgn();
                         const moveSequence = extractMoveSequenceFromPGN(currentPgn);
                         const possibleOpenings = lookupPossibleOpenings(moveSequence, 5);
                         setOpeningData(possibleOpenings);
 
-                        // 5. Complete the history item with computer's move data (only if we have evalP0)
                         if (partialHistoryItem && evalP0) {
                             const isWhite = playerColor === 'white';
                             const evalBefore = isWhite ? evalP0.score : -evalP0.score;
@@ -517,7 +517,6 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
                                 cpLoss,
                             });
 
-                            // Store the latest tactics for the Tutor component
                             setLatestMissedTactics(missedTactics);
 
                             const completeHistoryItem: MoveHistoryItem = {
@@ -526,8 +525,7 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
                                 fenAfterComputerMove: fenP2,
                                 evalAfterComputerMove: p2Eval,
                                 opening: possibleOpenings.length > 0 ? possibleOpenings[0].name : undefined,
-                                // Legacy fields for backward compatibility
-                                move: moveResult.result.san,
+                                move: playerMoveResult.san,
                                 evalBefore: evalP0.score,
                                 evalAfter: p1Eval.score,
                                 bestMove: evalP0.bestMove,
@@ -536,39 +534,23 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
                                 missedTactics,
                             };
                             setMoveHistory(prev => [...prev, completeHistoryItem]);
-                        } else {
-                            console.warn("Skipping move history - evalP0 was not available when player moved");
                         }
-
                         setIsAnalyzing(false);
-                    }).catch(err => {
-                        console.error("P2 analysis failed:", err);
-                        setIsAnalyzing(false);
-                    });
-                } else {
-                    setIsAnalyzing(false);
-                }
+                    }).catch(() => setIsAnalyzing(false));
+                } else setIsAnalyzing(false);
             }, 500);
-        }).catch(err => {
-            console.error("Bot move analysis failed:", err);
-            setIsAnalyzing(false);
-        });
+        }).catch(() => setIsAnalyzing(false));
 
         return true;
     }
 
-    // Check if computer needs to move (safety net for race conditions)
     const checkAndMakeComputerMove = useCallback(() => {
         if (!stockfish || gameOverState || isAnalyzing) return;
-
         const currentTurn = game.turn();
         const computerTurn = playerColor === 'white' ? 'b' : 'w';
 
-        // If it's the computer's turn and we're not already analyzing, make a move
         if (currentTurn === computerTurn) {
-            console.log("Safety check: Computer's turn detected, making move...");
             setIsAnalyzing(true);
-
             const currentFen = game.fen();
             stockfish.evaluate(currentFen, stockfishDepth).then(evalResult => {
                 const computerMoveData = {
@@ -580,33 +562,20 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
                 const compResult = makeAMove(computerMoveData);
                 if (compResult) {
                     setComputerMove(compResult.result);
-                    const { newFen } = compResult;
-
-                    // Evaluate the position after computer's move
-                    stockfish.evaluate(newFen, stockfishDepth).then(p2Eval => {
+                    stockfish.evaluate(compResult.newFen, stockfishDepth).then(p2Eval => {
                         setEvalP2(p2Eval);
                         const currentPgn = game.pgn();
                         const moveSequence = extractMoveSequenceFromPGN(currentPgn);
                         const possibleOpenings = lookupPossibleOpenings(moveSequence, 5);
                         setOpeningData(possibleOpenings);
                         setIsAnalyzing(false);
-                    }).catch(err => {
-                        console.error("Post-computer-move analysis failed:", err);
-                        setIsAnalyzing(false);
-                    });
-                } else {
-                    setIsAnalyzing(false);
-                }
-            }).catch(err => {
-                console.error("Computer move evaluation failed:", err);
-                setIsAnalyzing(false);
-            });
+                    }).catch(() => setIsAnalyzing(false));
+                } else setIsAnalyzing(false);
+            }).catch(() => setIsAnalyzing(false));
         }
-    }, [stockfish, gameOverState, isAnalyzing, playerColor, stockfishDepth, makeAMove]);
+    }, [stockfish, gameOverState, isAnalyzing, playerColor, stockfishDepth, makeAMove, game]);
 
     const handleNewGame = () => {
-        // Reset game to initial props or just reload?
-        // For now, let's just reset the board
         game.reset();
         setFen(game.fen());
         setGameOverState(null);
@@ -631,36 +600,17 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
 
         const currentFen = game.fen();
         let evaluation: StockfishEvaluation | null = null;
-
         if (stockfish) {
-            try {
-                evaluation = await stockfish.evaluate(currentFen, stockfishDepth);
-            } catch (error) {
-                console.error("Failed to evaluate resignation position", error);
-            }
+            try { evaluation = await stockfish.evaluate(currentFen, stockfishDepth); } catch (error) {}
         }
 
         const result = t.game.resignation;
         const winner = playerColor === 'white' ? 'Black' : 'White' as const;
-
-        setGameOverState({
-            result,
-            winner,
-        });
-
-        setResignationContext({
-            trigger: Date.now(),
-            fen: currentFen,
-            evaluation,
-            history: moveHistory,
-            result,
-            winner,
-        });
+        setGameOverState({ result, winner });
+        setResignationContext({ trigger: Date.now(), fen: currentFen, evaluation, history: moveHistory, result, winner });
     }, [moveHistory, playerColor, stockfish, stockfishDepth, t.game.resignation]);
 
-    const handleResignCancel = useCallback(() => {
-        setShowResignConfirm(false);
-    }, []);
+    const handleResignCancel = useCallback(() => setShowResignConfirm(false), []);
 
     const handleDownloadPGN = () => {
         const pgn = game.pgn();
@@ -690,153 +640,178 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
         setShowDownloadModal(false);
     };
 
-    // Determine material advantage
-    // If Black lost more value, White has advantage
     const whiteAdvantage = materialScore.black - materialScore.white;
     const blackAdvantage = materialScore.white - materialScore.black;
 
-    const [showStrengthSlider, setShowStrengthSlider] = useState(false);
-    const [isHistoryExpanded, setIsHistoryExpanded] = useState(false);
-
-    const handleAnalysisComplete = useCallback(() => {
-        setIsAnalyzing(false);
-    }, []);
+    const handleAnalysisComplete = useCallback(() => setIsAnalyzing(false), []);
 
     return (
         <>
-            <div className="flex-grow grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8 w-full max-w-6xl mx-auto p-4">
+            <div 
+                className={clsx(
+                    "flex-grow transition-all duration-300",
+                    isMobileChatOpen 
+                        ? "fixed top-0 left-0 right-0 z-[100] bg-white dark:bg-gray-900 flex flex-row p-0 m-0 w-full overflow-hidden" 
+                        : "grid grid-cols-1 md:grid-cols-3 gap-1 md:gap-4 w-full max-w-6xl mx-auto p-2 md:p-4 transition-all duration-300"
+                )}
+                style={isMobileChatOpen ? { 
+                    height: viewportHeight ? `${viewportHeight}px` : '100dvh',
+                    top: `${viewportOffset}px`,
+                    willChange: 'height, top'
+                } : {}}
+            >
 
 
-                {/* 1. Slim Navigation Row */}
-                <div className="md:col-span-3 flex justify-between items-center py-1 px-1">
+                {/* 1. Slim Navigation Row - Hidden in mobile chat mode */}
+                <div className={clsx(
+                    "md:col-span-3 flex justify-between items-center py-0 px-1",
+                    isMobileChatOpen && "hidden md:flex"
+                )}>
                     <button
                         onClick={onBack}
-                        className="flex items-center gap-1.5 px-2 py-1 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md text-xs font-medium transition-all"
+                        className="flex items-center gap-1 px-2 py-0.5 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md text-xs font-bold transition-all"
                         aria-label={t.game.backToMenu}
                     >
-                        <ArrowLeft size={14} />
-                        <span className="hidden sm:inline">{t.game.backToMenu}</span>
+                        &lt; {t.game.backToMenu}
                     </button>
+                    <TopUtilityLinks language={language} showExternalLinks={false} />
                 </div>
 
-                {/* 2. Board Area (Col 1-2) */}
-                <div ref={boardAreaRef} className="md:col-span-2 bg-white dark:bg-gray-800 p-2 md:p-4 rounded-lg shadow-lg flex flex-col md:flex-row gap-2 md:gap-8 relative">
-                    {/* Mobile Eval Bar (Horizontal) - Moved to top */}
-                    <div className="md:hidden w-full">
-                        <EvaluationBar
-                            score={isAnalyzing ? null : evalP0?.score}
-                            mate={isAnalyzing ? null : evalP0?.mate}
-                            isPlayerWhite={playerColor === 'white'}
-                            orientation="horizontal"
-                        />
+                {/* 2. Board Area (Left Part of Mobile Horizontal Split) */}
+                <div 
+                    data-testid="board-area"
+                    data-keyboard={isKeyboardVisible}
+                    ref={boardAreaRef} 
+                    className={clsx(
+                        "md:col-span-2 bg-white dark:bg-gray-800 p-1 md:p-4 rounded-lg shadow-lg flex flex-col md:flex-row gap-2 md:gap-8 relative overflow-hidden",
+                        isMobileChatOpen ? "w-[35%] h-full rounded-none border-r border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-900 items-center justify-center gap-4 py-4 px-1" : "md:relative md:h-auto transition-all duration-300"
+                    )}
+                    onClick={() => isMobileChatOpen && setIsMobileChatOpen(false)}
+                >
+                    {/* Top Cluster: Opponent Material + Eval Bar (Mobile Chat Mode only) */}
+                    {isMobileChatOpen && (
+                        <div className="w-full flex flex-col items-center gap-2 flex-shrink-0 scale-90">
+                            <CapturedPieces 
+                                captured={playerColor === 'white' ? capturedWhitePieces : capturedBlackPieces} 
+                                color={playerColor === 'white' ? 'w' : 'b'} 
+                                score={playerColor === 'white' ? (blackAdvantage > 0 ? blackAdvantage : null) : (whiteAdvantage > 0 ? whiteAdvantage : null)} 
+                            />
+                            
+                            <div className="w-full h-3">
+                                <EvaluationBar 
+                                    score={isAnalyzing ? null : evalP0?.score} 
+                                    mate={isAnalyzing ? null : evalP0?.mate} 
+                                    isPlayerWhite={playerColor === 'white'} 
+                                    orientation="horizontal" 
+                                />
+                            </div>
+                        </div>
+                    )}
+
+                    <div className={clsx(
+                        "md:hidden w-full transition-opacity duration-200",
+                        isMobileChatOpen ? "hidden" : "block"
+                    )}>
+                        <EvaluationBar score={isAnalyzing ? null : evalP0?.score} mate={isAnalyzing ? null : evalP0?.mate} isPlayerWhite={playerColor === 'white'} orientation="horizontal" />
                     </div>
 
-                    {/* Desktop Eval Bar (Vertical) */}
-                    <div className="hidden md:block h-[560px]">
-                        <EvaluationBar
-                            score={isAnalyzing ? null : evalP0?.score}
-                            mate={isAnalyzing ? null : evalP0?.mate}
-                            isPlayerWhite={playerColor === 'white'}
-                            orientation="vertical"
-                        />
+                    <div className={clsx(
+                        "hidden md:block h-[560px]",
+                        isMobileChatOpen && "md:block"
+                    )}>
+                        <EvaluationBar score={isAnalyzing ? null : evalP0?.score} mate={isAnalyzing ? null : evalP0?.mate} isPlayerWhite={playerColor === 'white'} orientation="vertical" />
                     </div>
 
-                    <div className="flex-1 flex flex-col gap-1">
-                        {/* Board Controls - Moved to top */}
-                        <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-                            <div className="relative">
-                                <button
-                                    onClick={() => setShowStrengthSlider(!showStrengthSlider)}
-                                    className="hover:text-gray-700 dark:hover:text-gray-200 underline decoration-dotted underline-offset-2"
-                                >
-                                    {t.game.stockfishLevel}: {stockfishDepth}
-                                </button>
-                                {showStrengthSlider && (
-                                    <div className="absolute top-full left-0 mt-2 w-48 bg-white dark:bg-gray-700 p-3 rounded shadow-xl border border-gray-200 dark:border-gray-600 z-10">
-                                        <label className="block text-xs font-bold mb-1 text-gray-700 dark:text-gray-200">
-                                            {t.game.stockfishStrength} ({t.game.depth}: {stockfishDepth})
-                                        </label>
-                                        <input
-                                            type="range"
-                                            min="1"
-                                            max="20"
-                                            value={stockfishDepth}
-                                            onChange={(e) => setStockfishDepth(parseInt(e.target.value))}
-                                            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-600"
-                                        />
+                    <div className={clsx(
+                        "flex flex-col gap-1 transition-all duration-300 w-full justify-center items-center",
+                        isMobileChatOpen ? "h-auto flex-shrink" : "flex-1 h-full transition-all duration-300"
+                    )}>
+                        {!isMobileChatOpen && (
+                            <>
+                                <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 w-full">
+                                    <div className="relative">
+                                        <button onClick={() => setShowStrengthSlider(!showStrengthSlider)} className="hover:text-gray-700 dark:hover:text-gray-200 underline decoration-dotted underline-offset-2">
+                                            {t.game.stockfishLevel}: {stockfishDepth}
+                                        </button>
+                                        {showStrengthSlider && (
+                                            <div className="absolute top-full left-0 mt-2 w-48 bg-white dark:bg-gray-700 p-3 rounded shadow-xl border border-gray-200 dark:border-gray-600 z-10">
+                                                <label className="block text-xs font-bold mb-1 text-gray-700 dark:text-gray-200">{t.game.stockfishStrength} ({t.game.depth}: {stockfishDepth})</label>
+                                                <input type="range" min="1" max="20" value={stockfishDepth} onChange={(e) => setStockfishDepth(parseInt(e.target.value))} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-600" />
+                                            </div>
+                                        )}
                                     </div>
-                                )}
+                                    <div className="flex items-center gap-3">
+                                        <button onClick={() => { game.undo(); game.undo(); setFen(game.fen()); setUserMove(null); setComputerMove(null); setEvalP0(null); setEvalP2(null); setOpeningData([]); updateCapturedPieces(); }} className="flex items-center gap-1 hover:text-blue-600 dark:hover:text-blue-400 transition-colors" disabled={!!gameOverState}><ArrowLeft size={12} /> {t.game.undoMove}</button>
+                                        <button onClick={handleResignClick} className="flex items-center gap-1 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors" disabled={!!gameOverState}><Flag size={12} /> {t.game.resign}</button>
+                                    </div>
+                                </div>
+                                <div className="h-6 w-full flex justify-start">
+                                    <CapturedPieces 
+                                        captured={playerColor === 'white' ? capturedWhitePieces : capturedBlackPieces} 
+                                        color={playerColor === 'white' ? 'w' : 'b'} 
+                                        score={playerColor === 'white' ? (blackAdvantage > 0 ? blackAdvantage : null) : (whiteAdvantage > 0 ? whiteAdvantage : null)} 
+                                    />
+                                </div>
+                            </>
+                        )}
+
+                        <div className={clsx(
+                            "bg-[#779954] p-[2px] rounded-sm",
+                            isMobileChatOpen ? "w-full aspect-square shadow-sm" : "w-full aspect-square transition-all duration-300"
+                        )}>
+                            <Chessboard options={{ position: fen, onPieceDrop: ({ sourceSquare, targetSquare }) => onDrop({ sourceSquare, targetSquare }), darkSquareStyle: { backgroundColor: '#779954' }, lightSquareStyle: { backgroundColor: '#e9edcc' }, animationDurationInMs: 200, boardOrientation: playerColor, allowDragging: !isMobileChatOpen, squareStyles: lastMoveHighlight }} />
+                        </div>
+
+                        {!isMobileChatOpen && (
+                            <div className="h-6 w-full flex justify-start">
+                                <CapturedPieces 
+                                    captured={playerColor === 'white' ? capturedBlackPieces : capturedWhitePieces} 
+                                    color={playerColor === 'white' ? 'b' : 'w'} 
+                                    score={playerColor === 'white' ? (whiteAdvantage > 0 ? whiteAdvantage : null) : (blackAdvantage > 0 ? blackAdvantage : null)} 
+                                />
                             </div>
-
-                            <div className="flex items-center gap-3">
-                                <button
-                                    onClick={() => {
-                                        game.undo();
-                                        game.undo();
-                                        setFen(game.fen());
-                                        setUserMove(null);
-                                        setComputerMove(null);
-                                        setEvalP0(null);
-                                        setEvalP2(null);
-                                        setOpeningData([]);
-                                        updateCapturedPieces();
-                                    }}
-                                    className="flex items-center gap-1 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                                    disabled={!!gameOverState}
-                                >
-                                    <ArrowLeft size={12} /> {t.game.undoMove}
-                                </button>
-
-                                <button
-                                    onClick={handleResignClick}
-                                    className="flex items-center gap-1 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors"
-                                    disabled={!!gameOverState}
-                                >
-                                    <Flag size={12} /> {t.game.resign}
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Opponent's Captured Pieces (Top) */}
-                        <div className="h-6">
-                            <CapturedPieces
-                                captured={playerColor === 'white' ? capturedWhitePieces : capturedBlackPieces}
-                                color={playerColor === 'white' ? 'w' : 'b'}
-                                score={playerColor === 'white' ? (blackAdvantage > 0 ? blackAdvantage : null) : (whiteAdvantage > 0 ? whiteAdvantage : null)}
-                            />
-                        </div>
-
-                        <div className="bg-[#779954] p-[2px] rounded-sm">
-                            <Chessboard
-                                options={{
-                                    position: fen,
-                                    onPieceDrop: ({ sourceSquare, targetSquare }) => onDrop({ sourceSquare, targetSquare }),
-                                    darkSquareStyle: { backgroundColor: '#779954' },
-                                    lightSquareStyle: { backgroundColor: '#e9edcc' },
-                                    animationDurationInMs: 200,
-                                    boardOrientation: playerColor
-                                }}
-                            />
-                        </div>
-
-                        {/* Player's Captured Pieces (Bottom) */}
-                        <div className="h-6">
-                            <CapturedPieces
-                                captured={playerColor === 'white' ? capturedBlackPieces : capturedWhitePieces}
-                                color={playerColor === 'white' ? 'b' : 'w'}
-                                score={playerColor === 'white' ? (whiteAdvantage > 0 ? whiteAdvantage : null) : (blackAdvantage > 0 ? blackAdvantage : null)}
-                            />
-                        </div>
+                        )}
                     </div>
+
+                    {/* Bottom Cluster: Last Move + Player Material (Mobile Chat Mode only) */}
+                    {isMobileChatOpen && (
+                        <div className="w-full flex flex-col items-center gap-2 flex-shrink-0 scale-90">
+                            {moveHistory.length > 0 && (
+                                <div className="text-[10px] text-gray-500 dark:text-gray-400 font-medium italic">
+                                    Last move ({
+                                        moveHistory[moveHistory.length - 1].computerMove !== '...' 
+                                            ? (playerColor === 'white' ? 'Black' : 'White') 
+                                            : (playerColor === 'white' ? 'White' : 'Black')
+                                    }): <span className="font-black not-italic text-gray-800 dark:text-gray-200">{
+                                        moveHistory[moveHistory.length - 1].computerMove !== '...' 
+                                            ? moveHistory[moveHistory.length - 1].computerMove 
+                                            : moveHistory[moveHistory.length - 1].playerMove
+                                    }</span>
+                                </div>
+                            )}
+                            <CapturedPieces 
+                                captured={playerColor === 'white' ? capturedBlackPieces : capturedWhitePieces} 
+                                color={playerColor === 'white' ? 'b' : 'w'} 
+                                score={playerColor === 'white' ? (whiteAdvantage > 0 ? whiteAdvantage : null) : (blackAdvantage > 0 ? blackAdvantage : null)} 
+                            />
+                        </div>
+                    )}
+
+                    {isMobileChatOpen && !isKeyboardVisible && (
+                        <div className="absolute bottom-1 left-0 right-0 text-center text-[7px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em]">
+                            Live Game
+                        </div>
+                    )}
                 </div>
 
-                {/* 3. Tutor (Col 3) - Side by side with Board on Desktop */}
-                <div className="md:col-span-1 h-[400px] md:h-auto">
-                    {/* Note: We rely on Tutor's internal height styling or pass a class.
-                         The Tutor component has 'h-[400px] md:h-full'.
-                         Since it's in a grid cell that might stretch, 'h-full' should work if the row has height.
-                         However, the Board Area defines the row height.
-                     */}
+                {/* 3. Tutor (Right Part of Mobile Horizontal Split) */}
+                <div 
+                    data-testid="tutor-container"
+                    className={clsx(
+                        "md:col-span-1 md:h-auto z-40 overflow-hidden flex flex-col",
+                        isMobileChatOpen ? "flex-1 h-full" : "translate-y-full md:translate-y-0 fixed inset-x-0 bottom-0 md:relative md:inset-auto transition-all duration-300",
+                    )}
+                >
                     <Tutor
                         game={game}
                         currentFen={fen}
@@ -855,12 +830,41 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
                         onCheckComputerMove={checkAndMakeComputerMove}
                         resignationContext={resignationContext}
                         openingContext={openingContext}
-                        onJumpToBoard={handleJumpToBoard}
+                        onJumpToBoard={() => setIsMobileChatOpen(false)}
+                        onChatFocus={() => setIsKeyboardVisible(true)}
+                        onChatBlur={() => setIsKeyboardVisible(false)}
                     />
                 </div>
 
+                {/* Unified Mobile Floating Action Button */}
+                <button
+                    onClick={() => setIsMobileChatOpen(!isMobileChatOpen)}
+                    aria-label={isMobileChatOpen ? "Close Chat" : "Open Chat"}
+                    className={clsx(
+                        "fixed right-4 z-[110] md:hidden transition-all duration-500 shadow-2xl",
+                        "flex items-center gap-2 px-3 py-2.5 rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800",
+                        isMobileChatOpen ? "bottom-40 scale-90 opacity-90" : "bottom-24 scale-100 opacity-100"
+                    )}
+                >
+                    {isMobileChatOpen ? (
+                        <>
+                            <X size={18} className="text-red-500 dark:text-red-400" />
+                            <span className="text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-tight">Close</span>
+                        </>
+                    ) : (
+                        <>
+                            <div className="text-xl leading-none">{selectedPersonality.image}</div>
+                            <span className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-tight">Coach Chat</span>
+                            <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse" />
+                        </>
+                    )}
+                </button>
+
                 {/* 4. History (Col 1-3) - Full width at bottom */}
-                <div className="md:col-span-3 bg-white dark:bg-gray-800 p-1.5 md:p-2 px-3 md:px-4 rounded-lg shadow-lg flex flex-col transition-all duration-300">
+                <div className={clsx(
+                    "md:col-span-3 bg-white dark:bg-gray-800 p-1.5 md:p-2 px-3 md:px-4 rounded-lg shadow-lg flex flex-col transition-all duration-300",
+                    isMobileChatOpen && "hidden md:flex"
+                )}>
                     <div className="flex items-center justify-between">
                         <button
                             onClick={() => setIsHistoryExpanded(!isHistoryExpanded)}
@@ -868,114 +872,17 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
                         >
                             {isHistoryExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                             <h3 className="text-xs font-medium text-gray-700 dark:text-gray-300">{t.game.gameHistory}</h3>
-                            {!isHistoryExpanded && moveHistory.length > 0 && (
-                                <span className="text-[9px] bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 px-1 py-0 rounded-full font-bold">
-                                    {moveHistory.length}
-                                </span>
-                            )}
                         </button>
-                        <div className="flex gap-2">
-                            <button
-                                onClick={() => setShowDownloadModal(true)}
-                                className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded hover:bg-green-200 dark:bg-green-900 dark:text-green-200 flex items-center gap-1"
-                            >
-                                <Download size={10} /> {t.game.download}
-                            </button>
-                            <button
-                                onClick={() => setShowAnalysisModal(true)}
-                                className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded hover:bg-purple-200 dark:bg-purple-900 dark:text-purple-200 flex items-center gap-1"
-                            >
-                                <Brain size={10} /> {t.game.analyze}
-                            </button>
-                        </div>
                     </div>
-
-                    {isHistoryExpanded && (
-                        <div className="mt-1.5 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded bg-gray-50 dark:bg-gray-900 p-1.5 max-h-40">
-                            <table className="w-full text-xs text-left">
-                                <thead>
-                                    <tr className="text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
-                                        <th className="py-0.5 px-2 w-10">#</th>
-                                        <th className="py-0.5 px-2">{t.game.white}</th>
-                                        <th className="py-0.5 px-2">{t.game.black}</th>
-                                        <th className="py-0.5 px-2 text-center w-20">{t.game.evalChange}</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {moveHistory.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={4} className="py-2 text-center text-gray-500 italic">
-                                                {t.game.noMovesYet}
-                                            </td>
-                                        </tr>
-                                    ) : (
-                                        moveHistory.map((item, idx) => {
-                                            // Calculate evaluation change for player's move
-                                            const evalBefore = item.evalBeforePlayerMove.score ?? 0;
-                                            const evalAfter = item.evalAfterPlayerMove.score ?? 0;
-                                            const evalChange = evalAfter - evalBefore;
-
-                                            // Determine color based on evaluation change
-                                            // Positive change = good for white, negative = good for black
-                                            let evalColor = 'text-gray-500';
-                                            if (Math.abs(evalChange) > 50) {
-                                                if (item.playerColor === 'white') {
-                                                    evalColor = evalChange > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400';
-                                                } else {
-                                                    evalColor = evalChange < 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400';
-                                                }
-                                            }
-
-                                            const evalDisplay = evalChange > 0 ? `+${(evalChange / 100).toFixed(1)}` : (evalChange / 100).toFixed(1);
-
-                                            return (
-                                                <tr key={idx} className="border-b border-gray-100 dark:border-gray-800 last:border-0">
-                                                    <td className="py-0.5 px-2 text-gray-500 dark:text-gray-500">{item.moveNumber}.</td>
-                                                    <td className="py-0.5 px-2 font-medium text-gray-900 dark:text-gray-200">
-                                                        {item.playerColor === 'white' ? item.playerMove : item.computerMove}
-                                                    </td>
-                                                    <td className="py-0.5 px-2 font-medium text-gray-900 dark:text-gray-200">
-                                                        {item.playerColor === 'black' ? item.playerMove : item.computerMove}
-                                                    </td>
-                                                    <td className={`py-0.5 px-2 text-center font-mono text-[10px] ${evalColor}`}>
-                                                        {evalDisplay}
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })
-                                    )}
-                                </tbody>
-                            </table>
-                            <div ref={messagesEndRef} />
-                        </div>
-                    )}
                 </div>
             </div>
 
             {showAnalysisModal && (
-                <GameAnalysisModal
-                    fen={fen}
-                    stockfish={stockfish}
-                    apiKey={apiKey}
-                    language={language}
-                    onClose={() => setShowAnalysisModal(false)}
-                />
+                <GameAnalysisModal fen={fen} stockfish={stockfish} apiKey={apiKey} language={language} onClose={() => setShowAnalysisModal(false)} />
             )}
 
             {gameOverState && (
-                <GameOverModal
-                    result={gameOverState.result}
-                    winner={gameOverState.winner}
-                    history={moveHistory}
-                    apiKey={apiKey}
-                    language={language}
-                    onClose={() => setGameOverState(null)}
-                    onNewGame={handleNewGame}
-                    onAnalyze={() => {
-                        setGameOverState(null);
-                        setShowAnalysisModal(true);
-                    }}
-                />
+                <GameOverModal result={gameOverState.result} winner={gameOverState.winner} history={moveHistory} apiKey={apiKey} language={language} onClose={() => setGameOverState(null)} onNewGame={handleNewGame} onAnalyze={() => { setGameOverState(null); setShowAnalysisModal(true); }} />
             )}
 
             {showDownloadModal && (
@@ -1012,11 +919,9 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
                 </div>
             )}
 
-            {/* Resign Confirmation Modal */}
             {showResignConfirm && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full overflow-hidden">
-                        {/* Header */}
                         <div className="bg-red-50 dark:bg-red-900/20 px-6 py-4 border-b border-red-100 dark:border-red-900/30">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3">
@@ -1035,8 +940,6 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
                                 </button>
                             </div>
                         </div>
-
-                        {/* Content */}
                         <div className="px-6 py-5">
                             <div className="flex items-start gap-3">
                                 <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
@@ -1045,8 +948,6 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
                                 </p>
                             </div>
                         </div>
-
-                        {/* Footer */}
                         <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900/50 flex justify-end gap-3">
                             <button
                                 onClick={handleResignCancel}

@@ -6,10 +6,13 @@ import { SupportedLanguage } from '@/lib/i18n/translations';
 
 interface TopUtilityLinksProps {
     language: SupportedLanguage;
+    showExternalLinks?: boolean;
 }
 
-export function TopUtilityLinks({ language }: TopUtilityLinksProps) {
+export function TopUtilityLinks({ language, showExternalLinks = true }: TopUtilityLinksProps) {
     const t = useTranslation(language);
+
+    if (!showExternalLinks) return null;
 
     return (
         <div className="flex items-center gap-2">
