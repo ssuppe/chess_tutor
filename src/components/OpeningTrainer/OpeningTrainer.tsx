@@ -35,6 +35,8 @@ interface OpeningTrainerProps {
   allVariations?: OpeningMetadata[];
 }
 
+const MOVE_HIGHLIGHT_STYLE = { backgroundColor: "rgba(255, 255, 0, 0.4)" };
+
 export default function OpeningTrainer({
   opening,
   personality,
@@ -55,6 +57,17 @@ export default function OpeningTrainer({
     undoToMove,
     navigateToMove,
   } = useOpeningTraining();
+
+  const lastMoveHighlight = useMemo(() => {
+    if (!session || session.moveHistory.length === 0) return {};
+    const lastMove = session.moveHistory[session.moveHistory.length - 1];
+    if (!lastMove) return {};
+
+    return {
+      [lastMove.from]: MOVE_HIGHLIGHT_STYLE,
+      [lastMove.to]: MOVE_HIGHLIGHT_STYLE,
+    };
+  }, [session]);
 
   // Get Chess instance on-demand from current FEN
   const chess = useChessInstance(session);
@@ -498,6 +511,7 @@ export default function OpeningTrainer({
               darkSquareStyle: { backgroundColor: '#779954' },
               lightSquareStyle: { backgroundColor: '#e9edcc' },
               animationDurationInMs: 200,
+              customSquareStyles: lastMoveHighlight,
             }}
           />
         </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { Chess, Move } from "chess.js";
 import { Chessboard } from "react-chessboard";
 import { Stockfish, StockfishEvaluation } from "@/lib/stockfish";
@@ -44,6 +44,8 @@ const PIECE_VALUES: Record<string, number> = {
     'k': 0
 };
 
+const MOVE_HIGHLIGHT_STYLE = { backgroundColor: "rgba(255, 255, 0, 0.4)" };
+
 const DEFAULT_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
 export default function ChessGame({ gameId, initialFen, initialPgn, initialPersonality, initialColor, initialStockfishDepth, openingContext, onBack }: ChessGameProps) {
@@ -73,6 +75,17 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
 
     const [userMove, setUserMove] = useState<Move | null>(null);
     const [computerMove, setComputerMove] = useState<Move | null>(null);
+
+    const lastMoveHighlight = useMemo(() => {
+        const move = computerMove || userMove;
+        if (!move) return {};
+
+        return {
+            [move.from]: MOVE_HIGHLIGHT_STYLE,
+            [move.to]: MOVE_HIGHLIGHT_STYLE,
+        };
+    }, [computerMove, userMove]);
+
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [apiKey, setApiKey] = useState<string | null>(() => {
         if (typeof window !== "undefined") return localStorage.getItem("gemini_api_key");
@@ -813,7 +826,8 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
                                     darkSquareStyle: { backgroundColor: '#779954' },
                                     lightSquareStyle: { backgroundColor: '#e9edcc' },
                                     animationDurationInMs: 200,
-                                    boardOrientation: playerColor
+                                    boardOrientation: playerColor,
+                                    customSquareStyles: lastMoveHighlight
                                 }}
                             />
                         </div>

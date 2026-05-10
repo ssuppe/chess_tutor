@@ -19,6 +19,8 @@ import pinFixtures from "../../../../../fixtures/tactics/pin.json";
 
 type FeedbackState = 'none' | 'correct' | 'incorrect';
 
+const MOVE_HIGHLIGHT_STYLE = { backgroundColor: "rgba(255, 255, 0, 0.4)" };
+
 export default function TacticalPracticePage() {
     const router = useRouter();
     const params = useParams();
@@ -32,6 +34,16 @@ export default function TacticalPracticePage() {
     const [selectedPersonality, setSelectedPersonality] = useState<Personality>(PERSONALITIES[0]);
     const [apiKey, setApiKey] = useState<string>('');
     const [userMove, setUserMove] = useState<Move | null>(null);
+    const [lastMove, setLastMove] = useState<Move | null>(null);
+
+    const lastMoveHighlight = useMemo(() => {
+        if (!lastMove) return {};
+        return {
+            [lastMove.from]: MOVE_HIGHLIGHT_STYLE,
+            [lastMove.to]: MOVE_HIGHLIGHT_STYLE,
+        };
+    }, [lastMove]);
+
     const [setupError, setSetupError] = useState<string | null>(null);
     const [showSetupWarning, setShowSetupWarning] = useState<boolean>(false);
     const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('easy');
@@ -122,6 +134,8 @@ export default function TacticalPracticePage() {
             setFen(newExercise.startPosition.fen);
             gameRef.current = new Chess(newExercise.startPosition.fen);
             setFeedback('none');
+            setUserMove(null);
+            setLastMove(null);
             setCurrentMoveIndex(0);  // Reset move sequence progress
             setSetupError(null);
         } catch (error) {
@@ -250,6 +264,7 @@ export default function TacticalPracticePage() {
 
             // Track the user's move for the Tutor (store the full Move object)
             setUserMove(result);
+            setLastMove(result);
 
             // Check if this is the correct move in the sequence
             const moves = exercise.moves || [];
@@ -364,6 +379,7 @@ export default function TacticalPracticePage() {
                         if (oppMove) {
                             // Play sound for opponent's move
                             playMoveSound(!!oppMove.captured);
+                            setLastMove(oppMove);
                             setFen(gameRef.current.fen());
                             setCurrentMoveIndex(nextMoveIndex + 1);  // Ready for next player move
                         }
@@ -555,7 +571,8 @@ export default function TacticalPracticePage() {
                                         darkSquareStyle: { backgroundColor: '#779954' },
                                         lightSquareStyle: { backgroundColor: '#e9edcc' },
                                         animationDurationInMs: 200,
-                                        boardOrientation: sideToMove
+                                        boardOrientation: sideToMove,
+                                        customSquareStyles: lastMoveHighlight
                                     }}
                                 />
                             </div>

@@ -25,6 +25,8 @@ import { OpeningsModal } from "@/components/OpeningsModal";
 
 interface MoveStep {
     san: string;
+    from: string;
+    to: string;
     color: "white" | "black";
     moveNumber: number;
     fenBefore: string;
@@ -39,6 +41,8 @@ interface StepDetails {
     bestMoveSan?: string | null;
     comment?: string;
 }
+
+const MOVE_HIGHLIGHT_STYLE = { backgroundColor: "rgba(255, 255, 0, 0.4)" };
 
 const DEFAULT_START = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
@@ -141,6 +145,17 @@ IMPORTANT:
         return steps[currentIndex - 1]?.fenAfter || initialFen;
     }, [currentIndex, steps, initialFen]);
 
+    const analysisHighlight = useMemo(() => {
+        if (currentIndex === 0) return {};
+        const step = steps[currentIndex - 1];
+        if (!step) return {};
+
+        return {
+            [step.from]: MOVE_HIGHLIGHT_STYLE,
+            [step.to]: MOVE_HIGHLIGHT_STYLE,
+        };
+    }, [currentIndex, steps]);
+
     const possibleOpenings = useMemo(() => {
         if (currentIndex === 0) return [];
         const moveSequence = buildMoveSequenceFromSteps(steps, currentIndex);
@@ -212,6 +227,8 @@ IMPORTANT:
                     if (applied) {
                         nextSteps.push({
                             san: applied.san,
+                            from: move.from,
+                            to: move.to,
                             color: applied.color === "w" ? "white" : "black",
                             moveNumber: Math.floor(idx / 2) + 1,
                             fenBefore: before,
@@ -516,7 +533,8 @@ INSTRUCTIONS:
                                                 darkSquareStyle: { backgroundColor: '#779954' },
                                                 lightSquareStyle: { backgroundColor: '#e9edcc' },
                                                 animationDurationInMs: 200,
-                                                boardStyle: { borderRadius: "8px", boxShadow: "0 4px 20px rgba(0,0,0,0.1)" }
+                                                boardStyle: { borderRadius: "8px", boxShadow: "0 4px 20px rgba(0,0,0,0.1)" },
+                                                customSquareStyles: analysisHighlight
                                             }}
                                         />
                                     </div>
@@ -582,7 +600,8 @@ INSTRUCTIONS:
                                             darkSquareStyle: { backgroundColor: '#779954' },
                                             lightSquareStyle: { backgroundColor: '#e9edcc' },
                                             animationDurationInMs: 200,
-                                            boardStyle: { borderRadius: "8px", boxShadow: "0 4px 20px rgba(0,0,0,0.1)" }
+                                            boardStyle: { borderRadius: "8px", boxShadow: "0 4px 20px rgba(0,0,0,0.1)" },
+                                            customSquareStyles: analysisHighlight
                                         }}
                                     />
                                 </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { StockfishEvaluation } from "@/lib/stockfish";
 import { ChessEngine } from "@/lib/engine";
 import { Chess, Move } from "chess.js";
@@ -547,6 +547,187 @@ ${isInTheory
 
     const lastAnalyzedMoveRef = useRef<string | null>(null);
 
+    const evaluateCurrentPosition = useCallback(async () => {
+        if (!stockfish) {
+            return null;
+        }
+        try {
+            const currentFen = game.fen();
+            const evaluation = await stockfish.evaluate(currentFen, 15);
+            return evaluation;
+        } catch (error) {
+            console.error("Error evaluating position:", error);
+            return null;
+        }
+    }, [game, stockfish]);
+
+    const sendMessageToChat = useCallback(async (text: string, isSystemMessage: boolean = false) => {
+        if (!chatSession) return;
+
+        if (!isSystemMessage) {
+            setMessages(prev => [...prev, { role: "user", text, timestamp: Date.now() }]);
+        }
+
+        setIsLoading(true);
+
+        try {
+            // Determine mode based on user text if it's not a system message
+            let finalPrompt = text;
+            if (!isSystemMessage) {
+                const lower = text.toLowerCase();
+
+                // In tactical practice mode, use the solution move instead of Stockfish
+                const evaluation = tacticalPracticeMode ? null : await evaluateCurrentPosition();
+                const bestMoveForHint = tacticalPracticeMode
+                    ? `${tacticalPracticeMode.solutionMove.from}${tacticalPracticeMode.solutionMove.to}${tacticalPracticeMode.solutionMove.promotion || ''}`
+                    : evaluation?.bestMove;
+
+                if (lower.includes("best move") || lower.includes("solution") || lower.includes("tell me")) {
+                    finalPrompt = `[SYSTEM TRIGGER: exact_move]
+
+TEACHING MODE ACTIVATED:
+The User is asking for the exact best move. This is a learning moment.
+As their TUTOR, you MUST help them - this is your primary purpose.
+Even though you are their opponent, teaching them is more important than hiding information.
+
+User Question: ${text}
+
+Current Position Data:
+- FEN: ${currentFen}
+- Best Move: ${bestMoveForHint || 'N/A'}
+- Evaluation: ${evaluation?.score ?? 'N/A'} centipawns ${evaluation?.score !== undefined ? (evaluation.score > 0 ? '(White is better)' : evaluation.score < 0 ? '(Black is better)' : '(Equal)') : ''}
+- Mate in: ${evaluation?.mate || 'None'}
+- Possible Openings: ${openingData && openingData.length > 0 ? openingData.map(o => `${o.name} (${o.eco})`).join(', ') : 'Unknown/Midgame'}
+${tacticalPracticeMode ? `- Tactical Pattern: ${tacticalPracticeMode.patternName}` : ''}
+
+INSTRUCTIONS:
+- Tell them the best move clearly (e.g., "The best move is e2-e4" or "You should play Nf3")
+- Explain WHY it's the best move (tactics, threats, positional ideas)
+${tacticalPracticeMode ? `- Explain how this move creates the ${tacticalPracticeMode.patternName} pattern` : ''}
+- Stay in your personality style, but be HELPFUL and EDUCATIONAL
+- Do NOT refuse to help - teaching is your core role
+- Keep it concise but informative`;
+
+                } else if (lower.includes("hint") || lower.includes("tip") || lower.includes("help")) {
+                    // Calculate progress for multi-move puzzles
+                    let progressInfo = '';
+                    if (tacticalPracticeMode?.moves && tacticalPracticeMode.moves.length > 0) {
+                        const totalPlayerMoves = tacticalPracticeMode.moves.filter(m => m.player).length;
+                        const currentPlayerMove = Math.floor((tacticalPracticeMode.currentMoveIndex || 0) / 2) + 1;
+                        progressInfo = `\n- Puzzle Progress: Move ${currentPlayerMove} of ${totalPlayerMoves}`;
+
+                        // Show next expected move
+                        const nextMove = tacticalPracticeMode.moves[tacticalPracticeMode.currentMoveIndex || 0];
+                        if (nextMove && nextMove.player) {
+                            progressInfo += `\n- Next Move to Find: ${nextMove.san} (${nextMove.uci})`;
+                        }
+                    }
+
+                    finalPrompt = `[SYSTEM TRIGGER: hint]
+
+TEACHING MODE ACTIVATED:
+The User is asking for a hint. This is a learning moment.
+As their TUTOR, you MUST help them - this is your primary purpose.
+Even though you are their opponent, teaching them is more important than winning.
+
+User Question: ${text}
+
+Current Position Data:
+- FEN: ${currentFen}
+- Best Move: ${bestMoveForHint || 'N/A'}
+- Evaluation: ${evaluation?.score ?? 'N/A'} centipawns ${evaluation?.score !== undefined ? (evaluation.score > 0 ? '(White is better)' : evaluation.score < 0 ? '(Black is better)' : '(Equal)') : ''}
+- Mate in: ${evaluation?.mate || 'None'}
+- Possible Openings: ${openingData && openingData.length > 0 ? openingData.map(o => `${o.name} (${o.eco})`).join(', ') : 'Unknown/Midgame'}
+${tacticalPracticeMode ? `- Tactical Pattern: ${tacticalPracticeMode.patternName}${progressInfo}` : ''}
+
+INSTRUCTIONS:
+- Give a HELPFUL hint without revealing the exact move (unless they specifically ask for it)
+- Point them toward what to look for: tactics, threats, piece placement, weaknesses
+${tacticalPracticeMode ? `- Guide them to find the ${tacticalPracticeMode.patternName} pattern` : ''}
+${tacticalPracticeMode?.moves && tacticalPracticeMode.moves.length > 1 ? '- This is a multi-move puzzle - guide them through the sequence step by step' : ''}
+- Examples: "Look at your knight on f3", "There's a tactic involving the bishop and queen", "Your king is vulnerable"
+- Stay in your personality style, but be HELPFUL and EDUCATIONAL
+- Do NOT refuse to help - teaching is your core role
+- Do NOT just say the move - guide them to find it themselves`;
+                } else {
+                    // General question - include full position context
+                    finalPrompt = `
+User Question: ${text}
+
+Current Position Context:
+- FEN: ${currentFen}
+- Evaluation: ${evaluation?.score ?? 'N/A'} centipawns ${evaluation?.score !== undefined ? (evaluation.score > 0 ? '(White is better)' : evaluation.score < 0 ? '(Black is better)' : '(Equal)') : ''}
+- Best Move: ${bestMoveForHint ?? 'N/A'}
+- Mate in: ${evaluation?.mate || 'None'}
+- Possible Openings: ${openingData && openingData.length > 0 ? openingData.map(o => `${o.name} (${o.eco})`).join(', ') : 'Unknown/Midgame'}
+${tacticalPracticeMode ? `- Tactical Pattern: ${tacticalPracticeMode.patternName}` : ''}
+
+INSTRUCTIONS:
+- Answer the user's question based on the CURRENT position data above
+- Use the FEN to understand exactly where all pieces are located
+- Stay in character and maintain your personality
+- Be helpful and educational
+- Respond in ${language}`;
+                }
+            }
+
+            const result = await chatSession.sendMessage(finalPrompt);
+            const response = await result.response;
+            const textResponse = response.text();
+
+            // Track debug entry
+            const actionType = isSystemMessage ? "Move Analysis" :
+                              text.toLowerCase().includes("best move") ? "Best Move Request" :
+                              text.toLowerCase().includes("hint") ? "Hint Request" :
+                              "General Question";
+
+            addEntry({
+                type: 'tutor',
+                action: actionType,
+                prompt: finalPrompt,
+                response: textResponse,
+                metadata: {
+                    fen: currentFen,
+                    personality: personality.name,
+                    language,
+                }
+            });
+
+            setMessages(prev => [...prev, { role: "model", text: textResponse, timestamp: Date.now() }]);
+        } catch (error) {
+            console.error("Chat Error:", error);
+
+            // Check if it's a Gemini API error
+            if (isGeminiError(error)) {
+                const errorInfo = parseGeminiError(error);
+                setGeminiError(errorInfo);
+
+                // Show a brief error message in chat
+                if (errorInfo.isQuotaError) {
+                    setMessages(prev => [...prev, {
+                        role: "model",
+                        text: "⚠️ API quota exceeded. Please check the error message for details.",
+                        timestamp: Date.now()
+                    }]);
+                } else {
+                    setMessages(prev => [...prev, {
+                        role: "model",
+                        text: "⚠️ I encountered an error. Please try again.",
+                        timestamp: Date.now()
+                    }]);
+                }
+            } else {
+                setMessages(prev => [...prev, {
+                    role: "model",
+                    text: "Sorry, I encountered an error.",
+                    timestamp: Date.now()
+                }]);
+            }
+        } finally {
+            setIsLoading(false);
+        }
+    }, [chatSession, evaluateCurrentPosition, currentFen, openingData, tacticalPracticeMode, personality.name, language, addEntry]);
+
     // Stage 1: Automatic Reaction after COMPUTER Move (so we see the full exchange)
     // Create a unique key for this exchange
     const exchangeKey = userMove && computerMove ? `${userMove.lan}-${computerMove.lan}` : null;
@@ -752,187 +933,6 @@ React to this exchange as the player.
 
         return () => clearTimeout(timer);
     }, [analyzeExchange, isReviewing]);
-
-    const evaluateCurrentPosition = useCallback(async () => {
-        if (!stockfish) {
-            return null;
-        }
-        try {
-            const currentFen = game.fen();
-            const evaluation = await stockfish.evaluate(currentFen, 15);
-            return evaluation;
-        } catch (error) {
-            console.error("Error evaluating position:", error);
-            return null;
-        }
-    }, [game, stockfish]);
-
-    const sendMessageToChat = useCallback(async (text: string, isSystemMessage: boolean = false) => {
-        if (!chatSession) return;
-
-        if (!isSystemMessage) {
-            setMessages(prev => [...prev, { role: "user", text, timestamp: Date.now() }]);
-        }
-
-        setIsLoading(true);
-
-        try {
-            // Determine mode based on user text if it's not a system message
-            let finalPrompt = text;
-            if (!isSystemMessage) {
-                const lower = text.toLowerCase();
-
-                // In tactical practice mode, use the solution move instead of Stockfish
-                const evaluation = tacticalPracticeMode ? null : await evaluateCurrentPosition();
-                const bestMoveForHint = tacticalPracticeMode
-                    ? `${tacticalPracticeMode.solutionMove.from}${tacticalPracticeMode.solutionMove.to}${tacticalPracticeMode.solutionMove.promotion || ''}`
-                    : evaluation?.bestMove;
-
-                if (lower.includes("best move") || lower.includes("solution") || lower.includes("tell me")) {
-                    finalPrompt = `[SYSTEM TRIGGER: exact_move]
-
-TEACHING MODE ACTIVATED:
-The User is asking for the exact best move. This is a learning moment.
-As their TUTOR, you MUST help them - this is your primary purpose.
-Even though you are their opponent, teaching them is more important than hiding information.
-
-User Question: ${text}
-
-Current Position Data:
-- FEN: ${currentFen}
-- Best Move: ${bestMoveForHint || 'N/A'}
-- Evaluation: ${evaluation?.score ?? 'N/A'} centipawns ${evaluation?.score !== undefined ? (evaluation.score > 0 ? '(White is better)' : evaluation.score < 0 ? '(Black is better)' : '(Equal)') : ''}
-- Mate in: ${evaluation?.mate || 'None'}
-- Possible Openings: ${openingData && openingData.length > 0 ? openingData.map(o => `${o.name} (${o.eco})`).join(', ') : 'Unknown/Midgame'}
-${tacticalPracticeMode ? `- Tactical Pattern: ${tacticalPracticeMode.patternName}` : ''}
-
-INSTRUCTIONS:
-- Tell them the best move clearly (e.g., "The best move is e2-e4" or "You should play Nf3")
-- Explain WHY it's the best move (tactics, threats, positional ideas)
-${tacticalPracticeMode ? `- Explain how this move creates the ${tacticalPracticeMode.patternName} pattern` : ''}
-- Stay in your personality style, but be HELPFUL and EDUCATIONAL
-- Do NOT refuse to help - teaching is your core role
-- Keep it concise but informative`;
-
-                } else if (lower.includes("hint") || lower.includes("tip") || lower.includes("help")) {
-                    // Calculate progress for multi-move puzzles
-                    let progressInfo = '';
-                    if (tacticalPracticeMode?.moves && tacticalPracticeMode.moves.length > 0) {
-                        const totalPlayerMoves = tacticalPracticeMode.moves.filter(m => m.player).length;
-                        const currentPlayerMove = Math.floor((tacticalPracticeMode.currentMoveIndex || 0) / 2) + 1;
-                        progressInfo = `\n- Puzzle Progress: Move ${currentPlayerMove} of ${totalPlayerMoves}`;
-
-                        // Show next expected move
-                        const nextMove = tacticalPracticeMode.moves[tacticalPracticeMode.currentMoveIndex || 0];
-                        if (nextMove && nextMove.player) {
-                            progressInfo += `\n- Next Move to Find: ${nextMove.san} (${nextMove.uci})`;
-                        }
-                    }
-
-                    finalPrompt = `[SYSTEM TRIGGER: hint]
-
-TEACHING MODE ACTIVATED:
-The User is asking for a hint. This is a learning moment.
-As their TUTOR, you MUST help them - this is your primary purpose.
-Even though you are their opponent, teaching them is more important than winning.
-
-User Question: ${text}
-
-Current Position Data:
-- FEN: ${currentFen}
-- Best Move: ${bestMoveForHint || 'N/A'}
-- Evaluation: ${evaluation?.score ?? 'N/A'} centipawns ${evaluation?.score !== undefined ? (evaluation.score > 0 ? '(White is better)' : evaluation.score < 0 ? '(Black is better)' : '(Equal)') : ''}
-- Mate in: ${evaluation?.mate || 'None'}
-- Possible Openings: ${openingData && openingData.length > 0 ? openingData.map(o => `${o.name} (${o.eco})`).join(', ') : 'Unknown/Midgame'}
-${tacticalPracticeMode ? `- Tactical Pattern: ${tacticalPracticeMode.patternName}${progressInfo}` : ''}
-
-INSTRUCTIONS:
-- Give a HELPFUL hint without revealing the exact move (unless they specifically ask for it)
-- Point them toward what to look for: tactics, threats, piece placement, weaknesses
-${tacticalPracticeMode ? `- Guide them to find the ${tacticalPracticeMode.patternName} pattern` : ''}
-${tacticalPracticeMode?.moves && tacticalPracticeMode.moves.length > 1 ? '- This is a multi-move puzzle - guide them through the sequence step by step' : ''}
-- Examples: "Look at your knight on f3", "There's a tactic involving the bishop and queen", "Your king is vulnerable"
-- Stay in your personality style, but be HELPFUL and EDUCATIONAL
-- Do NOT refuse to help - teaching is your core role
-- Do NOT just say the move - guide them to find it themselves`;
-                } else {
-                    // General question - include full position context
-                    finalPrompt = `
-User Question: ${text}
-
-Current Position Context:
-- FEN: ${currentFen}
-- Evaluation: ${evaluation?.score ?? 'N/A'} centipawns ${evaluation?.score !== undefined ? (evaluation.score > 0 ? '(White is better)' : evaluation.score < 0 ? '(Black is better)' : '(Equal)') : ''}
-- Best Move: ${bestMoveForHint ?? 'N/A'}
-- Mate in: ${evaluation?.mate || 'None'}
-- Possible Openings: ${openingData && openingData.length > 0 ? openingData.map(o => `${o.name} (${o.eco})`).join(', ') : 'Unknown/Midgame'}
-${tacticalPracticeMode ? `- Tactical Pattern: ${tacticalPracticeMode.patternName}` : ''}
-
-INSTRUCTIONS:
-- Answer the user's question based on the CURRENT position data above
-- Use the FEN to understand exactly where all pieces are located
-- Stay in character and maintain your personality
-- Be helpful and educational
-- Respond in ${language}`;
-                }
-            }
-
-            const result = await chatSession.sendMessage(finalPrompt);
-            const response = await result.response;
-            const textResponse = response.text();
-
-            // Track debug entry
-            const actionType = isSystemMessage ? "Move Analysis" :
-                              text.toLowerCase().includes("best move") ? "Best Move Request" :
-                              text.toLowerCase().includes("hint") ? "Hint Request" :
-                              "General Question";
-
-            addEntry({
-                type: 'tutor',
-                action: actionType,
-                prompt: finalPrompt,
-                response: textResponse,
-                metadata: {
-                    fen: currentFen,
-                    personality: personality.name,
-                    language,
-                }
-            });
-
-            setMessages(prev => [...prev, { role: "model", text: textResponse, timestamp: Date.now() }]);
-        } catch (error) {
-            console.error("Chat Error:", error);
-
-            // Check if it's a Gemini API error
-            if (isGeminiError(error)) {
-                const errorInfo = parseGeminiError(error);
-                setGeminiError(errorInfo);
-
-                // Show a brief error message in chat
-                if (errorInfo.isQuotaError) {
-                    setMessages(prev => [...prev, {
-                        role: "model",
-                        text: "⚠️ API quota exceeded. Please check the error message for details.",
-                        timestamp: Date.now()
-                    }]);
-                } else {
-                    setMessages(prev => [...prev, {
-                        role: "model",
-                        text: "⚠️ I encountered an error. Please try again.",
-                        timestamp: Date.now()
-                    }]);
-                }
-            } else {
-                setMessages(prev => [...prev, {
-                    role: "model",
-                    text: "Sorry, I encountered an error.",
-                    timestamp: Date.now()
-                }]);
-            }
-        } finally {
-            setIsLoading(false);
-        }
-    }, [chatSession, evaluateCurrentPosition, currentFen, openingData, tacticalPracticeMode, personality.name, language, addEntry]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
