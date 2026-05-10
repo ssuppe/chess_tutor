@@ -128,3 +128,37 @@ The AI Coach frequently "lost track" of piece positions during long games. Addit
 ### 4. Testing
 - Updated analysis tests to support the new high-density breadcrumb labels and multi-element tactical badges.
 - **Final Result:** 100% pass rate across all **238 workspace tests**.
+
+---
+
+# Pull Request Preparation: Move Square Highlighting
+
+## Context
+Users were having difficulty tracking moves made by the opponent (AI) and themselves, especially during rapid gameplay or historical navigation. The application lacked a visual "trail" showing the origin and destination of the most recent move.
+
+## Changes
+
+### 1. Centralized UI Styles & Utilities
+- **New Utility (`src/lib/chessStyles.ts`):** Created a centralized location for shared chessboard styles.
+- **Theme Unification:** Consolidated all hardcoded colors (`#779954`, `#e9edcc`) and animation settings into a global `CHESSBOARD_THEME` object.
+- **Robust Helper:** Implemented `getMoveHighlight()` which handles multiple move data formats including Move objects, coordinate objects, and raw UCI strings.
+
+### 2. Visibility & API Correctness
+- **API Resolution:** Corrected a critical mismatch with `react-chessboard` v5. Moves the highlighting prop from `customSquareStyles` (v4) to `squareStyles` and ensures it is correctly nested within the `options` object.
+- **Layering Guarantee:** Switched from `backgroundColor` to `inset boxShadow` for highlights. This ensures that the highlight renders "on top" of the square's opaque background and is not obscured by piece images or board themes.
+
+### 3. Application-Wide Integration
+- **Game Mode:** Added live highlighting for user and computer moves, with automatic clearing on "Undo" or "New Game."
+- **Analysis Mode:** Implemented history-aware highlighting that updates dynamically as the user navigates forward or backward through a game.
+- **Opening Trainer:** Added navigation-aware highlighting that stays synchronized with the user's current position in the repertoire.
+- **Tactical Practice:** Implemented highlighting for both the player's attempts and the AI's puzzle responses.
+
+### 4. Testing
+- **New Logic Tests:** Created `src/lib/__tests__/chessStyles.test.ts` with 100% coverage for the highlight generation logic.
+- **Enhanced UI Tests:** Created comprehensive move highlighting tests for `ChessGame` and `AnalysisPage` covering:
+    - Successful piece drops.
+    - Async pre-analysis safeguards.
+    - Multi-step history navigation.
+    - State resets (Undo).
+- **Final Result:** All **241 workspace tests** are passing.
+

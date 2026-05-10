@@ -25,6 +25,11 @@ import { Personality } from '@/lib/personalities';
 import { SupportedLanguage } from '@/lib/i18n/translations';
 import { useRouter } from 'next/navigation';
 
+import { 
+  getMoveHighlight, 
+  CHESSBOARD_THEME 
+} from "@/lib/chessStyles";
+
 interface OpeningTrainerProps {
   opening: OpeningMetadata;
   personality: Personality;
@@ -34,8 +39,6 @@ interface OpeningTrainerProps {
   variationTree?: VariationTree;
   allVariations?: OpeningMetadata[];
 }
-
-const MOVE_HIGHLIGHT_STYLE = { backgroundColor: "rgba(255, 255, 0, 0.4)" };
 
 export default function OpeningTrainer({
   opening,
@@ -59,14 +62,9 @@ export default function OpeningTrainer({
   } = useOpeningTraining();
 
   const lastMoveHighlight = useMemo(() => {
-    if (!session || session.moveHistory.length === 0) return {};
-    const lastMove = session.moveHistory[session.moveHistory.length - 1];
-    if (!lastMove) return {};
-
-    return {
-      [lastMove.from]: MOVE_HIGHLIGHT_STYLE,
-      [lastMove.to]: MOVE_HIGHLIGHT_STYLE,
-    };
+    if (!session || session.currentMoveIndex === 0) return {};
+    const move = session.moveHistory[session.currentMoveIndex - 1];
+    return getMoveHighlight(move?.uci || null);
   }, [session]);
 
   // Get Chess instance on-demand from current FEN
@@ -508,10 +506,10 @@ export default function OpeningTrainer({
                 return handlePieceDrop(sourceSquare, targetSquare);
               },
               boardOrientation: boardOrientation,
-              darkSquareStyle: { backgroundColor: '#779954' },
-              lightSquareStyle: { backgroundColor: '#e9edcc' },
-              animationDurationInMs: 200,
-              customSquareStyles: lastMoveHighlight,
+              darkSquareStyle: { backgroundColor: CHESSBOARD_THEME.darkSquare },
+              lightSquareStyle: { backgroundColor: CHESSBOARD_THEME.lightSquare },
+              animationDurationInMs: CHESSBOARD_THEME.animationDuration,
+              squareStyles: lastMoveHighlight,
             }}
           />
         </div>

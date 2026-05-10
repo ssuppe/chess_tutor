@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Chessboard } from "react-chessboard";
+import { CHESSBOARD_THEME } from "@/lib/chessStyles";
 import { X, Loader2, Download, ExternalLink } from "lucide-react";
 import { fetchChessComGames, fetchLichessGames, GameMetadata, Platform } from "@/lib/gameImport";
 import { SupportedLanguage } from "@/lib/i18n/translations";
@@ -196,15 +197,14 @@ export function GameImportModal({ onClose, onSelectGame, language }: GameImportM
                                         {/* Game Info */}
                                         <div className="flex gap-3">
                                             {/* Mini Chessboard */}
-                                            <div className="w-20 h-20 shrink-0 bg-[#779954] p-[1px] rounded-[4px]">
+                                            <div className="w-20 h-20 shrink-0 p-[1px] rounded-[4px]" style={{ backgroundColor: CHESSBOARD_THEME.darkSquare }}>
                                                 <Chessboard
                                                     options={{
-                                                        position: game.finalFen,
-                                                        boardOrientation: 'white',
+                                                        position: game.fen,
                                                         allowDragging: false,
-                                                        darkSquareStyle: { backgroundColor: '#779954' },
-                                                        lightSquareStyle: { backgroundColor: '#e9edcc' },
-                                                        boardStyle: { borderRadius: '3px' }
+                                                        darkSquareStyle: { backgroundColor: CHESSBOARD_THEME.darkSquare },
+                                                        lightSquareStyle: { backgroundColor: CHESSBOARD_THEME.lightSquare },
+                                                        animationDurationInMs: CHESSBOARD_THEME.animationDuration,
                                                     }}
                                                 />
                                             </div>

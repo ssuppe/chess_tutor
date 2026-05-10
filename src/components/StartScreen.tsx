@@ -11,6 +11,7 @@ import { detectChessFormat, ChessFormat } from "@/lib/chessFormatDetector";
 import Header from "./Header";
 import { SavedGame } from "@/lib/savedGames";
 import { Chessboard } from "react-chessboard";
+import { CHESSBOARD_THEME } from "@/lib/chessStyles";
 
 interface StartScreenProps {
     onStartGame: (options: {
@@ -178,15 +179,15 @@ export default function StartScreen({ onStartGame, onResumeGame, savedGames, onD
                                                     </button>
                                                 </div>
 
-                                                <div className="bg-[#779954] p-[1.5px] rounded-sm max-w-[120px] mx-auto sm:max-w-none">
+                                                <div className={`p-[1.5px] rounded-sm max-w-[120px] mx-auto sm:max-w-none`} style={{ backgroundColor: CHESSBOARD_THEME.darkSquare }}>
                                                     <Chessboard
                                                         options={{
                                                             position: game.fen,
                                                             boardOrientation: game.playerColor,
                                                             allowDragging: false,
-                                                            darkSquareStyle: { backgroundColor: '#779954' },
-                                                            lightSquareStyle: { backgroundColor: '#e9edcc' },
-                                                            animationDurationInMs: 150,
+                                                            darkSquareStyle: { backgroundColor: CHESSBOARD_THEME.darkSquare },
+                                                            lightSquareStyle: { backgroundColor: CHESSBOARD_THEME.lightSquare },
+                                                            animationDurationInMs: CHESSBOARD_THEME.animationDuration,
                                                             boardStyle: { width: '100%', aspectRatio: '1' }
                                                         }}
                                                     />

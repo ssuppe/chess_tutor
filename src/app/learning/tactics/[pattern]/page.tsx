@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { Chess, Move, Square } from "chess.js";
 import { Chessboard } from "react-chessboard";
@@ -16,10 +16,9 @@ import {
     TacticExercise
 } from "@/lib/tacticalLibrary";
 import pinFixtures from "../../../../../fixtures/tactics/pin.json";
+import { getMoveHighlight, CHESSBOARD_THEME } from "@/lib/chessStyles";
 
 type FeedbackState = 'none' | 'correct' | 'incorrect';
-
-const MOVE_HIGHLIGHT_STYLE = { backgroundColor: "rgba(255, 255, 0, 0.4)" };
 
 export default function TacticalPracticePage() {
     const router = useRouter();
@@ -37,11 +36,7 @@ export default function TacticalPracticePage() {
     const [lastMove, setLastMove] = useState<Move | null>(null);
 
     const lastMoveHighlight = useMemo(() => {
-        if (!lastMove) return {};
-        return {
-            [lastMove.from]: MOVE_HIGHLIGHT_STYLE,
-            [lastMove.to]: MOVE_HIGHLIGHT_STYLE,
-        };
+        return getMoveHighlight(lastMove);
     }, [lastMove]);
 
     const [setupError, setSetupError] = useState<string | null>(null);
@@ -568,11 +563,11 @@ export default function TacticalPracticePage() {
                                         onPieceDrop: ({ sourceSquare, targetSquare }) => {
                                             return onDrop({ sourceSquare: sourceSquare as Square, targetSquare: targetSquare as Square | null });
                                         },
-                                        darkSquareStyle: { backgroundColor: '#779954' },
-                                        lightSquareStyle: { backgroundColor: '#e9edcc' },
-                                        animationDurationInMs: 200,
+                                        darkSquareStyle: { backgroundColor: CHESSBOARD_THEME.darkSquare },
+                                        lightSquareStyle: { backgroundColor: CHESSBOARD_THEME.lightSquare },
+                                        animationDurationInMs: CHESSBOARD_THEME.animationDuration,
                                         boardOrientation: sideToMove,
-                                        customSquareStyles: lastMoveHighlight
+                                        squareStyles: lastMoveHighlight
                                     }}
                                 />
                             </div>

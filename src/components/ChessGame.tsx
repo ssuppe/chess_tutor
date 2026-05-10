@@ -17,6 +17,7 @@ import { CapturedPieces } from "./CapturedPieces";
 import { detectMissedTactics, uciToSan, DetectedTactic } from "@/lib/tacticDetection";
 import { upsertSavedGame } from "@/lib/savedGames";
 import { useChessSounds } from "@/lib/hooks/useChessSounds";
+import { getMoveHighlight, CHESSBOARD_THEME } from "@/lib/chessStyles";
 
 interface ChessGameProps {
     gameId: string;
@@ -43,8 +44,6 @@ const PIECE_VALUES: Record<string, number> = {
     'q': 9,
     'k': 0
 };
-
-const MOVE_HIGHLIGHT_STYLE = { backgroundColor: "rgba(255, 255, 0, 0.4)" };
 
 const DEFAULT_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
@@ -77,13 +76,7 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
     const [computerMove, setComputerMove] = useState<Move | null>(null);
 
     const lastMoveHighlight = useMemo(() => {
-        const move = computerMove || userMove;
-        if (!move) return {};
-
-        return {
-            [move.from]: MOVE_HIGHLIGHT_STYLE,
-            [move.to]: MOVE_HIGHLIGHT_STYLE,
-        };
+        return getMoveHighlight(computerMove || userMove);
     }, [computerMove, userMove]);
 
     const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -823,11 +816,11 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
                                 options={{
                                     position: fen,
                                     onPieceDrop: ({ sourceSquare, targetSquare }) => onDrop({ sourceSquare, targetSquare }),
-                                    darkSquareStyle: { backgroundColor: '#779954' },
-                                    lightSquareStyle: { backgroundColor: '#e9edcc' },
-                                    animationDurationInMs: 200,
+                                    darkSquareStyle: { backgroundColor: CHESSBOARD_THEME.darkSquare },
+                                    lightSquareStyle: { backgroundColor: CHESSBOARD_THEME.lightSquare },
+                                    animationDurationInMs: CHESSBOARD_THEME.animationDuration,
                                     boardOrientation: playerColor,
-                                    customSquareStyles: lastMoveHighlight
+                                    squareStyles: lastMoveHighlight
                                 }}
                             />
                         </div>

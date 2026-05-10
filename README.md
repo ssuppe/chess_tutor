@@ -56,6 +56,7 @@ This application was built using **Antigravity by Google**. I like to work with 
 
 ### Core Features
 - **Stockfish Engine**: Powerful chess engine for move analysis and opponent play
+- **Move Highlighting**: Visual feedback showing the origin and destination squares of the last move in all game modes
 - **Opening Training Mode**: Interactive opening trainer with AI tutor guidance
   - Practice 12,379 chess openings from comprehensive ECO database
   - Real-time feedback on theory adherence vs. deviations

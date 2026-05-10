@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { DebugProvider } from "@/contexts/DebugContext";
 import AnalysisPage from "../page";
+import { MOVE_HIGHLIGHT_STYLE } from "@/lib/chessStyles";
 
 // Mock next/navigation
 jest.mock("next/navigation", () => ({
@@ -19,7 +20,7 @@ jest.mock("react-chessboard", () => ({
         return (
             <div 
                 data-testid="chessboard" 
-                data-styles={JSON.stringify(options.customSquareStyles || {})}
+                data-styles={JSON.stringify(options.squareStyles || {})}
             >
                 Mock Chessboard
             </div>
@@ -80,5 +81,47 @@ describe("AnalysisPage Move Highlighting", () => {
         
         expect(styles["e2"]).toBeDefined();
         expect(styles["e4"]).toBeDefined();
+        expect(styles["e2"]).toEqual(MOVE_HIGHLIGHT_STYLE);
+
+        // Navigate back to start
+        const prevButton = screen.getByLabelText(/Previous Move/i);
+        await act(async () => {
+            fireEvent.click(prevButton);
+        });
+
+        const startBoard = screen.getAllByTestId("chessboard")[0];
+        expect(startBoard.getAttribute("data-styles")).toBe("{}");
+    });
+
+    it("should highlight the correct move when navigating to arbitrary points", async () => {
+        await act(async () => {
+            render(
+                <DebugProvider>
+                    <AnalysisPage />
+                </DebugProvider>
+            );
+        });
+
+        const textarea = screen.getByPlaceholderText(/Paste PGN or FEN here/i);
+        await act(async () => {
+            fireEvent.change(textarea, { target: { value: samplePgn } });
+            fireEvent.click(screen.getByText(/Start Analysis/i));
+        });
+
+        const nextButton = screen.getByLabelText(/Next Move/i);
+        
+        // Move 1: 1. e4
+        await act(async () => { fireEvent.click(nextButton); });
+        
+        // Move 2: 1... e5
+        await act(async () => { fireEvent.click(nextButton); });
+
+        const board = screen.getAllByTestId("chessboard")[0];
+        const styles = JSON.parse(board.getAttribute("data-styles") || "{}");
+        
+        // Should highlight e7 and e5 (the 2nd move)
+        expect(styles["e7"]).toBeDefined();
+        expect(styles["e5"]).toBeDefined();
+        expect(styles["e2"]).toBeUndefined(); // Should NOT highlight the first move anymore
     });
 });

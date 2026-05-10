@@ -22,6 +22,7 @@ import { useDebug } from "@/contexts/DebugContext";
 import { GameImportModal } from "@/components/GameImportModal";
 import { EvaluationBar } from "@/components/EvaluationBar";
 import { OpeningsModal } from "@/components/OpeningsModal";
+import { getMoveHighlight, CHESSBOARD_THEME } from "@/lib/chessStyles";
 
 interface MoveStep {
     san: string;
@@ -41,8 +42,6 @@ interface StepDetails {
     bestMoveSan?: string | null;
     comment?: string;
 }
-
-const MOVE_HIGHLIGHT_STYLE = { backgroundColor: "rgba(255, 255, 0, 0.4)" };
 
 const DEFAULT_START = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
@@ -146,14 +145,7 @@ IMPORTANT:
     }, [currentIndex, steps, initialFen]);
 
     const analysisHighlight = useMemo(() => {
-        if (currentIndex === 0) return {};
-        const step = steps[currentIndex - 1];
-        if (!step) return {};
-
-        return {
-            [step.from]: MOVE_HIGHLIGHT_STYLE,
-            [step.to]: MOVE_HIGHLIGHT_STYLE,
-        };
+        return getMoveHighlight(steps[currentIndex - 1]);
     }, [currentIndex, steps]);
 
     const possibleOpenings = useMemo(() => {
@@ -530,11 +522,11 @@ INSTRUCTIONS:
                                                 position: currentFen,
                                                 boardOrientation: orientation,
                                                 allowDragging: false,
-                                                darkSquareStyle: { backgroundColor: '#779954' },
-                                                lightSquareStyle: { backgroundColor: '#e9edcc' },
-                                                animationDurationInMs: 200,
+                                                darkSquareStyle: { backgroundColor: CHESSBOARD_THEME.darkSquare },
+                                                lightSquareStyle: { backgroundColor: CHESSBOARD_THEME.lightSquare },
+                                                animationDurationInMs: CHESSBOARD_THEME.animationDuration,
                                                 boardStyle: { borderRadius: "8px", boxShadow: "0 4px 20px rgba(0,0,0,0.1)" },
-                                                customSquareStyles: analysisHighlight
+                                                squareStyles: analysisHighlight
                                             }}
                                         />
                                     </div>
@@ -597,11 +589,11 @@ INSTRUCTIONS:
                                             position: currentFen,
                                             boardOrientation: orientation,
                                             allowDragging: false,
-                                            darkSquareStyle: { backgroundColor: '#779954' },
-                                            lightSquareStyle: { backgroundColor: '#e9edcc' },
-                                            animationDurationInMs: 200,
+                                            darkSquareStyle: { backgroundColor: CHESSBOARD_THEME.darkSquare },
+                                            lightSquareStyle: { backgroundColor: CHESSBOARD_THEME.lightSquare },
+                                            animationDurationInMs: CHESSBOARD_THEME.animationDuration,
                                             boardStyle: { borderRadius: "8px", boxShadow: "0 4px 20px rgba(0,0,0,0.1)" },
-                                            customSquareStyles: analysisHighlight
+                                            squareStyles: analysisHighlight
                                         }}
                                     />
                                 </div>
