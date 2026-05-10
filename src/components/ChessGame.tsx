@@ -160,6 +160,7 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
 
     const handleJumpToBoard = () => {
         setIsMobileChatOpen(false);
+        setIsMobileBoardExpanded(false);
         boardAreaRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
 
@@ -845,7 +846,10 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
 
                 {/* Unified Mobile Floating Action Button */}
                 <button
-                    onClick={() => setIsMobileChatOpen(!isMobileChatOpen)}
+                    onClick={() => {
+                        if (isMobileChatOpen) setIsMobileBoardExpanded(false);
+                        setIsMobileChatOpen(!isMobileChatOpen);
+                    }}
                     aria-label={isMobileChatOpen ? "Close Chat" : "Open Chat"}
                     className={clsx(
                         "fixed right-4 z-[110] md:hidden transition-all duration-500 shadow-2xl",
