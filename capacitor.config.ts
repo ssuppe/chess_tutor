@@ -26,8 +26,8 @@ const config: CapacitorConfig = {
   // Plugins configuration
   plugins: {
     Keyboard: {
-      resize: 'none',
-      style: 'dark',
+      resize: 'body' as any,
+      style: 'dark' as any,
     },
   },
 };

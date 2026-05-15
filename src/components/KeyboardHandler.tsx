@@ -10,19 +10,26 @@ export function KeyboardHandler() {
     useEffect(() => {
         if (!Capacitor.isNativePlatform()) return;
 
-        const showListener = Keyboard.addListener('keyboardWillShow', info => {
-            setKeyboardHeight(info.keyboardHeight);
-            document.documentElement.style.setProperty('--keyboard-height', `${info.keyboardHeight}px`);
-        });
+        let showListener: any;
+        let hideListener: any;
 
-        const hideListener = Keyboard.addListener('keyboardWillHide', () => {
-            setKeyboardHeight(0);
-            document.documentElement.style.setProperty('--keyboard-height', '0px');
-        });
+        const setupListeners = async () => {
+            showListener = await Keyboard.addListener('keyboardWillShow', info => {
+                setKeyboardHeight(info.keyboardHeight);
+                document.documentElement.style.setProperty('--keyboard-height', `${info.keyboardHeight}px`);
+            });
+
+            hideListener = await Keyboard.addListener('keyboardWillHide', () => {
+                setKeyboardHeight(0);
+                document.documentElement.style.setProperty('--keyboard-height', '0px');
+            });
+        };
+
+        setupListeners();
 
         return () => {
-            showListener.remove();
-            hideListener.remove();
+            if (showListener) showListener.remove();
+            if (hideListener) hideListener.remove();
         };
     }, []);
 
