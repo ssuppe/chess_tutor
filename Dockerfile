@@ -26,6 +26,7 @@ ENV NEXT_PUBLIC_GEMINI_API_KEY=$NEXT_PUBLIC_GEMINI_API_KEY
 
 # Build Next.js application with standalone output
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV NEXT_PUBLIC_BASE_PATH=/chess
 RUN npm run build
 
 # Stage 3: Runner
@@ -34,6 +35,7 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV NEXT_PUBLIC_BASE_PATH=/chess
 
 # Optional: OCI-Labels für GHCR
 LABEL org.opencontainers.image.source="https://github.com/stefan-kp/chess_tutor"

@@ -2,8 +2,10 @@ import type { NextConfig } from "next";
 
 // Check if building for mobile (static export) or web (server)
 const isMobileBuild = process.env.BUILD_TARGET === 'mobile';
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
 
 const nextConfig: NextConfig = {
+  basePath,
   // Mobile: static export (no API routes, no server)
   // Web: standalone (includes API routes)
   output: isMobileBuild ? 'export' : 'standalone',
