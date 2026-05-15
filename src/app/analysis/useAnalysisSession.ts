@@ -299,14 +299,14 @@ IMPORTANT:
                     .join("; ") || "None";
 
                 const prompt = buildMoveCommentaryPrompt({
-                    bestMove: details.bestMoveSan ?? details.evalBefore.bestMove,
+                    bestMove: details.bestMoveSan ?? details.evalBefore?.bestMove ?? "",
                     color: step.color,
                     cpLoss: delta,
-                    evalAfter: details.evalAfter.score / 100,
-                    evalBefore: details.evalBefore.score / 100,
+                    evalAfter: (details.evalAfter?.score || 0) / 100,
+                    evalBefore: (details.evalBefore?.score || 0) / 100,
                     fenAfter: step.fenAfter,
                     fenBefore: step.fenBefore,
-                    mateInfo: details.evalAfter.mate !== null ? `Mate in ${details.evalAfter.mate}` : "No mate detected",
+                    mateInfo: details.evalAfter?.mate !== null ? `Mate in ${details.evalAfter?.mate}` : "No mate detected",
                     moveNumber: step.moveNumber,
                     openings: possibleOpenings.length > 0 ? possibleOpenings.map((opening) => `${opening.name} (${opening.eco})`).join(", ") : "Unknown/Midgame",
                     san: step.san,

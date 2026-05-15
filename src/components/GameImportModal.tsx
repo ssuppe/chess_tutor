@@ -200,7 +200,7 @@ export function GameImportModal({ onClose, onSelectGame, language }: GameImportM
                                             <div className="w-20 h-20 shrink-0 p-[1px] rounded-[4px]" style={{ backgroundColor: CHESSBOARD_THEME.darkSquare }}>
                                                 <Chessboard
                                                     options={{
-                                                        position: game.fen,
+                                                        position: game.finalFen,
                                                         allowDragging: false,
                                                         darkSquareStyle: { backgroundColor: CHESSBOARD_THEME.darkSquare },
                                                         lightSquareStyle: { backgroundColor: CHESSBOARD_THEME.lightSquare },
