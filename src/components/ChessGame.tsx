@@ -526,7 +526,7 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
                                 fenAfterComputerMove: fenP2,
                                 evalAfterComputerMove: p2Eval,
                                 opening: possibleOpenings.length > 0 ? possibleOpenings[0].name : undefined,
-                                move: playerMoveResult.san,
+                                move: moveResult.result.san,
                                 evalBefore: evalP0.score,
                                 evalAfter: p1Eval.score,
                                 bestMove: evalP0.bestMove,

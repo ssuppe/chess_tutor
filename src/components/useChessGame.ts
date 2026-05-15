@@ -313,8 +313,8 @@ export function useChessGame({
                             p2Eval,
                             playerColor,
                             playerMove: moveResult.result,
+                            moveNumber: gameRef.current.moveNumber() - 1,
                         });
-
                         setLatestMissedTactics(missedTactics);
                         setMoveHistory((previous) => [...previous, { ...partialHistoryItem, ...historyItem }]);
                     } else {

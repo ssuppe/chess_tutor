@@ -38,6 +38,7 @@ describe("gameState", () => {
       p2Eval: { bestMove: "g1f3", ponder: null, score: 10, mate: null, depth: 15 },
       playerColor: "white",
       playerMove,
+      moveNumber: 1,
     });
 
     expect(historyItem.playerMove).toBe("e4");

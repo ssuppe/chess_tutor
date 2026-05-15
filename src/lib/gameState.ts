@@ -59,6 +59,7 @@ interface BuildMoveHistoryItemArgs {
     p2Eval: StockfishEvaluation;
     playerColor: "white" | "black";
     playerMove: Move;
+    moveNumber: number;
 }
 
 export function buildMoveHistoryItem(args: BuildMoveHistoryItemArgs): {
@@ -75,6 +76,7 @@ export function buildMoveHistoryItem(args: BuildMoveHistoryItemArgs): {
         p2Eval,
         playerColor,
         playerMove,
+        moveNumber,
     } = args;
 
     const isWhite = playerColor === "white";
@@ -92,7 +94,7 @@ export function buildMoveHistoryItem(args: BuildMoveHistoryItemArgs): {
 
     return {
         historyItem: {
-            moveNumber: Math.ceil(playerMove.ply / 2),
+            moveNumber,
             playerMove: playerMove.san,
             playerColor,
             fenBeforePlayerMove,
