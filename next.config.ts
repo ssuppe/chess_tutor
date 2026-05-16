@@ -19,6 +19,7 @@ const nextConfig: NextConfig = {
   env: {
     NEXT_PUBLIC_USE_REMOTE_ENGINE: process.env.NEXT_PUBLIC_USE_REMOTE_ENGINE || (isMobileBuild ? 'true' : 'false'),
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || '',
+    NEXT_PUBLIC_BASE_PATH: basePath,
   },
 };
 

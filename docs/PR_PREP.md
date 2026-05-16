@@ -115,3 +115,30 @@ Mobile users faced significant ergonomic friction due to a vertical layout that 
 ## Testing & Validation
 - **Multi-Mode Test Suite**: Verified stability with `MobileChatOverlay.test.tsx` (Gameplay), `page.test.tsx` (Analysis), and `Tutor.test.tsx`.
 - **Final Result**: All **247 workspace tests** are passing.
+
+---
+
+# Pull Request Preparation: Subpath Deployment & Engine Loading
+
+## Context
+The application was being deployed to a subpath (`goodnumbers.net/chess`). This broke absolute paths for Web Workers (Stockfish) and required manual path prefixing. Additionally, the engine initialization delay (WASM compilation) lacked user feedback, leading to a "frozen" board experience on startup.
+
+## Changes
+
+### 1. Subpath Compatibility
+- **Environment Exposure:** Updated `next.config.ts` to expose `NEXT_PUBLIC_BASE_PATH` to the client-side code.
+- **Dynamic Worker Paths:** Updated `src/lib/stockfish.ts` to prepend the base path to the Stockfish worker URL, preventing 404 errors when served under a subpath.
+- **Independent Deployment:** Added a project-root `justfile` for automated building, packaging, and pushing of Docker artifacts independently of the main site orchestrator.
+
+### 2. Engine Loading UI
+- **Readiness Lifecycle:** Enhanced the `Stockfish` class with an `onReady` callback that triggers when the `uciok` signal is received from the worker.
+- **Board Overlay:** Implemented a semi-transparent, blurred loading overlay in `src/components/ChessGame.tsx` that covers the board until the engine is ready.
+- **Interaction Guard:** Explicitly disabled piece dragging while the engine is booting to prevent illegal move attempts during initialization.
+
+### 3. Repository Hygiene
+- **Git Protection:** Updated `.gitignore` to exclude local deployment artifacts (`justfile`, `deploy-artifacts/`) and Gemini command suite configurations to keep the upstream fork clean.
+
+## Testing & Validation
+- **Subpath Verification:** Verified that `https://goodnumbers.net/chess` correctly loads all assets and the Stockfish worker.
+- **UX Check:** Confirmed the "Engine Booting" overlay correctly fades out and enables the board once Stockfish completes initialization.
+- **Production Build:** Successfully executed a full standalone Next.js build in the Docker container.

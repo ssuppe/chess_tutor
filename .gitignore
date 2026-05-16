@@ -81,3 +81,6 @@ __pycache__/
 /justfile
 /deploy-artifacts/
 .env.production
+
+# Gemini Personal Commands
+.gemini/commands
