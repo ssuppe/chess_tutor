@@ -13,7 +13,7 @@ import { SupportedLanguage } from "@/lib/i18n/translations";
 import { lookupOpening, lookupPossibleOpenings, extractMoveSequenceFromPGN, OpeningMetadata } from "@/lib/openings";
 import { GameAnalysisModal } from "./GameAnalysisModal";
 import { GameOverModal, MoveHistoryItem } from "./GameOverModal";
-import { Brain, ArrowLeft, Download, Flag, AlertTriangle, X, ChevronRight, ChevronDown, MessageCircle } from "lucide-react";
+import { Brain, ArrowLeft, Download, Flag, AlertTriangle, X, ChevronRight, ChevronDown, MessageCircle, Loader2 } from "lucide-react";
 import { CapturedPieces } from "./CapturedPieces";
 import { detectMissedTactics, uciToSan, DetectedTactic } from "@/lib/tacticDetection";
 import { upsertSavedGame } from "@/lib/savedGames";
@@ -52,6 +52,7 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
     const [game] = useState(() => new Chess(initialFen || DEFAULT_FEN));
     const [fen, setFen] = useState(initialFen || DEFAULT_FEN);
     const [stockfish, setStockfish] = useState<Stockfish | null>(null);
+    const [isEngineReady, setIsEngineReady] = useState(false);
 
     // Analysis States
     const [evalP0, setEvalP0] = useState<StockfishEvaluation | null>(null);
@@ -221,7 +222,7 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
 
     // Initialize Stockfish
     useEffect(() => {
-        const sf = new Stockfish();
+        const sf = new Stockfish(() => setIsEngineReady(true));
         setStockfish(sf);
         return () => sf.terminate();
     }, []);
@@ -737,16 +738,18 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
                         {!isMobileChatOpen && (
                             <>
                                 <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 w-full">
-                                    <div className="relative">
-                                        <button onClick={() => setShowStrengthSlider(!showStrengthSlider)} className="hover:text-gray-700 dark:hover:text-gray-200 underline decoration-dotted underline-offset-2">
-                                            {t.game.stockfishLevel}: {stockfishDepth}
-                                        </button>
-                                        {showStrengthSlider && (
-                                            <div className="absolute top-full left-0 mt-2 w-48 bg-white dark:bg-gray-700 p-3 rounded shadow-xl border border-gray-200 dark:border-gray-600 z-10">
-                                                <label className="block text-xs font-bold mb-1 text-gray-700 dark:text-gray-200">{t.game.stockfishStrength} ({t.game.depth}: {stockfishDepth})</label>
-                                                <input type="range" min="1" max="20" value={stockfishDepth} onChange={(e) => setStockfishDepth(parseInt(e.target.value))} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-600" />
-                                            </div>
-                                        )}
+                                    <div className="flex items-center gap-3">
+                                        <div className="relative">
+                                            <button onClick={() => setShowStrengthSlider(!showStrengthSlider)} className="hover:text-gray-700 dark:hover:text-gray-200 underline decoration-dotted underline-offset-2">
+                                                {t.game.stockfishLevel}: {stockfishDepth}
+                                            </button>
+                                            {showStrengthSlider && (
+                                                <div className="absolute top-full left-0 mt-2 w-48 bg-white dark:bg-gray-700 p-3 rounded shadow-xl border border-gray-200 dark:border-gray-600 z-10">
+                                                    <label className="block text-xs font-bold mb-1 text-gray-700 dark:text-gray-200">{t.game.stockfishStrength} ({t.game.depth}: {stockfishDepth})</label>
+                                                    <input type="range" min="1" max="20" value={stockfishDepth} onChange={(e) => setStockfishDepth(parseInt(e.target.value))} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-600" />
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                     <div className="flex items-center gap-3">
                                         <button onClick={() => { game.undo(); game.undo(); setFen(game.fen()); setUserMove(null); setComputerMove(null); setEvalP0(null); setEvalP2(null); setOpeningData([]); updateCapturedPieces(); }} className="flex items-center gap-1 hover:text-blue-600 dark:hover:text-blue-400 transition-colors" disabled={!!gameOverState}><ArrowLeft size={12} /> {t.game.undoMove}</button>
@@ -764,10 +767,24 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
                         )}
 
                         <div className={clsx(
-                            "bg-[#779954] p-[2px] rounded-sm",
+                            "bg-[#779954] p-[2px] rounded-sm relative overflow-hidden",
                             isMobileChatOpen ? "w-full aspect-square shadow-sm" : "w-full aspect-square transition-all duration-300"
                         )}>
-                            <Chessboard options={{ position: fen, onPieceDrop: ({ sourceSquare, targetSquare }) => onDrop({ sourceSquare, targetSquare }), darkSquareStyle: { backgroundColor: '#779954' }, lightSquareStyle: { backgroundColor: '#e9edcc' }, animationDurationInMs: 200, boardOrientation: playerColor, allowDragging: !isMobileChatOpen, squareStyles: lastMoveHighlight }} />
+                            {!isEngineReady && (
+                                <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/40 backdrop-blur-[1.5px] rounded-sm animate-in fade-in duration-500">
+                                    <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-2xl flex flex-col items-center gap-4 border border-gray-100 dark:border-gray-700 transform animate-in zoom-in slide-in-from-bottom-4 duration-500">
+                                        <div className="relative">
+                                            <div className="absolute inset-0 bg-blue-400/20 blur-xl rounded-full animate-pulse" />
+                                            <Loader2 className="w-10 h-10 text-blue-600 dark:text-blue-400 animate-spin relative z-10" />
+                                        </div>
+                                        <div className="flex flex-col items-center text-center">
+                                            <span className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-wider">Engine Booting</span>
+                                            <span className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest opacity-80">Stockfish is warming up...</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                            <Chessboard options={{ position: fen, onPieceDrop: ({ sourceSquare, targetSquare }) => onDrop({ sourceSquare, targetSquare }), darkSquareStyle: { backgroundColor: '#779954' }, lightSquareStyle: { backgroundColor: '#e9edcc' }, animationDurationInMs: 200, boardOrientation: playerColor, allowDragging: !isMobileChatOpen && isEngineReady, squareStyles: lastMoveHighlight }} />
                         </div>
 
                         {!isMobileChatOpen && (

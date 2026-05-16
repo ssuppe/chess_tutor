@@ -11,13 +11,15 @@ export class Stockfish {
   private isReady: boolean = false;
   private evaluationQueue: Promise<void> = Promise.resolve();
 
-  constructor() {
+  constructor(private onReady?: () => void) {
     if (typeof window !== "undefined") {
-      this.worker = new Worker("/stockfish/stockfish.js");
+      const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
+      this.worker = new Worker(`${basePath}/stockfish/stockfish.js`);
       this.worker.onmessage = (e) => {
         // console.log("Stockfish message:", e.data);
         if (e.data === "uciok") {
           this.isReady = true;
+          this.onReady?.();
         }
       };
       this.worker.postMessage("uci");
