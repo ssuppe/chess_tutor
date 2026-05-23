@@ -5,6 +5,9 @@ export interface Translations {
     common: {
         close: string;
         cancel: string;
+        delete: string;
+        deleteConfirmTitle: string;
+        deleteConfirmMessage: string;
         confirm: string;
         loading: string;
         error: string;
@@ -250,6 +253,9 @@ const en: Translations = {
     common: {
         close: 'Close',
         cancel: 'Cancel',
+        delete: 'Delete',
+        deleteConfirmTitle: 'Delete Game?',
+        deleteConfirmMessage: 'Are you sure you want to delete this game? This action cannot be undone.',
         confirm: 'Confirm',
         loading: 'Loading...',
         error: 'Error',
@@ -483,6 +489,9 @@ const de: Translations = {
     common: {
         close: 'Schließen',
         cancel: 'Abbrechen',
+        delete: 'Löschen',
+        deleteConfirmTitle: 'Spiel löschen?',
+        deleteConfirmMessage: 'Bist du sicher, dass du dieses Spiel löschen möchtest? Diese Aktion kann nicht rückgängig gemacht werden.',
         confirm: 'Bestätigen',
         loading: 'Lädt...',
         error: 'Fehler',
@@ -716,6 +725,9 @@ const fr: Translations = {
     common: {
         close: 'Fermer',
         cancel: 'Annuler',
+        delete: 'Supprimer',
+        deleteConfirmTitle: 'Supprimer le jeu ?',
+        deleteConfirmMessage: 'Êtes-vous sûr de vouloir supprimer ce jeu ? Cette action est irréversible.',
         confirm: 'Confirmer',
         loading: 'Chargement...',
         error: 'Erreur',
@@ -949,6 +961,9 @@ const it: Translations = {
     common: {
         close: 'Chiudi',
         cancel: 'Annulla',
+        delete: 'Elimina',
+        deleteConfirmTitle: 'Elimina gioco?',
+        deleteConfirmMessage: 'Sei sicuro di voler eliminare questo gioco? Questa azione non può essere annullata.',
         confirm: 'Conferma',
         loading: 'Caricamento...',
         error: 'Errore',
@@ -1182,6 +1197,9 @@ const pl: Translations = {
     common: {
         close: 'Zamknij',
         cancel: 'Anuluj',
+        delete: 'Usuń',
+        deleteConfirmTitle: 'Usunąć grę?',
+        deleteConfirmMessage: 'Czy na pewno chcesz usunąć tę grę? Tej czynności nie można cofnąć.',
         confirm: 'Potwierdź',
         loading: 'Ładowanie...',
         error: 'Błąd',

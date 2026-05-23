@@ -39,6 +39,7 @@ export default function StartScreen({ onStartGame, onResumeGame, savedGames, onD
     const [colorSelection, setColorSelection] = useState<'white' | 'black' | 'random'>('white');
     const [showAdvanced, setShowAdvanced] = useState(false);
     const [mounted, setMounted] = useState(false);
+    const [gameToDelete, setGameToDelete] = useState<string | null>(null);
     const hasSavedGames = savedGames.length > 0;
 
     useEffect(() => {
@@ -46,6 +47,18 @@ export default function StartScreen({ onStartGame, onResumeGame, savedGames, onD
     }, []);
 
     const t = useTranslation(language);
+
+    const handleDeleteClick = (e: React.MouseEvent, id: string) => {
+        e.stopPropagation();
+        setGameToDelete(id);
+    };
+
+    const confirmDelete = () => {
+        if (gameToDelete) {
+            onDeleteSavedGame(gameToDelete);
+            setGameToDelete(null);
+        }
+    };
 
     const handleImportChange = (value: string) => {
         setImportInput(value);
@@ -152,7 +165,7 @@ export default function StartScreen({ onStartGame, onResumeGame, savedGames, onD
                                                 onClick={() => onResumeGame(game)}
                                                 className="group relative bg-gray-50 dark:bg-gray-700 p-3 rounded-xl border border-gray-200 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-300 shadow-sm transition-all cursor-pointer"
                                             >
-                                                <div className="absolute top-1.5 right-1.5 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                                                <div className="absolute top-1.5 right-1.5 flex gap-1 sm:opacity-0 sm:group-hover:opacity-100 opacity-100 transition-opacity z-10">
                                                     <button
                                                         onClick={(e) => {
                                                             e.stopPropagation();
@@ -163,17 +176,14 @@ export default function StartScreen({ onStartGame, onResumeGame, savedGames, onD
                                                             router.push('/analysis');
                                                         }}
                                                         aria-label={t.start.analyzeThisGame}
-                                                        className="p-1.5 rounded-full bg-white dark:bg-gray-800 text-gray-500 hover:text-purple-600 shadow-sm"
+                                                        className="p-1.5 rounded-full bg-white dark:bg-gray-800 text-gray-500 hover:text-purple-600 shadow-sm border border-gray-100 dark:border-gray-600"
                                                     >
                                                         <BarChart2 size={12} />
                                                     </button>
                                                     <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            onDeleteSavedGame(game.id);
-                                                        }}
+                                                        onClick={(e) => handleDeleteClick(e, game.id)}
                                                         aria-label={t.start.deleteGame}
-                                                        className="p-1.5 rounded-full bg-white dark:bg-gray-800 text-gray-500 hover:text-red-600 shadow-sm"
+                                                        className="p-1.5 rounded-full bg-white dark:bg-gray-800 text-gray-500 hover:text-red-600 shadow-sm border border-gray-100 dark:border-gray-600"
                                                     >
                                                         <Trash2 size={12} />
                                                     </button>
@@ -374,6 +384,41 @@ export default function StartScreen({ onStartGame, onResumeGame, savedGames, onD
                     </div>
                 </div>
             </div>
+
+            {/* Delete Confirmation Modal */}
+            {gameToDelete && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-sm w-full p-6 border border-gray-100 dark:border-gray-700 animate-in zoom-in slide-in-from-bottom-4 duration-300">
+                        <div className="flex flex-col items-center text-center space-y-4">
+                            <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-full text-red-600 dark:text-red-400">
+                                <Trash2 size={24} />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                                    {t.common.deleteConfirmTitle}
+                                </h3>
+                                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                                    {t.common.deleteConfirmMessage}
+                                </p>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3 w-full pt-2">
+                                <button
+                                    onClick={() => setGameToDelete(null)}
+                                    className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-xl font-semibold hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-sm"
+                                >
+                                    {t.common.cancel}
+                                </button>
+                                <button
+                                    onClick={confirmDelete}
+                                    className="px-4 py-2 bg-red-600 text-white rounded-xl font-semibold hover:bg-red-700 shadow-md transition-colors text-sm"
+                                >
+                                    {t.common.delete}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
