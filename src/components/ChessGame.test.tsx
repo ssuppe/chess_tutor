@@ -36,10 +36,13 @@ jest.mock("../lib/stockfish", () => {
     });
     return {
         __mock: { evaluate },
-        Stockfish: jest.fn().mockImplementation(() => ({
-            evaluate,
-            terminate: jest.fn(),
-        })),
+        Stockfish: jest.fn().mockImplementation((onReady) => {
+            if (onReady) setTimeout(onReady, 0);
+            return {
+                evaluate,
+                terminate: jest.fn(),
+            };
+        }),
     };
 });
 const { __mock: stockfishMock } = jest.requireMock("../lib/stockfish") as { __mock: { evaluate: jest.Mock } };

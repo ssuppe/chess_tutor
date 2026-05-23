@@ -132,7 +132,7 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
             [lastMove.from]: { boxShadow: 'inset 0 0 0 4px rgba(255, 255, 0, 0.75)' },
             [lastMove.to]: { boxShadow: 'inset 0 0 0 4px rgba(255, 255, 0, 0.75)' }
         };
-    }, [game]);
+    }, [game, fen]);
 
     // Settings
     const [language, setLanguage] = useState<SupportedLanguage>('en');

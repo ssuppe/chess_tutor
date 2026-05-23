@@ -36,10 +36,13 @@ jest.mock("../Tutor", () => ({
 
 // Mock Stockfish
 jest.mock("@/lib/stockfish", () => ({
-    Stockfish: jest.fn().mockImplementation(() => ({
-        evaluate: jest.fn().mockResolvedValue({ score: 0, bestMove: "e2e4", depth: 10 }),
-        terminate: jest.fn(),
-    }))
+    Stockfish: jest.fn().mockImplementation((onReady) => {
+        if (onReady) setTimeout(onReady, 0);
+        return {
+            evaluate: jest.fn().mockResolvedValue({ score: 0, bestMove: "e2e4", depth: 10 }),
+            terminate: jest.fn(),
+        };
+    })
 }));
 
 // Mock translations
