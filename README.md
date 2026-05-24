@@ -7,8 +7,9 @@ This repository is a community fork of the excellent [AI Chess Tutor](https://gi
 - **AI Stability**: Advanced positional grounding and architectural fixes to ensure the coach always maintains perfect spatial awareness.
 - **Model Migration**: Upgraded support for latest Gemini models (including 3.1-Flash-Lite) with user-selectable model options.
 - **Performance**: Integrated server-side Wikipedia caching and LLM request debouncing to eliminate API throttling and reduce latency.
-- **UI Optimization**: High-density mobile-first layout with **Adaptive Board Resizing** (35% to 55% toggle) and streamlined navigation.
+- **UI Optimization**: High-density mobile-first layout with **Adaptive Board Resizing** (35% to 55% toggle). Built on a unified **BoardViewLayout** architecture for 100% visual consistency across all game modes.
 - **Game Management**: Enhanced start screen with persistent game history, analysis shortcuts, and secure **Game Deletion with confirmation**.
+- **Architectural Unification**: Complete standardization of Gameplay, Analysis, and Opening Training modes into a shared layout engine, reducing code duplication and improving UX stability.
 - **Expanded Support**: Full Polish language translation and comprehensive UI string refinements for a cleaner look.
 
 > **Branch Structure Note**: All enhancements are consolidated on the `enhanced` branch. The `main` branch is kept identical to the [original upstream repository](https://github.com/stefan-kp/chess_tutor) to ensure clean synchronization and atomic Pull Requests.
