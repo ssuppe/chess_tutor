@@ -757,9 +757,3 @@ INSTRUCTIONS:
         </div>
     );
 }
-
-// Internal helper for tactical filtering (if not exported from tacticDetection)
-function filterMeaningfulTactics(tactics: DetectedTactic[] | null | undefined): DetectedTactic[] {
-    if (!tactics) return [];
-    return tactics.filter(t => t.material_delta && t.material_delta > 50);
-}
