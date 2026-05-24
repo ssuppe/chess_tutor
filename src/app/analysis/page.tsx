@@ -5,7 +5,21 @@ import { Chess, Move } from "chess.js";
 import { Chessboard } from "react-chessboard";
 import { Brain, ChevronLeft, ChevronRight, Loader2, ArrowLeft, Download, PlayCircle, Upload, RotateCcw, X, MessageCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useDebug } from "@/contexts/DebugContext";
+import { useTranslation } from "@/lib/i18n/useTranslation";
+import { Personality, PERSONALITIES } from "@/lib/personalities";
+import { Stockfish, StockfishEvaluation } from "@/lib/stockfish";
+import { detectChessFormat, ChessFormat } from "@/lib/chessFormatDetector";
+import { detectMissedTactics, DetectedTactic, uciToSan, filterMeaningfulTactics } from "@/lib/tacticDetection";
+import { lookupPossibleOpenings, buildMoveSequenceFromSteps, OpeningMetadata } from "@/lib/openings";
+import { getGenAIModel } from "@/lib/gemini";
+import { ChatSession } from "@google/generative-ai";
+import ReactMarkdown from "react-markdown";
 
+import { GameImportModal } from "@/components/GameImportModal";
+import { EvaluationBar } from "@/components/EvaluationBar";
+import { OpeningsModal } from "@/components/OpeningsModal";
+import { TopUtilityLinks } from "@/components/TopUtilityLinks";
 import { BoardViewLayout } from "@/components/BoardViewLayout";
 import { generateHumanReadableBoard, getCapturedState } from "@/lib/gameState";
 import clsx from "clsx";
@@ -33,6 +47,7 @@ export default function AnalysisPage() {
     const { isDebug } = useDebug();
 
     const [language, setLanguage] = useState<SupportedLanguage>("en");
+    const t = useTranslation(language);
     const [apiKey, setApiKey] = useState<string | null>(null);
     const [input, setInput] = useState("");
     const [detectedFormat, setDetectedFormat] = useState<ChessFormat | null>(null);
@@ -45,7 +60,7 @@ export default function AnalysisPage() {
     const [orientation, setOrientation] = useState<"white" | "black">("white");
 
     const [stockfish, setStockfish] = useState<Stockfish | null>(null);
-    const [details, setDetails] = useState<Record<number, MoveDetails>>({});
+    const [stepDetails, setStepDetails] = useState<Record<number, MoveDetails>>({});
     const [comments, setComments] = useState<Record<number, string>>({});
     const [isCommenting, setIsCommenting] = useState(false);
     const [evaluationVersion, setEvaluationVersion] = useState(0);
