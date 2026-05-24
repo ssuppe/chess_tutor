@@ -549,6 +549,29 @@ INSTRUCTIONS:
                                             ))}
                                         </div>
                                         <button onClick={handleLoadGame} className="w-full py-2.5 bg-purple-600 text-white rounded-xl hover:bg-purple-700 font-semibold shadow-lg transition-colors">{t.analysis.startButton}</button>
+
+                                        {/* Import from Online Platforms */}
+                                        <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                                            <p className="text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-2 text-center font-bold">
+                                                {t.analysis.importFromPlatforms}
+                                            </p>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <button
+                                                    onClick={() => setShowImportModal(true)}
+                                                    className="py-2 px-3 bg-[#81b64c] text-white rounded-lg hover:bg-[#a3d16e] font-medium text-xs flex items-center justify-center gap-2 shadow transition-colors"
+                                                >
+                                                    <Download size={14} />
+                                                    Chess.com
+                                                </button>
+                                                <button
+                                                    onClick={() => setShowImportModal(true)}
+                                                    className="py-2 px-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-xs flex items-center justify-center gap-2 shadow transition-colors"
+                                                >
+                                                    <Download size={14} />
+                                                    Lichess
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
                                     <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-4 flex flex-col items-center justify-center border border-gray-200 dark:border-gray-700">
                                         <div className="w-full max-w-sm"><Chessboard options={{ position: currentFen, boardOrientation: orientation, allowDragging: false, darkSquareStyle: { backgroundColor: '#779954' }, lightSquareStyle: { backgroundColor: '#e9edcc' }, animationDurationInMs: 200, boardStyle: { borderRadius: "8px" }}} /></div>
