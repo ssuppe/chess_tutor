@@ -19,6 +19,7 @@ import { detectMissedTactics, uciToSan, DetectedTactic } from "@/lib/tacticDetec
 import { upsertSavedGame } from "@/lib/savedGames";
 import { useChessSounds } from "@/lib/hooks/useChessSounds";
 import { TopUtilityLinks } from "./TopUtilityLinks";
+import { BoardViewLayout } from "./BoardViewLayout";
 
 interface ChessGameProps {
     gameId: string;
