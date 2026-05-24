@@ -485,19 +485,6 @@ export default function ChessGame({
                             </div>
                         )}
 
-                        {/* Mobile Advice Strip (When chat is closed) */}
-                        {!isMobileChatOpen && latestCoachMessage && (
-                            <div className="md:hidden w-full px-2 py-1.5 bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800/30 rounded-lg animate-in slide-in-from-top-2 duration-300">
-                                <div className="flex items-center gap-1.5 mb-0.5">
-                                    <span className="text-sm leading-none">{selectedPersonality.image}</span>
-                                    <span className="text-[8px] font-black uppercase text-purple-600 dark:text-purple-400 tracking-widest">Advice</span>
-                                </div>
-                                <div className="prose prose-sm dark:prose-invert text-[11px] leading-tight line-clamp-2 text-gray-700 dark:text-gray-300">
-                                    <ReactMarkdown>{latestCoachMessage}</ReactMarkdown>
-                                </div>
-                            </div>
-                        )}
-
                         <div className={clsx(
                             "md:hidden w-full transition-opacity duration-200",
                             isMobileChatOpen ? "hidden" : "block"

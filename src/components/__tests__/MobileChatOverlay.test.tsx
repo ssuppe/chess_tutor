@@ -81,7 +81,7 @@ describe("Mobile Chat Overlay (Bottom Sheet)", () => {
         // Flex split should be active (Side-by-Side)
         expect(mainContainer).toHaveClass("fixed");
         expect(mainContainer).toHaveClass("flex-row");
-        expect(boardArea).toHaveClass("w-[52%]");
+        expect(boardArea).toHaveClass("w-[35%]");
 
         // Close chat via the same button (which now says 'Close Chat')
         const closeButton = screen.getByLabelText(/Close Chat/i);
@@ -106,14 +106,14 @@ describe("Mobile Chat Overlay (Bottom Sheet)", () => {
 
         // Standard chat view (Side-by-Side)
         expect(mainContainer).toHaveClass("flex");
-        expect(boardArea).toHaveClass("w-[52%]");
+        expect(boardArea).toHaveClass("w-[35%]");
 
         // Simulate focus (keyboard opening)
         fireEvent.focus(textarea);
         
         // Should STILL be side-by-side
         expect(mainContainer).toHaveClass("flex");
-        expect(boardArea).toHaveClass("w-[52%]");
+        expect(boardArea).toHaveClass("w-[35%]");
 
         // Simulate blur (keyboard closing)
         fireEvent.blur(textarea);
@@ -149,20 +149,20 @@ describe("Mobile Chat Overlay (Bottom Sheet)", () => {
         const boardArea = screen.getByTestId("board-area");
         const mainContainer = boardArea.parentElement!;
         
-        // Initial state: Mini (52%)
-        expect(boardArea).toHaveClass("w-[52%]");
+        // Initial state: Mini (35%)
+        expect(boardArea).toHaveClass("w-[35%]");
         expect(mainContainer).toHaveClass("fixed");
 
-        // Click board to expand (Focus mode: 60%)
+        // Click board to expand (Focus mode: 55%)
         fireEvent.click(boardArea);
-        expect(boardArea).toHaveClass("w-[60%]");
-        expect(boardArea).not.toHaveClass("w-[52%]");
+        expect(boardArea).toHaveClass("w-[55%]");
+        expect(boardArea).not.toHaveClass("w-[35%]");
         expect(mainContainer).toHaveClass("fixed"); // Chat should remain open
 
-        // Click board again to shrink (Mini mode: 52%)
+        // Click board again to shrink (Mini mode: 35%)
         fireEvent.click(boardArea);
-        expect(boardArea).toHaveClass("w-[52%]");
-        expect(boardArea).not.toHaveClass("w-[60%]");
+        expect(boardArea).toHaveClass("w-[35%]");
+        expect(boardArea).not.toHaveClass("w-[55%]");
         expect(mainContainer).toHaveClass("fixed"); // Chat should remain open
     });
 });

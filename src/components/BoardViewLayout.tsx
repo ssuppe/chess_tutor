@@ -84,9 +84,9 @@ export const BoardViewLayout: React.FC<BoardViewLayoutProps> = ({
                 className={clsx(
                     "md:col-span-2 bg-white dark:bg-gray-800 p-1 md:p-4 rounded-lg shadow-lg flex flex-col md:flex-row gap-2 md:gap-8 relative overflow-hidden transition-all duration-300",
                     isMobileChatOpen 
-                        ? (isMobileBoardExpanded ? "w-[60%] flex-shrink-0" : "w-[52%] flex-shrink-0") 
+                        ? (isMobileBoardExpanded ? "w-[55%] flex-shrink-0" : "w-[35%] flex-shrink-0") 
                         : "md:relative md:h-auto",
-                    isMobileChatOpen && "h-full rounded-none border-r border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-900 gap-2 py-4 px-1"
+                    isMobileChatOpen && "h-full rounded-none border-r border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-900 items-center justify-center gap-4 py-4 px-1"
                 )}
                 onClick={() => isMobileChatOpen && setIsMobileBoardExpanded(!isMobileBoardExpanded)}
             >
@@ -102,7 +102,7 @@ export const BoardViewLayout: React.FC<BoardViewLayoutProps> = ({
                 data-testid="tutor-container"
                 className={clsx(
                 "md:col-span-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden flex flex-col transition-all duration-300",
-                isMobileChatOpen ? "w-[48%] flex-shrink-0 h-full rounded-none" : "min-h-[400px] md:h-[560px]"
+                isMobileChatOpen ? "flex-1 h-full rounded-none" : "min-h-[400px] md:h-[560px]"
             )}>
                 {sidePanel}
             </div>
