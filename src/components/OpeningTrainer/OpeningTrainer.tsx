@@ -30,6 +30,7 @@ import { CapturedPieces } from '@/components/CapturedPieces';
 import { getCapturedState } from '@/lib/gameState';
 import { EvaluationBar } from '@/components/EvaluationBar';
 import { TopUtilityLinks } from '@/components/TopUtilityLinks';
+import { BoardViewLayout } from '@/components/BoardViewLayout';
 
 interface OpeningTrainerProps {
   opening: OpeningMetadata;
@@ -77,6 +78,7 @@ export default function OpeningTrainer({
   // Mobile UX States
   const [isMobileChatOpen, setIsMobileChatOpen] = useState(false);
   const [isMobileBoardExpanded, setIsMobileBoardExpanded] = useState(false);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const [viewportHeight, setViewportHeight] = useState<number | null>(null);
   const [viewportOffset, setViewportOffset] = useState<number>(0);
 
@@ -336,44 +338,17 @@ export default function OpeningTrainer({
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-100 dark:bg-gray-900">
-      <div 
-        className={clsx(
-            "flex-grow",
-            isMobileChatOpen 
-                ? "fixed top-0 left-0 right-0 z-[100] bg-white dark:bg-gray-900 flex flex-row p-0 m-0 w-full overflow-hidden" 
-                : "grid grid-cols-1 lg:grid-cols-3 gap-6 p-4 max-w-7xl mx-auto w-full transition-all duration-300"
-        )}
-        style={isMobileChatOpen ? { 
-            height: viewportHeight ? `${viewportHeight}px` : '100dvh',
-            top: `${viewportOffset}px`,
-            willChange: 'height, top'
-        } : {}}
-      >
-        {/* 1. Navigation Row */}
-        {!isMobileChatOpen && (
-          <div className="lg:col-span-3 flex justify-between items-center py-1">
-              <button
-                  onClick={() => router.push('/')}
-                  className="flex items-center gap-1 px-2 py-0.5 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md text-xs font-bold transition-all"
-              >
-                  &lt; Back
-              </button>
-              <TopUtilityLinks language={language} showExternalLinks={false} />
-          </div>
-        )}
-
-        {/* 2. Board Area */}
-        <div 
-            data-testid="board-area"
-            className={clsx(
-                "bg-white dark:bg-gray-800 p-1 lg:p-4 rounded-lg shadow-lg flex flex-col items-center relative overflow-hidden transition-all duration-500",
-                isMobileChatOpen 
-                    ? (isMobileBoardExpanded ? "w-[55%]" : "w-[35%]")
-                    : "lg:col-span-2 space-y-4",
-                isMobileChatOpen && "h-full rounded-none border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 justify-center gap-4 py-4 px-1"
-            )}
-            onClick={() => isMobileChatOpen && setIsMobileBoardExpanded(!isMobileBoardExpanded)}
-        >
+      <BoardViewLayout
+        language={language}
+        onBack={() => router.push('/')}
+        isMobileChatOpen={isMobileChatOpen}
+        isMobileBoardExpanded={isMobileBoardExpanded}
+        setIsMobileBoardExpanded={setIsMobileBoardExpanded}
+        viewportHeight={viewportHeight ?? undefined}
+        viewportOffset={viewportOffset}
+        boardArea={
+          <>
+            {/* Interaction Overlay */}
             {isMobileChatOpen && <div className="absolute inset-0 z-10 cursor-pointer" />}
 
             {/* Top Cluster (Mobile only) */}
@@ -440,77 +415,74 @@ export default function OpeningTrainer({
                 </div>
               </div>
             )}
-        </div>
-
-        {/* 3. Tutor / Sidebar */}
-        <div 
-          data-testid="tutor-container"
-          className={clsx(
-              "transition-all duration-300 ease-in-out z-40 overflow-hidden flex flex-col",
-              isMobileChatOpen ? "flex-1 h-full" : "translate-y-full lg:translate-y-0 fixed inset-x-0 bottom-0 lg:relative lg:inset-auto",
-          )}
-        >
-          {apiKey ? (
-            <Tutor
-              game={chess}
-              currentFen={currentPosition}
-              userMove={null}
-              computerMove={null}
-              stockfish={stockfish}
-              evalP0={null}
-              evalP2={null}
-              openingData={[]}
-              missedTactics={[]}
-              onAnalysisComplete={() => {}}
-              apiKey={apiKey}
-              personality={personality}
-              language={language}
-              playerColor={userColor}
-              onCheckComputerMove={() => {}}
-              isReviewing={session.currentMoveIndex < session.moveHistory.length}
-              resignationContext={null}
-              openingPracticeMode={openingPracticeMode}
-              onJumpToBoard={() => {
-                  if (isMobileChatOpen) setIsMobileBoardExpanded(false);
-                  setIsMobileChatOpen(false);
-              }}
-            />
-          ) : (
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 text-center border border-gray-200 dark:border-gray-700">
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Coach Chat</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 text-xs">Set up your API key to interact with your coach.</p>
-              <button onClick={() => window.location.href = '/onboarding'} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-bold uppercase tracking-wider shadow-sm">Onboarding</button>
-            </div>
-          )}
-        </div>
-
-        {/* Unified Mobile Floating Action Button */}
-        <button
-            onClick={() => {
-                if (isMobileChatOpen) setIsMobileBoardExpanded(false);
-                setIsMobileChatOpen(!isMobileChatOpen);
-            }}
-            aria-label={isMobileChatOpen ? "Close Chat" : "Open Chat"}
-            className={clsx(
-                "fixed right-4 z-[110] lg:hidden transition-all duration-500 shadow-2xl",
-                "flex items-center gap-2 px-3 py-2.5 rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800",
-                isMobileChatOpen ? "bottom-40 scale-90 opacity-90" : "bottom-24 scale-100 opacity-100"
-            )}
-        >
-            {isMobileChatOpen ? (
-                <>
-                    <X size={18} className="text-red-500 dark:text-red-400" />
-                    <span className="text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-tight">Close</span>
-                </>
+          </>
+        }
+        sidePanel={
+          <div className="h-full flex flex-col overflow-hidden">
+            {apiKey ? (
+              <Tutor
+                game={chess}
+                currentFen={currentPosition}
+                userMove={null}
+                computerMove={null}
+                stockfish={stockfish}
+                evalP0={null}
+                evalP2={null}
+                openingData={[]}
+                missedTactics={[]}
+                onAnalysisComplete={() => {}}
+                apiKey={apiKey}
+                personality={personality}
+                language={language}
+                playerColor={userColor}
+                onCheckComputerMove={() => {}}
+                isReviewing={session.currentMoveIndex < session.moveHistory.length}
+                resignationContext={null}
+                openingPracticeMode={openingPracticeMode}
+                onJumpToBoard={() => {
+                    if (isMobileChatOpen) setIsMobileBoardExpanded(false);
+                    setIsMobileChatOpen(false);
+                }}
+                onChatFocus={() => setIsKeyboardVisible(true)}
+                onChatBlur={() => setIsKeyboardVisible(false)}
+              />
             ) : (
-                <>
-                    <div className="text-xl leading-none">{personality.image}</div>
-                    <span className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-tight">Tutor Chat</span>
-                    <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse" />
-                </>
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-6 text-center border border-gray-200 dark:border-gray-700">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Coach Chat</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 text-xs">Set up your API key to interact with your coach.</p>
+                <button onClick={() => window.location.href = '/onboarding'} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-bold uppercase tracking-wider shadow-sm">Onboarding</button>
+              </div>
             )}
-        </button>
-      </div>
+          </div>
+        }
+      />
+
+      {/* Unified Mobile Floating Action Button */}
+      <button
+          onClick={() => {
+              if (isMobileChatOpen) setIsMobileBoardExpanded(false);
+              setIsMobileChatOpen(!isMobileChatOpen);
+          }}
+          aria-label={isMobileChatOpen ? "Close Chat" : "Open Chat"}
+          className={clsx(
+              "fixed right-4 z-[110] lg:hidden transition-all duration-500 shadow-2xl",
+              "flex items-center gap-2 px-3 py-2.5 rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800",
+              isMobileChatOpen ? "bottom-40 scale-90 opacity-90" : "bottom-24 scale-100 opacity-100"
+          )}
+      >
+          {isMobileChatOpen ? (
+              <>
+                  <X size={18} className="text-red-500 dark:text-red-400" />
+                  <span className="text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-tight">Close</span>
+              </>
+          ) : (
+              <>
+                  <div className="text-xl leading-none">{personality.image}</div>
+                  <span className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-tight">Tutor Chat</span>
+                  <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse" />
+              </>
+          )}
+      </button>
 
       {/* Deviation Dialog */}
       {showDeviationDialog && session?.deviationMoveIndex !== null && (

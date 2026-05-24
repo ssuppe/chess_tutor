@@ -18,6 +18,7 @@ jest.mock("react-chessboard", () => ({
 jest.mock("@/lib/stockfish", () => {
     const stockfishInstance = {
         evaluate: jest.fn(),
+        getBestMove: jest.fn().mockResolvedValue("e2e4"),
         terminate: jest.fn(),
     };
     const Stockfish = jest.fn(() => stockfishInstance);
