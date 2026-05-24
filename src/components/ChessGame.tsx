@@ -17,6 +17,7 @@ import { Brain, ArrowLeft, Download, Flag, AlertTriangle, X, ChevronRight, Chevr
 import { CapturedPieces } from "./CapturedPieces";
 import { detectMissedTactics, uciToSan, DetectedTactic } from "@/lib/tacticDetection";
 import { upsertSavedGame } from "@/lib/savedGames";
+import { getCapturedState } from "@/lib/gameState";
 import { useChessSounds } from "@/lib/hooks/useChessSounds";
 import { TopUtilityLinks } from "./TopUtilityLinks";
 import { BoardViewLayout } from "./BoardViewLayout";
@@ -153,33 +154,7 @@ export default function ChessGame({
     const { playMoveSound, playCheck, playVictory, playDefeat } = useChessSounds();
 
     // Captured Pieces State
-    const [capturedWhitePieces, setCapturedWhitePieces] = useState<string[]>([]);
-    const [capturedBlackPieces, setCapturedBlackPieces] = useState<string[]>([]);
-    const [materialScore, setMaterialScore] = useState<{ white: number, black: number }>({ white: 0, black: 0 });
-
-    const updateCapturedPieces = useCallback(() => {
-        const history = game.history({ verbose: true });
-        const whitePiecesLost: string[] = [];
-        const blackPiecesLost: string[] = [];
-        let whiteLostScore = 0;
-        let blackLostScore = 0;
-
-        history.forEach(move => {
-            if (move.captured) {
-                if (move.color === 'w') {
-                    blackPiecesLost.push(move.captured);
-                    blackLostScore += PIECE_VALUES[move.captured] || 0;
-                } else {
-                    whitePiecesLost.push(move.captured);
-                    whiteLostScore += PIECE_VALUES[move.captured] || 0;
-                }
-            }
-        });
-
-        setCapturedWhitePieces(whitePiecesLost);
-        setCapturedBlackPieces(blackPiecesLost);
-        setMaterialScore({ white: whiteLostScore, black: blackLostScore });
-    }, [game]);
+    const capturedState = useMemo(() => getCapturedState(fen), [fen]);
 
     const makeAMove = useCallback(
         (move: { from: string; to: string; promotion?: string }) => {
@@ -189,7 +164,6 @@ export default function ChessGame({
                 if (result) {
                     const newFen = game.fen();
                     setFen(newFen);
-                    updateCapturedPieces();
                     playMoveSound(!!result.captured);
 
                     return { result, newFen };
@@ -199,7 +173,7 @@ export default function ChessGame({
             }
             return null;
         },
-        [game, updateCapturedPieces, playMoveSound]
+        [game, playMoveSound]
     );
 
     // Initialize Stockfish
@@ -226,15 +200,42 @@ export default function ChessGame({
                 const history = game.history({ verbose: true });
                 
                 const newMoveHistory: MoveHistoryItem[] = [];
-                for (let i = 0; i < history.length; i += 2) {
+                if (playerColor === 'black' && history.length > 0) {
+                    // If human is Black, the first move is White (Computer)
                     newMoveHistory.push({
-                        playerMove: history[i].san,
-                        computerMove: history[i+1]?.san || '...'
+                        playerMove: '',
+                        computerMove: history[0].san,
+                        playerColor: 'black',
+                        moveNumber: 1
                     });
+
+                    // Subsequent pairs: Black (Player) followed by White (Computer)
+                    for (let i = 1; i < history.length; i += 2) {
+                        const blackMove = history[i];
+                        const whiteMove = history[i + 1];
+                        newMoveHistory.push({
+                            playerMove: blackMove.san,
+                            playerColor: 'black',
+                            computerMove: whiteMove?.san || '...',
+                            moveNumber: Math.floor((i + 1) / 2) + 1
+                        });
+                    }
+                } else {
+                    // If human is White, the first move is White (Player)
+                    for (let i = 0; i < history.length; i += 2) {
+                        const whiteMove = history[i];
+                        const blackMove = history[i + 1];
+                        
+                        newMoveHistory.push({
+                            playerMove: whiteMove.san,
+                            playerColor: 'white',
+                            computerMove: blackMove?.san || '...',
+                            moveNumber: Math.floor(i / 2) + 1
+                        });
+                    }
                 }
                 setMoveHistory(newMoveHistory);
                 setFen(game.fen());
-                updateCapturedPieces();
 
                 const moveSequence = extractMoveSequenceFromPGN(initialPgn);
                 const opening = lookupOpening(moveSequence);
@@ -250,7 +251,7 @@ export default function ChessGame({
                 console.error("Failed to load initial PGN:", e);
             }
         }
-    }, [initialPgn, game, updateCapturedPieces, openingContext]);
+    }, [initialPgn, game, openingContext]);
 
     // Handle Game Over Check
     useEffect(() => {
@@ -276,8 +277,8 @@ export default function ChessGame({
         }
     }, [fen, game, playCheck, playVictory]);
 
-    const checkAndMakeComputerMove = useCallback(async () => {
-        if (!stockfish || game.isGameOver() || game.turn() === (playerColor === 'white' ? 'w' : 'b')) return;
+    const checkAndMakeComputerMove = useCallback(async (lastPlayerMove?: Move) => {
+        if (!stockfish || game.isGameOver() || isAnalyzing || game.turn() === (playerColor === 'white' ? 'w' : 'b')) return;
 
         setIsAnalyzing(true);
         const currentFen = game.fen();
@@ -288,12 +289,12 @@ export default function ChessGame({
         const tactics = await detectMissedTactics({
             fen: currentFen,
             playerColor: playerColor,
-            playerMoveSan: userMove?.san || '',
+            playerMoveSan: lastPlayerMove?.san || userMove?.san || '',
             bestMoveUci: p0.bestMove,
         });
         setLatestMissedTactics(tactics);
 
-        const bestMove = await stockfish.getBestMove(currentFen, stockfishDepth);
+        const bestMove = p0.bestMove;
         const result = makeAMove({
             from: bestMove.slice(0, 2),
             to: bestMove.slice(2, 4),
@@ -314,6 +315,14 @@ export default function ChessGame({
                 const newHistory = [...prev];
                 if (newHistory.length > 0 && newHistory[newHistory.length - 1].computerMove === '...') {
                     newHistory[newHistory.length - 1].computerMove = result.result.san;
+                } else {
+                    // Handle the case where the computer moves first (e.g. human is Black)
+                    newHistory.push({
+                        playerMove: '',
+                        computerMove: result.result.san,
+                        playerColor: playerColor,
+                        moveNumber: 1
+                    });
                 }
                 return newHistory;
             });
@@ -355,12 +364,18 @@ export default function ChessGame({
                 try {
                     const p0 = await stockfish.evaluate(fen, stockfishDepth);
                     setEvalP0(p0);
+
+                    // If it's not the player's turn at the very beginning (e.g. human is Black),
+                    // trigger the computer move.
+                    if (game.turn() !== (playerColor === 'white' ? 'w' : 'b')) {
+                        checkAndMakeComputerMove();
+                    }
                 } catch (e) {}
                 setIsAnalyzing(false);
             };
             runInitialEval();
         }
-    }, [stockfish, isEngineReady, gameOverState, stockfishDepth]);
+    }, [stockfish, isEngineReady, gameOverState, stockfishDepth, fen, playerColor, game, checkAndMakeComputerMove]);
 
     async function onDrop({ sourceSquare, targetSquare }: { sourceSquare: string; targetSquare: string }) {
         if (game.isGameOver() || game.turn() !== (playerColor === 'white' ? 'w' : 'b')) return false;
@@ -374,8 +389,13 @@ export default function ChessGame({
         const result = makeAMove(moveData);
         if (result) {
             setUserMove(result.result);
-            setMoveHistory(prev => [...prev, { playerMove: result.result.san, computerMove: '...' }]);
-            checkAndMakeComputerMove();
+            setMoveHistory(prev => [...prev, { 
+                playerMove: result.result.san, 
+                computerMove: '...',
+                playerColor: playerColor,
+                moveNumber: Math.ceil((game.history().length + 1) / 2)
+            }]);
+            checkAndMakeComputerMove(result.result);
             return true;
         }
         return false;
@@ -394,7 +414,6 @@ export default function ChessGame({
         setEvalP2(null);
         setOpeningData([]);
         setResignationContext(null);
-        updateCapturedPieces();
     };
 
     const handleResignClick = useCallback(() => {
@@ -448,9 +467,6 @@ export default function ChessGame({
         setShowDownloadModal(false);
     };
 
-    const whiteAdvantage = materialScore.black - materialScore.white;
-    const blackAdvantage = materialScore.white - materialScore.black;
-
     const handleAnalysisComplete = useCallback(() => setIsAnalyzing(false), []);
 
     return (
@@ -469,9 +485,11 @@ export default function ChessGame({
                         {isMobileChatOpen && (
                             <div className="w-full flex flex-col items-center gap-1.5 flex-shrink-0">
                                 <CapturedPieces 
-                                    captured={playerColor === 'white' ? capturedWhitePieces : capturedBlackPieces} 
+                                    captured={playerColor === 'white' ? capturedState.whitePiecesLost : capturedState.blackPiecesLost} 
                                     color={playerColor === 'white' ? 'w' : 'b'} 
-                                    score={playerColor === 'white' ? (blackAdvantage > 0 ? blackAdvantage : null) : (whiteAdvantage > 0 ? whiteAdvantage : null)} 
+                                    score={playerColor === 'white' 
+                                        ? (capturedState.blackLostScore - capturedState.whiteLostScore > 0 ? capturedState.blackLostScore - capturedState.whiteLostScore : null) 
+                                        : (capturedState.whiteLostScore - capturedState.blackLostScore > 0 ? capturedState.whiteLostScore - capturedState.blackLostScore : null)} 
                                 />
                                 
                                 <div className="w-full h-3">
@@ -520,15 +538,17 @@ export default function ChessGame({
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-3">
-                                            <button onClick={() => { game.undo(); game.undo(); setFen(game.fen()); setUserMove(null); setComputerMove(null); setEvalP0(null); setEvalP2(null); setOpeningData([]); updateCapturedPieces(); }} className="flex items-center gap-1 hover:text-blue-600 dark:hover:text-blue-400 transition-colors" disabled={!!gameOverState}><ArrowLeft size={12} /> {t.game.undoMove}</button>
+                                            <button onClick={() => { game.undo(); game.undo(); setFen(game.fen()); setUserMove(null); setComputerMove(null); setEvalP0(null); setEvalP2(null); setOpeningData([]); }} className="flex items-center gap-1 hover:text-blue-600 dark:hover:text-blue-400 transition-colors" disabled={!!gameOverState}><ArrowLeft size={12} /> {t.game.undoMove}</button>
                                             <button onClick={handleResignClick} className="flex items-center gap-1 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors" disabled={!!gameOverState}><Flag size={12} /> {t.game.resign}</button>
                                         </div>
                                     </div>
                                     <div className="h-6 w-full flex justify-start">
                                         <CapturedPieces 
-                                            captured={playerColor === 'white' ? capturedWhitePieces : capturedBlackPieces} 
+                                            captured={playerColor === 'white' ? capturedState.whitePiecesLost : capturedState.blackPiecesLost} 
                                             color={playerColor === 'white' ? 'w' : 'b'} 
-                                            score={playerColor === 'white' ? (blackAdvantage > 0 ? blackAdvantage : null) : (whiteAdvantage > 0 ? whiteAdvantage : null)} 
+                                            score={playerColor === 'white' 
+                                                ? (capturedState.blackLostScore - capturedState.whiteLostScore > 0 ? capturedState.blackLostScore - capturedState.whiteLostScore : null) 
+                                                : (capturedState.whiteLostScore - capturedState.blackLostScore > 0 ? capturedState.whiteLostScore - capturedState.blackLostScore : null)} 
                                         />
                                     </div>
                                 </>
@@ -558,9 +578,11 @@ export default function ChessGame({
                             {!isMobileChatOpen && (
                                 <div className="h-6 w-full flex justify-start">
                                     <CapturedPieces 
-                                        captured={playerColor === 'white' ? capturedBlackPieces : capturedWhitePieces} 
+                                        captured={playerColor === 'white' ? capturedState.blackPiecesLost : capturedState.whitePiecesLost} 
                                         color={playerColor === 'white' ? 'b' : 'w'} 
-                                        score={playerColor === 'white' ? (whiteAdvantage > 0 ? whiteAdvantage : null) : (blackAdvantage > 0 ? blackAdvantage : null)} 
+                                        score={playerColor === 'white' 
+                                            ? (capturedState.whiteLostScore - capturedState.blackLostScore > 0 ? capturedState.whiteLostScore - capturedState.blackLostScore : null) 
+                                            : (capturedState.blackLostScore - capturedState.whiteLostScore > 0 ? capturedState.blackLostScore - capturedState.whiteLostScore : null)} 
                                     />
                                 </div>
                             )}
@@ -583,9 +605,11 @@ export default function ChessGame({
                                     </div>
                                 )}
                                 <CapturedPieces 
-                                    captured={playerColor === 'white' ? capturedBlackPieces : capturedWhitePieces} 
+                                    captured={playerColor === 'white' ? capturedState.blackPiecesLost : capturedState.whitePiecesLost} 
                                     color={playerColor === 'white' ? 'b' : 'w'} 
-                                    score={playerColor === 'white' ? (whiteAdvantage > 0 ? whiteAdvantage : null) : (blackAdvantage > 0 ? blackAdvantage : null)} 
+                                    score={playerColor === 'white' 
+                                        ? (capturedState.whiteLostScore - capturedState.blackLostScore > 0 ? capturedState.whiteLostScore - capturedState.blackLostScore : null) 
+                                        : (capturedState.blackLostScore - capturedState.whiteLostScore > 0 ? capturedState.blackLostScore - capturedState.whiteLostScore : null)} 
                                 />
                             </div>
                         )}

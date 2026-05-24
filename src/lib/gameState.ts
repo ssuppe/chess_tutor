@@ -23,23 +23,43 @@ export type CapturedState = {
 
 export function getCapturedState(gameOrFen: Chess | string): CapturedState {
     const chess = typeof gameOrFen === 'string' ? new Chess(gameOrFen) : gameOrFen;
-    const history = chess.history({ verbose: true });
+    
+    // Define the full set of pieces for a standard game
+    const fullSet: Record<string, number> = {
+        'w-p': 8, 'w-n': 2, 'w-b': 2, 'w-r': 2, 'w-q': 1,
+        'b-p': 8, 'b-n': 2, 'b-b': 2, 'b-r': 2, 'b-q': 1
+    };
+
+    // Count current pieces on board
+    const currentCount: Record<string, number> = {};
+    chess.board().forEach(row => {
+        row.forEach(piece => {
+            if (piece) {
+                const key = `${piece.color}-${piece.type}`;
+                currentCount[key] = (currentCount[key] || 0) + 1;
+            }
+        });
+    });
+
     const whitePiecesLost: string[] = [];
     const blackPiecesLost: string[] = [];
     let whiteLostScore = 0;
     let blackLostScore = 0;
 
-    history.forEach((move) => {
-        if (!move.captured) return;
-
-        if (move.color === "w") {
-            blackPiecesLost.push(move.captured);
-            blackLostScore += PIECE_VALUES[move.captured] || 0;
-            return;
+    // Calculate lost pieces by subtracting current count from full set
+    Object.entries(fullSet).forEach(([key, count]) => {
+        const [color, type] = key.split('-');
+        const lost = Math.max(0, count - (currentCount[key] || 0));
+        
+        for (let i = 0; i < lost; i++) {
+            if (color === 'w') {
+                whitePiecesLost.push(type);
+                whiteLostScore += PIECE_VALUES[type] || 0;
+            } else {
+                blackPiecesLost.push(type);
+                blackLostScore += PIECE_VALUES[type] || 0;
+            }
         }
-
-        whitePiecesLost.push(move.captured);
-        whiteLostScore += PIECE_VALUES[move.captured] || 0;
     });
 
     return {

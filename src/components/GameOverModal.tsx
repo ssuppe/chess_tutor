@@ -9,20 +9,20 @@ import ReactMarkdown from "react-markdown";
 import { SupportedLanguage } from "@/lib/i18n/translations";
 
 export interface MoveHistoryItem {
-    moveNumber: number;
+    moveNumber?: number;
 
     // Player's move data
     playerMove: string;
-    playerColor: 'white' | 'black';
-    fenBeforePlayerMove: string;
-    evalBeforePlayerMove: StockfishEvaluation;  // P0 - evaluation before player's move
-    fenAfterPlayerMove: string;
-    evalAfterPlayerMove: StockfishEvaluation;   // P1 - evaluation after player's move
+    playerColor?: 'white' | 'black';
+    fenBeforePlayerMove?: string;
+    evalBeforePlayerMove?: StockfishEvaluation;  // P0 - evaluation before player's move
+    fenAfterPlayerMove?: string;
+    evalAfterPlayerMove?: StockfishEvaluation;   // P1 - evaluation after player's move
 
     // Computer's move data
     computerMove: string;
-    fenAfterComputerMove: string;
-    evalAfterComputerMove: StockfishEvaluation; // P2 - evaluation after computer's move
+    fenAfterComputerMove?: string;
+    evalAfterComputerMove?: StockfishEvaluation; // P2 - evaluation after computer's move
 
     // Opening info (optional)
     opening?: string;

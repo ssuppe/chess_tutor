@@ -34,14 +34,12 @@ jest.mock("../lib/stockfish", () => {
         bestMove: "e7e5",
         depth: 15
     });
-    const getBestMove = jest.fn().mockResolvedValue("e7e5");
     return {
-        __mock: { evaluate, getBestMove },
+        __mock: { evaluate },
         Stockfish: jest.fn().mockImplementation((onReady) => {
             if (onReady) setTimeout(onReady, 0);
             return {
                 evaluate,
-                getBestMove,
                 terminate: jest.fn(),
             };
         }),
