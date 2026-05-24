@@ -6,83 +6,64 @@ import { Chessboard } from "react-chessboard";
 import { Brain, ChevronLeft, ChevronRight, Loader2, ArrowLeft, Download, PlayCircle, Upload, RotateCcw, X, MessageCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-import Header from "@/components/Header";
-import { SupportedLanguage } from "@/lib/i18n/translations";
-import { useTranslation } from "@/lib/i18n/useTranslation";
-import { Personality, PERSONALITIES } from "@/lib/personalities";
-import { Stockfish, StockfishEvaluation } from "@/lib/stockfish";
-import { detectChessFormat, ChessFormat } from "@/lib/chessFormatDetector";
-import { detectMissedTactics, DetectedTactic, uciToSan, filterMeaningfulTactics } from "@/lib/tacticDetection";
-import { lookupPossibleOpenings, buildMoveSequenceFromSteps, OpeningMetadata } from "@/lib/openings";
-import { getGenAIModel } from "@/lib/gemini";
-import { ChatSession } from "@google/generative-ai";
-import ReactMarkdown from "react-markdown";
-import { useDebug } from "@/contexts/DebugContext";
-import { GameImportModal } from "@/components/GameImportModal";
-import { EvaluationBar } from "@/components/EvaluationBar";
-import { OpeningsModal } from "@/components/OpeningsModal";
-import { TopUtilityLinks } from "@/components/TopUtilityLinks";
-import { CapturedPieces } from "@/components/CapturedPieces";
+import { BoardViewLayout } from "@/components/BoardViewLayout";
 import { generateHumanReadableBoard, getCapturedState } from "@/lib/gameState";
 import clsx from "clsx";
 
 interface MoveStep {
     san: string;
-    color: "white" | "black";
-    moveNumber: number;
     fenBefore: string;
     fenAfter: string;
-    from: string;
-    to: string;
+    color: 'w' | 'b';
+    from?: string;
+    to?: string;
 }
 
-interface StepDetails {
-    evalBefore?: StockfishEvaluation;
-    evalAfter?: StockfishEvaluation;
-    cpLoss?: number;
-    missedTactics?: DetectedTactic[];
-    bestMoveSan?: string | null;
-    comment?: string;
+interface MoveDetails {
+    evalAfter: StockfishEvaluation | null;
+    bestMoveSan: string | null;
+    cpLoss: number | null;
+    missedTactics: DetectedTactic[];
 }
 
 const DEFAULT_START = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
 export default function AnalysisPage() {
     const router = useRouter();
+    const { isDebug } = useDebug();
+
     const [language, setLanguage] = useState<SupportedLanguage>("en");
     const [apiKey, setApiKey] = useState<string | null>(null);
-    const t = useTranslation(language);
-    const { addEntry } = useDebug();
-
     const [input, setInput] = useState("");
     const [detectedFormat, setDetectedFormat] = useState<ChessFormat | null>(null);
     const [selectedPersonality, setSelectedPersonality] = useState<Personality>(PERSONALITIES[0]);
-    const [orientation, setOrientation] = useState<"white" | "black">("white");
-
-    const [initialFen, setInitialFen] = useState<string>(DEFAULT_START);
-    const [steps, setSteps] = useState<MoveStep[]>([]);
-    const [currentIndex, setCurrentIndex] = useState(0); // 0 = starting position
     const [error, setError] = useState<string | null>(null);
 
-    // Mobile UX States
-    const [isMobileChatOpen, setIsMobileChatOpen] = useState(false);
-    const [isMobileBoardExpanded, setIsMobileBoardExpanded] = useState(false);
-    const [viewportHeight, setViewportHeight] = useState<number | null>(null);
-    const [viewportOffset, setViewportOffset] = useState<number>(0);
+    const [steps, setSteps] = useState<MoveStep[]>([]);
+    const [currentIndex, setCurrentIndex] = useState(0);
+    const [initialFen, setInitialFen] = useState(DEFAULT_START);
+    const [orientation, setOrientation] = useState<"white" | "black">("white");
 
     const [stockfish, setStockfish] = useState<Stockfish | null>(null);
-    const evaluationCache = useRef<Record<string, StockfishEvaluation>>({});
-    const [evaluationVersion, setEvaluationVersion] = useState(0);
-    const [stepDetails, setStepDetails] = useState<Record<number, StepDetails>>({});
-    const [isCommenting, setIsCommenting] = useState(false);
+    const [details, setDetails] = useState<Record<number, MoveDetails>>({});
     const [comments, setComments] = useState<Record<number, string>>({});
+    const [isCommenting, setIsCommenting] = useState(false);
+    const [evaluationVersion, setEvaluationVersion] = useState(0);
+
+    const evaluationCache = useRef<Record<string, StockfishEvaluation>>({});
     const [chatSession, setChatSession] = useState<ChatSession | null>(null);
     const [showImportModal, setShowImportModal] = useState(false);
     const [showPlayModal, setShowPlayModal] = useState(false);
     const [showOpeningsModal, setShowOpeningsModal] = useState(false);
+
     const [playPersonality, setPlayPersonality] = useState<Personality>(PERSONALITIES[0]);
     const [playColor, setPlayColor] = useState<"white" | "black">("white");
-    const [playStrength, setPlayStrength] = useState(15);
+    const [playStrength, setPlayStrength] = useState(10);
+
+    const [isMobileChatOpen, setIsMobileChatOpen] = useState(false);
+    const [isMobileBoardExpanded, setIsMobileBoardExpanded] = useState(false);
+    const [viewportHeight, setViewportHeight] = useState<number | null>(null);
+    const [viewportOffset, setViewportOffset] = useState<number>(0);
 
     // Track actual visual viewport height and offset for keyboard awareness
     useEffect(() => {
