@@ -39,6 +39,7 @@ interface MoveDetails {
     bestMoveSan: string | null;
     cpLoss: number | null;
     missedTactics: DetectedTactic[];
+    comment?: string;
 }
 
 const DEFAULT_START = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
@@ -81,22 +82,18 @@ export default function AnalysisPage() {
     const [viewportHeight, setViewportHeight] = useState<number | null>(null);
     const [viewportOffset, setViewportOffset] = useState<number>(0);
 
-    // Track actual visual viewport height and offset for keyboard awareness
     useEffect(() => {
-        if (typeof window === 'undefined') return;
-
         const updateViewport = () => {
-            const height = window.visualViewport?.height || window.innerHeight;
-            const offset = window.visualViewport?.offsetTop || 0;
-            setViewportHeight(height);
-            setViewportOffset(offset);
-            if (offset > 0) window.scrollTo(0, 0);
+            if (window.visualViewport) {
+                setViewportHeight(window.visualViewport.height);
+                setViewportOffset(window.visualViewport.offsetTop);
+            }
         };
 
-        updateViewport();
         window.visualViewport?.addEventListener('resize', updateViewport);
         window.visualViewport?.addEventListener('scroll', updateViewport);
         window.addEventListener('resize', updateViewport);
+        updateViewport();
 
         return () => {
             window.visualViewport?.removeEventListener('resize', updateViewport);
@@ -132,9 +129,9 @@ export default function AnalysisPage() {
         if (storedLang) setLanguage(storedLang as SupportedLanguage);
 
         // Check for pending analysis from saved game
-        const pendingAnalysis = localStorage.getItem("chess_tutor_pending_analysis");
+        const pendingAnalysis = localStorage.getItem("chess_t_pending_analysis");
         if (pendingAnalysis) {
-            localStorage.removeItem("chess_tutor_pending_analysis");
+            localStorage.removeItem("chess_t_pending_analysis");
             setInput(pendingAnalysis);
             setDetectedFormat(detectChessFormat(pendingAnalysis));
             setTimeout(() => {
@@ -227,37 +224,28 @@ IMPORTANT:
     const loadGameFromPgnOrFen = (notation: string) => {
         const trimmed = notation.trim();
         const format = detectChessFormat(trimmed);
-
-        if (!trimmed || format === "invalid") {
-            setError(t.analysis.importError);
-            return;
-        }
+        const chess = new Chess();
 
         try {
-            const parsedGame = new Chess();
-            const nextSteps: MoveStep[] = [];
-            let startFen = DEFAULT_START;
-
             if (format === "fen") {
-                parsedGame.load(trimmed);
-                startFen = parsedGame.fen();
-            } else {
-                parsedGame.loadPgn(trimmed);
-                const headers = parsedGame.header();
+                chess.load(trimmed);
+                setInitialFen(trimmed);
+                setSteps([]);
+            } else if (format === "pgn") {
+                chess.loadPgn(trimmed);
+                const headers = chess.header();
+                let startFen = DEFAULT_START;
                 if (headers.FEN) {
                     const base = new Chess();
                     base.load(headers.FEN);
                     startFen = base.fen();
-                } else {
-                    parsedGame.reset();
-                    startFen = parsedGame.fen();
                 }
 
                 const replay = new Chess();
                 replay.load(startFen);
-                const history = new Chess();
-                history.loadPgn(trimmed);
-                const verboseMoves = history.history({ verbose: true });
+                const verboseMoves = chess.history({ verbose: true });
+                const nextSteps: MoveStep[] = [];
+                
                 verboseMoves.forEach((move, idx) => {
                     const before = replay.fen();
                     const applied = replay.move({ from: move.from, to: move.to, promotion: move.promotion || "q" });
@@ -273,17 +261,17 @@ IMPORTANT:
                         });
                     }
                 });
+                
+                setInitialFen(startFen);
+                setSteps(nextSteps);
             }
-
             evaluationCache.current = {};
             setEvaluationVersion(v => v + 1);
-            setInitialFen(startFen);
-            setSteps(nextSteps);
             setCurrentIndex(0);
             setStepDetails({});
             setComments({});
             setError(null);
-            ensureEvaluation(startFen);
+            ensureEvaluation(initialFen);
         } catch (e) {
             console.error("Failed to load game", e);
             setError(t.analysis.importError);
@@ -294,6 +282,7 @@ IMPORTANT:
         setInput(pgn);
         setDetectedFormat(detectChessFormat(pgn));
         loadGameFromPgnOrFen(pgn);
+        setShowImportModal(false);
     };
 
     const handleResetAnalysis = () => {
@@ -317,7 +306,7 @@ IMPORTANT:
             stockfishDepth: playStrength,
         };
 
-        localStorage.setItem("chess_tutor_pending_game", JSON.stringify(payload));
+        localStorage.setItem("chess_t_pending_game", JSON.stringify(payload));
         router.push("/");
     };
 
@@ -340,7 +329,7 @@ IMPORTANT:
         if (!evalBefore || !evalAfter) return;
 
         setStepDetails(prev => {
-            if (prev[currentIndex]?.evalBefore && prev[currentIndex]?.evalAfter) return prev;
+            if (prev[currentIndex]?.evalAfter) return prev;
             const isWhite = step.color === "w";
             const cpLoss = isWhite
                 ? evalBefore.score - evalAfter.score
@@ -356,11 +345,10 @@ IMPORTANT:
             return {
                 ...prev,
                 [currentIndex]: {
-                    evalBefore,
                     evalAfter,
+                    bestMoveSan,
                     cpLoss,
                     missedTactics,
-                    bestMoveSan,
                 }
             };
         });
@@ -371,7 +359,7 @@ IMPORTANT:
         if (currentIndex === 0) return;
         const step = steps[currentIndex - 1];
         const details = stepDetails[currentIndex];
-        if (!step || !details?.evalBefore || !details?.evalAfter) return;
+        if (!step || !details?.evalAfter) return;
         if (comments[currentIndex]) return;
 
         let cancelled = false;
@@ -379,7 +367,6 @@ IMPORTANT:
         const timeout = setTimeout(async () => {
             try {
                 const delta = details.cpLoss ?? 0;
-                const evalBefore = details.evalBefore!.score / 100;
                 const evalAfter = details.evalAfter!.score / 100;
                 const mateInfo = details.evalAfter!.mate !== null ? `Mate in ${details.evalAfter!.mate}` : "No mate detected";
                 const tactics = filterMeaningfulTactics(details.missedTactics)
@@ -391,14 +378,13 @@ Analyze this move:
 
 DATA:
 - Move number: ${step.moveNumber}
-- Side to move: ${step.color}
+- Side to move: ${step.color === 'w' ? 'White' : 'Black'}
 - Move played (SAN): ${step.san}
 - FEN before move: ${step.fenBefore}
 - FEN after move: ${step.fenAfter}
 - CURRENT PIECE POSITIONS: ${generateHumanReadableBoard(step.fenAfter)}
-- Evaluation before move: ${evalBefore.toFixed(2)} pawns
 - Evaluation after move: ${evalAfter.toFixed(2)} pawns
-- Best move suggestion: ${details.bestMoveSan ?? details.evalBefore!.bestMove}
+- Best move suggestion: ${details.bestMoveSan}
 - Evaluation shift (centipawns): ${delta}
 - Possible Openings: ${possibleOpenings.length > 0 ? possibleOpenings.map(o => `${o.name} (${o.eco})`).join(', ') : "Unknown/Midgame"}
 - Missed tactics: ${tactics}
@@ -408,7 +394,6 @@ INSTRUCTIONS:
 - Be concise (3-4 sentences).
 - Mention whether the move improved or worsened the position and why.
 - Highlight any tactical ideas the player may have missed.
-- Refer to the player's side as ${step.color}.
 - Use the CURRENT PIECE POSITIONS to verify exactly where all pieces are located.
 - Keep it educational and stay true to your personality tone.`;
 
@@ -446,16 +431,16 @@ INSTRUCTIONS:
             clearTimeout(timeout);
             setIsCommenting(false);
         };
-    }, [chatSession, currentIndex, stepDetails, steps, comments, possibleOpenings]);
+    }, [chatSession, currentIndex, stepDetails, steps, comments, possibleOpenings, addEntry, language, selectedPersonality.name]);
 
-    const formatEval = (evaluation?: StockfishEvaluation) => {
+    const formatEval = (evaluation?: StockfishEvaluation | null) => {
         if (!evaluation) return t.analysis.enginePending;
         if (evaluation.mate !== null) return `#${evaluation.mate}`;
         return `${evaluation.score >= 0 ? "+" : ""}${(evaluation.score / 100).toFixed(2)}`;
     };
 
-    const formatCpLoss = (cp?: number) => {
-        if (cp === undefined) return t.analysis.enginePending;
+    const formatCpLoss = (cp?: number | null) => {
+        if (cp === null || cp === undefined) return t.analysis.enginePending;
         const pawns = (cp / 100).toFixed(2);
         return `${cp > 0 ? "+" : ""}${pawns}`;
     };
@@ -465,332 +450,298 @@ INSTRUCTIONS:
     const tacticSummary = filterMeaningfulTactics(currentDetails?.missedTactics);
 
     // Get captured pieces for both sides at current FEN
-    const capturedState = useMemo(() => getCapturedState(new Chess(currentFen)), [currentFen]);
+    const capturedState = useMemo(() => getCapturedState(currentFen), [currentFen]);
 
     // Highlighting current move
     const lastMoveHighlight = useMemo(() => {
         if (currentIndex === 0 || !currentStep) return {};
         return {
-            [currentStep.from]: { boxShadow: 'inset 0 0 0 4px rgba(255, 255, 0, 0.75)' },
-            [currentStep.to]: { boxShadow: 'inset 0 0 0 4px rgba(255, 255, 0, 0.75)' }
+            [currentStep.from!]: { boxShadow: 'inset 0 0 0 4px rgba(255, 255, 0, 0.75)' },
+            [currentStep.to!]: { boxShadow: 'inset 0 0 0 4px rgba(255, 255, 0, 0.75)' }
         };
     }, [currentIndex, currentStep]);
 
     return (
         <div className="flex flex-col min-h-screen bg-gray-100 dark:bg-gray-900">
-            <div 
-                className={clsx(
-                    "flex-grow transition-all duration-300",
-                    isMobileChatOpen 
-                        ? "fixed top-0 left-0 right-0 z-[100] bg-white dark:bg-gray-900 flex flex-row p-0 m-0 w-full overflow-hidden" 
-                        : "flex flex-col"
-                )}
-                style={isMobileChatOpen ? { 
-                    height: viewportHeight ? `${viewportHeight}px` : '100dvh',
-                    top: `${viewportOffset}px`,
-                    willChange: 'height, top'
-                } : {}}
-            >
-                {/* 1. Navigation Row */}
-                <div className={clsx(
-                    "w-full px-4 pt-2",
-                    isMobileChatOpen && "hidden md:block"
-                )}>
-                    <div className="max-w-6xl mx-auto flex justify-between items-center py-1">
-                        <button
-                            onClick={() => router.push('/')}
-                            className="flex items-center gap-1 px-2 py-0.5 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md text-xs font-bold transition-all"
-                            aria-label={t.game.backToMenu}
-                        >
-                            &lt; {t.game.backToMenu}
-                        </button>
-                        {steps.length > 0 && (
-                            <div className="text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400 font-semibold">
-                                {t.analysis.title} • {currentIndex} / {steps.length}
+            <BoardViewLayout
+                language={language}
+                onBack={() => router.push('/')}
+                isMobileChatOpen={isMobileChatOpen}
+                isMobileBoardExpanded={isMobileBoardExpanded}
+                setIsMobileBoardExpanded={setIsMobileBoardExpanded}
+                viewportHeight={viewportHeight ?? undefined}
+                viewportOffset={viewportOffset}
+                headerActions={
+                    steps.length > 0 && (
+                        <div className="text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400 font-semibold">
+                            {t.analysis.title} • {currentIndex} / {steps.length}
+                        </div>
+                    )
+                }
+                boardArea={
+                    steps.length === 0 ? (
+                        <div className="w-full flex flex-col items-center justify-center h-full p-4 space-y-4">
+                            <div className="w-full max-w-sm">
+                                <Chessboard 
+                                    options={{ 
+                                        position: currentFen, 
+                                        boardOrientation: orientation, 
+                                        allowDragging: false, 
+                                        darkSquareStyle: { backgroundColor: '#779954' }, 
+                                        lightSquareStyle: { backgroundColor: '#e9edcc' }, 
+                                        animationDurationInMs: 200, 
+                                        boardStyle: { borderRadius: "8px" }
+                                    }} 
+                                />
                             </div>
-                        )}
-                        <TopUtilityLinks language={language} showExternalLinks={false} />
-                    </div>
-                </div>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 text-center uppercase tracking-wider font-bold">{t.analysis.currentPosition}</p>
+                        </div>
+                    ) : (
+                        <>
+                            {/* Top Cluster (Mobile Chat Mode only) */}
+                            {isMobileChatOpen && (
+                                <div className="w-full flex flex-col items-center gap-1.5 scale-90 flex-shrink-0">
+                                    <CapturedPieces captured={capturedState.blackPiecesLost} color="b" score={capturedState.blackLostScore - capturedState.whiteLostScore > 0 ? capturedState.blackLostScore - capturedState.whiteLostScore : null} />
+                                    {currentIndex > 0 && currentDetails?.evalAfter && <div className="w-full h-3"><EvaluationBar score={currentDetails.evalAfter.score} mate={currentDetails.evalAfter.mate} isPlayerWhite={orientation === 'white'} orientation="horizontal" /></div>}
+                                </div>
+                            )}
 
-                <main className={clsx(
-                    "flex-grow w-full flex justify-center",
-                    isMobileChatOpen ? "p-0 m-0 h-full" : "px-4 py-2 md:py-4"
-                )}>
-                    <div className={clsx(
-                        "w-full max-w-6xl",
-                        isMobileChatOpen ? "h-full flex flex-row" : "space-y-4"
-                    )}>
-                        {/* Phase 1: Import View - shown when no game is loaded */}
-                        {steps.length === 0 && (
-                            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-4 md:p-8 border border-gray-200 dark:border-gray-700">
-                                <div className="mt-4 md:mt-6 grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-                                    <div className="space-y-4">
-                                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">{t.analysis.pasteLabel}</label>
-                                        <textarea
-                                            value={input}
-                                            onChange={(e) => handleInputChange(e.target.value)}
-                                            placeholder={t.analysis.pastePlaceholder}
-                                            className="w-full p-3 border rounded-lg dark:bg-gray-700 dark:border-gray-600 font-mono text-sm min-h-[150px]"
-                                        />
-                                        {error && <p className="text-sm text-red-500">{error}</p>}
-                                        <div className="grid grid-cols-2 gap-2">
-                                            {PERSONALITIES.map(p => (
-                                                <button
-                                                    key={p.id}
-                                                    onClick={() => setSelectedPersonality(p)}
-                                                    className={`p-2 rounded-lg border flex items-center gap-2 transition-colors ${selectedPersonality.id === p.id ? "border-purple-500 bg-purple-50 dark:bg-purple-900/20" : "border-gray-200 dark:border-gray-700"}`}
-                                                >
-                                                    <span className="text-lg">{p.image}</span>
-                                                    <span className="text-xs text-left">{p.name}</span>
-                                                </button>
-                                            ))}
-                                        </div>
-                                        <button onClick={handleLoadGame} className="w-full py-2.5 bg-purple-600 text-white rounded-xl hover:bg-purple-700 font-semibold shadow-lg transition-colors">{t.analysis.startButton}</button>
-
-                                        {/* Import from Online Platforms */}
-                                        <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-                                            <p className="text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-2 text-center font-bold">
-                                                {t.analysis.importFromPlatforms}
-                                            </p>
-                                            <div className="grid grid-cols-2 gap-2">
-                                                <button
-                                                    onClick={() => setShowImportModal(true)}
-                                                    className="py-2 px-3 bg-[#81b64c] text-white rounded-lg hover:bg-[#a3d16e] font-medium text-xs flex items-center justify-center gap-2 shadow transition-colors"
-                                                >
-                                                    <Download size={14} />
-                                                    Chess.com
-                                                </button>
-                                                <button
-                                                    onClick={() => setShowImportModal(true)}
-                                                    className="py-2 px-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-xs flex items-center justify-center gap-2 shadow transition-colors"
-                                                >
-                                                    <Download size={14} />
-                                                    Lichess
-                                                </button>
-                                            </div>
-                                        </div>
+                            {/* Mobile Advice Strip (When chat is closed) */}
+                            {!isMobileChatOpen && steps.length > 0 && comments[currentIndex] && (
+                                <div className="md:hidden w-full px-2 py-1.5 bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800/30 rounded-lg animate-in slide-in-from-top-2 duration-300">
+                                    <div className="flex items-center gap-1.5 mb-0.5">
+                                        <span className="text-sm leading-none">{selectedPersonality.image}</span>
+                                        <span className="text-[8px] font-black uppercase text-purple-600 dark:text-purple-400 tracking-widest">Advice</span>
                                     </div>
-                                    <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-4 flex flex-col items-center justify-center border border-gray-200 dark:border-gray-700">
-                                        <div className="w-full max-w-sm"><Chessboard options={{ position: currentFen, boardOrientation: orientation, allowDragging: false, darkSquareStyle: { backgroundColor: '#779954' }, lightSquareStyle: { backgroundColor: '#e9edcc' }, animationDurationInMs: 200, boardStyle: { borderRadius: "8px" }}} /></div>
-                                        <p className="mt-3 text-xs text-gray-500 dark:text-gray-400 text-center uppercase tracking-wider font-bold">{t.analysis.currentPosition}</p>
+                                    <div className="prose prose-sm dark:prose-invert text-[11px] leading-tight line-clamp-2 text-gray-700 dark:text-gray-300">
+                                        <ReactMarkdown>{comments[currentIndex]}</ReactMarkdown>
                                     </div>
                                 </div>
+                            )}
+
+                            {/* Board Container */}
+                            <div className={clsx(
+                                "bg-[#779954] p-[1px] rounded-sm relative overflow-hidden",
+                                isMobileChatOpen ? "w-full aspect-square shadow-sm" : "w-full aspect-square max-w-md transition-all duration-300"
+                            )}>
+                                <Chessboard options={{ position: currentFen, boardOrientation: orientation, allowDragging: false, darkSquareStyle: { backgroundColor: '#779954' }, lightSquareStyle: { backgroundColor: '#e9edcc' }, animationDurationInMs: 200, squareStyles: lastMoveHighlight }} />
                             </div>
-                        )}
 
-                        {/* Phase 2: Analysis View - shown when game is loaded */}
-                        {steps.length > 0 && !isMobileChatOpen && (
-                            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-2 md:p-6 border border-gray-200 dark:border-gray-700 transition-all duration-300">
-                                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-xl">{selectedPersonality.image}</span>
-                                        <h1 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-widest">{t.analysis.modeTitle}</h1>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <button onClick={handleResetAnalysis} className="px-2 py-1 text-[10px] font-bold text-gray-500 bg-gray-100 dark:bg-gray-700 rounded hover:bg-gray-200 flex items-center gap-1"><RotateCcw size={12} /> {t.analysis.loadNewGame}</button>
-                                        <button onClick={() => { setPlayColor(orientation); setShowPlayModal(true); }} className="px-2 py-1 text-[10px] font-bold text-white bg-blue-600 rounded hover:bg-blue-700 flex items-center gap-1 shadow-sm"><PlayCircle size={12} /> Play</button>
-                                        <select value={orientation} onChange={(e) => setOrientation(e.target.value as "white" | "black")} className="p-1 rounded bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-[10px] font-bold uppercase">{ (["white", "black"] as const).map(c => <option key={c} value={c}>{c.toUpperCase()}</option>) }</select>
-                                    </div>
-                                </div>
-
-                                <div className="flex flex-col items-center gap-3">
-                                    <div className="w-full max-w-md"><Chessboard options={{ position: currentFen, boardOrientation: orientation, allowDragging: false, darkSquareStyle: { backgroundColor: '#779954' }, lightSquareStyle: { backgroundColor: '#e9edcc' }, animationDurationInMs: 200, squareStyles: lastMoveHighlight }} /></div>
-                                    <div className="flex items-center gap-4">
+                            {/* Bottom Cluster (Mobile Chat Mode only) */}
+                            {isMobileChatOpen && (
+                                <div className="w-full flex flex-col items-center gap-2 flex-shrink-0 scale-90">
+                                    {currentIndex > 0 && currentStep && (
+                                        <div className="text-[10px] text-gray-500 dark:text-gray-400 font-medium italic">
+                                            Last move ({currentStep.color === 'w' ? 'White' : 'Black'}): <span className="font-black not-italic text-gray-800 dark:text-gray-200">{currentStep.san}</span>
+                                        </div>
+                                    )}
+                                    <CapturedPieces captured={capturedState.whitePiecesLost} color="w" score={capturedState.whiteLostScore - capturedState.blackLostScore > 0 ? capturedState.whiteLostScore - capturedState.blackLostScore : null} />
+                                    
+                                    {/* Navigation Arrows in Strip */}
+                                    <div className="flex items-center gap-4 mt-2">
                                         <button
-                                            onClick={() => setCurrentIndex(i => Math.max(0, i - 1))}
-                                            className="p-2 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 disabled:opacity-30"
+                                            onClick={(e) => { e.stopPropagation(); setCurrentIndex(i => Math.max(0, i - 1)); }}
                                             disabled={currentIndex === 0}
+                                            className="p-1.5 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm disabled:opacity-20"
                                             aria-label={t.analysis.previous}
                                         >
-                                            <ChevronLeft size={24} />
+                                            <ChevronLeft size={16} />
                                         </button>
-                                        <div className="text-xs font-black tabular-nums">{currentIndex} / {steps.length}</div>
+                                        <div className="text-[10px] font-black tabular-nums">{currentIndex}</div>
                                         <button
-                                            onClick={() => setCurrentIndex(i => Math.min(steps.length, i + 1))}
-                                            className="p-2 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 disabled:opacity-30"
+                                            onClick={(e) => { e.stopPropagation(); setCurrentIndex(i => Math.min(steps.length, i + 1)); }}
                                             disabled={currentIndex >= steps.length}
+                                            className="p-1.5 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm disabled:opacity-20"
                                             aria-label={t.analysis.next}
                                         >
-                                            <ChevronRight size={24} />
+                                            <ChevronRight size={16} />
                                         </button>
                                     </div>
                                 </div>
-                            </div>
-                        )}
+                            )}
 
-                        {/* Analysis Panels - Grid on desktop, specific layout on mobile chat */}
-                        {steps.length > 0 && !isMobileChatOpen && (
-                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 md:gap-4">
-                                {/* AI Analysis Panel */}
-                                <div className="lg:col-span-1 bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-4 space-y-3">
-                                    <div className="flex items-center justify-between"><h2 className="text-sm font-black text-gray-400 uppercase tracking-widest">{t.analysis.aiAnalysis}</h2></div>
-                                    {currentIndex > 0 && currentDetails?.evalAfter && (
-                                        <div className="w-full h-3"><EvaluationBar score={currentDetails.evalAfter.score} mate={currentDetails.evalAfter.mate} isPlayerWhite={orientation === 'white'} orientation="horizontal" /></div>
-                                    )}
-                                    <div className="min-h-[100px]">
-                                        {isCommenting ? <div className="flex items-center gap-2 text-gray-500 text-xs animate-pulse"><Loader2 className="animate-spin" size={14} /> <span>Thinking...</span></div> : comments[currentIndex] ? <div className="prose prose-sm dark:prose-invert text-sm leading-snug"><ReactMarkdown>{comments[currentIndex]}</ReactMarkdown></div> : <p className="text-xs text-gray-400 text-center py-4 italic">{t.analysis.coachPending}</p>}
-                                    </div>
+                            {/* Controls (Desktop/Non-chat view) */}
+                            {!isMobileChatOpen && (
+                                <div className="flex items-center gap-4 mt-4">
+                                    <button
+                                        onClick={() => setCurrentIndex(i => Math.max(0, i - 1))}
+                                        className="p-2 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 disabled:opacity-30"
+                                        disabled={currentIndex === 0}
+                                        aria-label={t.analysis.previous}
+                                    >
+                                        <ChevronLeft size={24} />
+                                    </button>
+                                    <div className="text-xs font-black tabular-nums">{currentIndex} / {steps.length}</div>
+                                    <button
+                                        onClick={() => setCurrentIndex(i => Math.min(steps.length, i + 1))}
+                                        className="p-2 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 disabled:opacity-30"
+                                        disabled={currentIndex >= steps.length}
+                                        aria-label={t.analysis.next}
+                                    >
+                                        <ChevronRight size={24} />
+                                    </button>
                                 </div>
-                                {/* Tech Stats Panel */}
-                                <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-4 space-y-3">
-                                    <div className="flex items-center justify-between">
-                                        <h2 className="text-sm font-black text-gray-400 uppercase tracking-widest">{t.analysis.title}</h2>
-                                    </div>
-                                    {currentIndex === 0 ? <p className="text-xs text-gray-400 text-center py-8 italic">{t.analysis.currentPosition}</p> : (
-                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-[10px] uppercase font-bold tracking-widest">
-                                            <div className="bg-gray-50 dark:bg-gray-900 p-2 rounded border border-gray-100 dark:border-gray-800"><div className="text-gray-400 mb-1">{t.analysis.step}</div><div className="text-gray-900 dark:text-gray-100 text-xs">#{currentIndex} - {steps[currentIndex - 1]?.san}</div></div>
-                                            <div className="bg-gray-50 dark:bg-gray-900 p-2 rounded border border-gray-100 dark:border-gray-800"><div className="text-gray-400 mb-1">{t.analysis.evaluation}</div><div className="text-gray-900 dark:text-gray-100 text-xs">{formatEval(currentDetails?.evalAfter)}</div></div>
-                                            <div className="bg-gray-50 dark:bg-gray-900 p-2 rounded border border-gray-100 dark:border-gray-800"><div className="text-gray-400 mb-1">{t.analysis.cpLoss}</div><div className="text-gray-900 dark:text-gray-100 text-xs">{formatCpLoss(currentDetails?.cpLoss)}</div></div>
-                                            <div className="bg-gray-50 dark:bg-gray-900 p-2 rounded border border-gray-100 dark:border-gray-800"><div className="text-gray-400 mb-1">{t.analysis.bestMove}</div><div className="text-gray-900 dark:text-gray-100 text-xs">{currentDetails?.bestMoveSan || "Thinking..."}</div></div>
-                                        </div>
-                                    )}
-                                    
-                                    {/* Detailed Tactics List */}
-                                    {tacticSummary.length > 0 && (
-                                        <div className="flex flex-wrap gap-2 mt-2">
-                                            {tacticSummary.map((t, i) => (
-                                                <div key={i} className="flex items-center gap-1.5 px-2 py-1 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800/50 rounded-md text-[10px]">
-                                                    <span className="font-black text-red-600 dark:text-red-400 uppercase">
-                                                        {t.tactic_type} {t.affected_squares && t.affected_squares.length > 0 ? `on ${t.affected_squares.join(', ')}` : ''}
-                                                    </span>
-                                                    {t.material_delta && (
-                                                        <span className="text-red-500/70 dark:text-red-500/50 font-bold tabular-nums">
-                                                            ~{(t.material_delta / 100).toFixed(1)} pawns
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Mobile Optimized Split View */}
-                        {steps.length > 0 && isMobileChatOpen && (
-                            <>
-                                {/* Left Side: Context Strip */}
-                                <div 
-                                    data-testid="board-area"
-                                    className={clsx(
-                                        "h-full rounded-none border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex flex-col items-center justify-center gap-4 py-4 px-1 relative overflow-hidden transition-all duration-500",
-                                        isMobileBoardExpanded ? "w-[55%]" : "w-[35%]"
-                                    )}
-                                    onClick={() => setIsMobileBoardExpanded(!isMobileBoardExpanded)}
-                                >
-                                    <div className="absolute inset-0 z-10 cursor-pointer" />
-                                    
-                                    {/* Top Cluster */}
-                                    <div className="w-full flex flex-col items-center gap-1.5 scale-90 flex-shrink-0">
-                                        <CapturedPieces captured={capturedState.blackPiecesLost} color="b" score={capturedState.blackLostScore - capturedState.whiteLostScore > 0 ? capturedState.blackLostScore - capturedState.whiteLostScore : null} />
-                                        {currentIndex > 0 && currentDetails?.evalAfter && <div className="w-full h-3"><EvaluationBar score={currentDetails.evalAfter.score} mate={currentDetails.evalAfter.mate} isPlayerWhite={orientation === 'white'} orientation="horizontal" /></div>}
-                                    </div>
-
-                                    {/* Board */}
-                                    <div className="w-full aspect-square shadow-sm bg-[#779954] p-[1px] rounded flex-shrink-0">
-                                        <Chessboard options={{ position: currentFen, boardOrientation: orientation, allowDragging: false, darkSquareStyle: { backgroundColor: '#779954' }, lightSquareStyle: { backgroundColor: '#e9edcc' }, animationDurationInMs: 200, squareStyles: lastMoveHighlight }} />
-                                    </div>
-
-                                    {/* Bottom Cluster */}
-                                    <div className="w-full flex flex-col items-center gap-2 flex-shrink-0 scale-90">
-                                        {currentIndex > 0 && currentStep && (
-                                            <div className="text-[10px] text-gray-500 dark:text-gray-400 font-medium italic">
-                                                Last move ({currentStep.color}): <span className="font-black not-italic text-gray-800 dark:text-gray-200">{currentStep.san}</span>
-                                            </div>
-                                        )}
-                                        <CapturedPieces captured={capturedState.whitePiecesLost} color="w" score={capturedState.whiteLostScore - capturedState.blackLostScore > 0 ? capturedState.whiteLostScore - capturedState.blackLostScore : null} />
-                                        
-                                        {/* Navigation Arrows in Strip */}
-                                        <div className="flex items-center gap-4 mt-2">
+                            )}
+                        </>
+                    )
+                }
+                sidePanel={
+                    <div className="h-full flex flex-col overflow-hidden bg-white dark:bg-gray-800">
+                        {steps.length === 0 ? (
+                            /* Import View Slot */
+                            <div className="p-4 md:p-6 space-y-4 overflow-y-auto">
+                                <div className="space-y-4">
+                                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">{t.analysis.pasteLabel}</label>
+                                    <textarea
+                                        value={input}
+                                        onChange={(e) => handleInputChange(e.target.value)}
+                                        placeholder={t.analysis.pastePlaceholder}
+                                        className="w-full p-3 border rounded-lg dark:bg-gray-700 dark:border-gray-600 font-mono text-sm min-h-[120px] focus:ring-2 focus:ring-purple-500 outline-none"
+                                    />
+                                    {error && <p className="text-sm text-red-500">{error}</p>}
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {PERSONALITIES.map(p => (
                                             <button
-                                                onClick={(e) => { e.stopPropagation(); setCurrentIndex(i => Math.max(0, i - 1)); }}
-                                                disabled={currentIndex === 0}
-                                                className="p-1.5 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm disabled:opacity-20"
-                                                aria-label={t.analysis.previous}
+                                                key={p.id}
+                                                onClick={() => setSelectedPersonality(p)}
+                                                className={`p-2 rounded-lg border flex items-center gap-2 transition-colors ${selectedPersonality.id === p.id ? "border-purple-500 bg-purple-50 dark:bg-purple-900/20" : "border-gray-200 dark:border-gray-700"}`}
                                             >
-                                                <ChevronLeft size={16} />
+                                                <span className="text-lg">{p.image}</span>
+                                                <span className="text-[10px] text-left leading-tight font-bold">{p.name}</span>
                                             </button>
-                                            <div className="text-[10px] font-black tabular-nums">{currentIndex}</div>
+                                        ))}
+                                    </div>
+                                    <button onClick={handleLoadGame} className="w-full py-2.5 bg-purple-600 text-white rounded-xl hover:bg-purple-700 font-semibold shadow-lg transition-all active:scale-[0.98]">{t.analysis.startButton}</button>
+
+                                    <div className="pt-4 border-t border-gray-100 dark:border-gray-700">
+                                        <p className="text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-2 text-center font-bold">
+                                            {t.analysis.importFromPlatforms}
+                                        </p>
+                                        <div className="grid grid-cols-2 gap-2">
                                             <button
-                                                onClick={(e) => { e.stopPropagation(); setCurrentIndex(i => Math.min(steps.length, i + 1)); }}
-                                                disabled={currentIndex >= steps.length}
-                                                className="p-1.5 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm disabled:opacity-20"
-                                                aria-label={t.analysis.next}
+                                                onClick={() => setShowImportModal(true)}
+                                                className="py-2 px-3 bg-[#81b64c] text-white rounded-lg hover:bg-[#a3d16e] font-medium text-xs flex items-center justify-center gap-2 shadow transition-colors"
                                             >
-                                                <ChevronRight size={16} />
+                                                <Download size={14} />
+                                                Chess.com
+                                            </button>
+                                            <button
+                                                onClick={() => setShowImportModal(true)}
+                                                className="py-2 px-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-xs flex items-center justify-center gap-2 shadow transition-colors"
+                                            >
+                                                <Download size={14} />
+                                                Lichess
                                             </button>
                                         </div>
                                     </div>
                                 </div>
-
-                                {/* Right Side: Analysis Panel */}
-                                <div className="flex-1 h-full flex flex-col overflow-hidden bg-white dark:bg-gray-800">
-                                    <div className="p-1 px-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex items-center justify-between">
-                                        <div className="flex items-center gap-1.5">
-                                            <div className="text-sm">{selectedPersonality.image}</div>
-                                            <h2 className="font-bold text-[10px] text-blue-600 dark:text-blue-400 uppercase tracking-widest">Coach Analysis</h2>
-                                        </div>
+                            </div>
+                        ) : (
+                            /* Analysis Content Slot */
+                            <div className="flex-1 flex flex-col overflow-hidden">
+                                {/* Header Controls */}
+                                <div className="p-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex items-center justify-between gap-2">
+                                    <div className="flex items-center gap-1.5 overflow-hidden">
+                                        <div className="text-sm shrink-0">{selectedPersonality.image}</div>
+                                        <h2 className="font-bold text-[10px] text-blue-600 dark:text-blue-400 uppercase tracking-widest truncate">Coach Analysis</h2>
                                     </div>
-                                    <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-32">
+                                    <div className="flex items-center gap-1">
+                                        <button onClick={handleResetAnalysis} className="p-1.5 text-gray-500 hover:text-purple-600 transition-colors" title={t.analysis.loadNewGame}><RotateCcw size={14} /></button>
+                                        <button onClick={() => { setPlayColor(orientation); setShowPlayModal(true); }} className="p-1.5 text-blue-600 hover:text-blue-700 transition-colors" title="Play"><PlayCircle size={14} /></button>
+                                        <select value={orientation} onChange={(e) => setOrientation(e.target.value as "white" | "black")} className="p-1 rounded bg-transparent border-none text-[9px] font-black uppercase outline-none cursor-pointer">{ (["white", "black"] as const).map(c => <option key={c} value={c}>{c.slice(0,1).toUpperCase()}</option>) }</select>
+                                    </div>
+                                </div>
+
+                                {/* Content Scroll Area */}
+                                <div className="flex-1 overflow-y-auto p-4 space-y-6 pb-32">
+                                    {/* Evaluation Strip (Non-chat mobile/Desktop only) */}
+                                    {!isMobileChatOpen && currentIndex > 0 && currentDetails?.evalAfter && (
+                                        <div className="w-full h-3 flex-shrink-0"><EvaluationBar score={currentDetails.evalAfter.score} mate={currentDetails.evalAfter.mate} isPlayerWhite={orientation === 'white'} orientation="horizontal" /></div>
+                                    )}
+
+                                    {/* Commentary Bubble */}
+                                    <div className="bg-purple-50 dark:bg-purple-900/10 rounded-2xl p-4 border border-purple-100 dark:border-purple-800/30">
                                         {isCommenting ? (
-                                            <div className="flex items-center gap-2 text-gray-500 text-xs animate-pulse"><Loader2 className="animate-spin" size={14} /> <span>Thinking...</span></div>
+                                            <div className="flex items-center gap-2 text-gray-500 text-xs animate-pulse font-bold uppercase tracking-widest"><Loader2 className="animate-spin" size={14} /> <span>Coach Thinking...</span></div>
                                         ) : comments[currentIndex] ? (
-                                            <div className="prose prose-sm dark:prose-invert text-base leading-snug"><ReactMarkdown>{comments[currentIndex]}</ReactMarkdown></div>
+                                            <div className="prose prose-sm dark:prose-invert text-sm md:text-base leading-snug"><ReactMarkdown>{comments[currentIndex]}</ReactMarkdown></div>
                                         ) : (
-                                            <p className="text-xs text-gray-400 text-center py-8 italic font-bold uppercase tracking-wider">{t.analysis.coachPending}</p>
-                                        )}
-                                        
-                                        {/* Show technical stats below commentary on mobile */}
-                                        {currentIndex > 0 && (
-                                            <div className="mt-8 pt-4 border-t border-gray-100 dark:border-gray-800 grid grid-cols-2 gap-2 text-[9px] uppercase font-black">
-                                                <div className="bg-gray-50 dark:bg-gray-900/50 p-2 rounded"><div className="text-gray-400 mb-1">Eval</div><div>{formatEval(currentDetails?.evalAfter)}</div></div>
-                                                <div className="bg-gray-50 dark:bg-gray-900/50 p-2 rounded"><div className="text-gray-400 mb-1">Loss</div><div>{formatCpLoss(currentDetails?.cpLoss)}</div></div>
-                                            </div>
+                                            <p className="text-xs text-gray-400 text-center py-4 italic font-bold uppercase tracking-wider">{t.analysis.coachPending}</p>
                                         )}
                                     </div>
+
+                                    {/* Tech Stats Section */}
+                                    {currentIndex > 0 && (
+                                        <div className="grid grid-cols-2 gap-2 text-[9px] uppercase font-black">
+                                            <div className="bg-gray-50 dark:bg-gray-900/50 p-2.5 rounded-xl border border-gray-100 dark:border-gray-800/50"><div className="text-gray-400 mb-1">Position</div><div>#{currentIndex} - {currentStep?.san}</div></div>
+                                            <div className="bg-gray-50 dark:bg-gray-900/50 p-2.5 rounded-xl border border-gray-100 dark:border-gray-800/50"><div className="text-gray-400 mb-1">Engine Eval</div><div>{formatEval(currentDetails?.evalAfter)}</div></div>
+                                            <div className="bg-gray-50 dark:bg-gray-900/50 p-2.5 rounded-xl border border-gray-100 dark:border-gray-800/50"><div className="text-gray-400 mb-1">Move Quality</div><div className={clsx(currentDetails?.cpLoss && currentDetails.cpLoss > 100 ? "text-red-500" : "text-green-600")}>{formatCpLoss(currentDetails?.cpLoss)}</div></div>
+                                            <div className="bg-gray-50 dark:bg-gray-900/50 p-2.5 rounded-xl border border-gray-100 dark:border-gray-800/50"><div className="text-gray-400 mb-1">Best Move</div><div className="text-blue-600">{currentDetails?.bestMoveSan || "..."}</div></div>
+                                        </div>
+                                    )}
+
+                                    {/* Tactics List */}
+                                    {tacticSummary.length > 0 && (
+                                        <div className="space-y-2">
+                                            <p className="text-[10px] font-black uppercase text-red-500 tracking-[0.2em] mb-1">Detected Tactics</p>
+                                            <div className="flex flex-wrap gap-2">
+                                                {tacticSummary.map((t, i) => (
+                                                    <div key={i} className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800/50 rounded-full text-[10px]">
+                                                        <span className="font-black text-red-600 dark:text-red-400 uppercase">
+                                                            {t.tactic_type} {t.affected_squares && t.affected_squares.length > 0 ? `on ${t.affected_squares.join(', ')}` : ''}
+                                                        </span>
+                                                        {t.material_delta && (
+                                                            <span className="text-red-500/70 dark:text-red-500/50 font-bold tabular-nums">
+                                                                ~{(t.material_delta / 100).toFixed(1)} pawns
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
-                            </>
+                            </div>
                         )}
                     </div>
-                </main>
+                }
+            />
 
-                {/* Unified Mobile Floating Action Button */}
-                {steps.length > 0 && (
-                    <button
-                        onClick={() => {
-                            if (isMobileChatOpen) setIsMobileBoardExpanded(false);
-                            setIsMobileChatOpen(!isMobileChatOpen);
-                        }}
-                        aria-label={isMobileChatOpen ? "Close Analysis" : "Open Analysis"}
-                        className={clsx(
-                            "fixed right-4 z-[110] md:hidden transition-all duration-500 shadow-2xl",
-                            "flex items-center gap-2 px-3 py-2.5 rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800",
-                            isMobileChatOpen ? "bottom-20 scale-90 opacity-90" : "bottom-24 scale-100 opacity-100"
-                        )}
-                    >
-                        {isMobileChatOpen ? (
-                            <>
-                                <X size={18} className="text-red-500 dark:text-red-400" />
-                                <span className="text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-tight">Close</span>
-                            </>
-                        ) : (
-                            <>
-                                <div className="text-xl leading-none">{selectedPersonality.image}</div>
-                                <span className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-tight">AI Analysis</span>
-                                <div className="w-2 h-2 bg-purple-600 rounded-full animate-pulse" />
-                            </>
-                        )}
-                    </button>
-                )}
-            </div>
+            {/* Unified Mobile Floating Action Button */}
+            {steps.length > 0 && (
+                <button
+                    onClick={() => {
+                        if (isMobileChatOpen) setIsMobileBoardExpanded(false);
+                        setIsMobileChatOpen(!isMobileChatOpen);
+                    }}
+                    aria-label={isMobileChatOpen ? "Close Analysis" : "Open Analysis"}
+                    className={clsx(
+                        "fixed right-4 z-[110] md:hidden transition-all duration-500 shadow-2xl",
+                        "flex items-center gap-2 px-3 py-2.5 rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800",
+                        isMobileChatOpen ? "bottom-40 scale-90 opacity-90" : "bottom-24 scale-100 opacity-100"
+                    )}
+                >
+                    {isMobileChatOpen ? (
+                        <>
+                            <X size={18} className="text-red-500 dark:text-red-400" />
+                            <span className="text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-tight">Close</span>
+                        </>
+                    ) : (
+                        <>
+                            <div className="text-xl leading-none">{selectedPersonality.image}</div>
+                            <span className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-tight">AI Analysis</span>
+                            <div className="w-2 h-2 bg-purple-600 rounded-full animate-pulse" />
+                        </>
+                    )}
+                </button>
+            )}
 
-            {/* Modals remain same... */}
+            {/* Modals */}
             {showImportModal && <GameImportModal onClose={() => setShowImportModal(false)} onSelectGame={handleImportGame} language={language} />}
             {showOpeningsModal && possibleOpenings.length > 0 && <OpeningsModal openings={possibleOpenings} currentFen={currentFen} language={language} personality={selectedPersonality} onClose={() => setShowOpeningsModal(false)} />}
             {showPlayModal && (
                 <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/50 px-4 py-8">
-                    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-2xl w-full p-6 space-y-6 border border-gray-200 dark:border-gray-700">
+                    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-2xl w-full p-6 space-y-6 border border-gray-200 dark:border-gray-700 animate-in zoom-in duration-300">
                         <div className="flex items-start justify-between gap-4">
                             <div><h3 className="text-2xl font-bold text-gray-900 dark:text-white">{t.analysis.playFromHere}</h3><p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{t.analysis.playDescription}</p></div>
                             <button onClick={() => setShowPlayModal(false)} className="text-gray-500 hover:text-gray-700" aria-label={t.common.close}>✕</button>
@@ -805,4 +756,10 @@ INSTRUCTIONS:
             )}
         </div>
     );
+}
+
+// Internal helper for tactical filtering (if not exported from tacticDetection)
+function filterMeaningfulTactics(tactics: DetectedTactic[] | null | undefined): DetectedTactic[] {
+    if (!tactics) return [];
+    return tactics.filter(t => t.material_delta && t.material_delta > 50);
 }

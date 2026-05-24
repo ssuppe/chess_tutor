@@ -40,34 +40,30 @@ interface ChessGameProps {
 }
 
 const PIECE_VALUES: Record<string, number> = {
-    'p': 1,
-    'n': 3,
-    'b': 3,
-    'r': 5,
-    'q': 9,
-    'k': 0
+    p: 100, n: 300, b: 300, r: 500, q: 900
 };
 
-const DEFAULT_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-
-export default function ChessGame({ gameId, initialFen, initialPgn, initialPersonality, initialColor, initialStockfishDepth, openingContext, onBack }: ChessGameProps) {
-    const [game] = useState(() => new Chess(initialFen || DEFAULT_FEN));
-    const [fen, setFen] = useState(initialFen || DEFAULT_FEN);
-    const [stockfish, setStockfish] = useState<Stockfish | null>(null);
-    const [isEngineReady, setIsEngineReady] = useState(false);
-
-    // Analysis States
-    const [evalP0, setEvalP0] = useState<StockfishEvaluation | null>(null);
-    const [evalP2, setEvalP2] = useState<StockfishEvaluation | null>(null);
-
-    // Opening Data
-    const [openingData, setOpeningData] = useState<OpeningMetadata[]>([]);
-    
-    // Tactical Analysis Data
-    const [latestMissedTactics, setLatestMissedTactics] = useState<DetectedTactic[] | null>(null);
-
+export default function ChessGame({ 
+    gameId, 
+    initialFen, 
+    initialPgn,
+    initialPersonality,
+    initialColor = 'white', 
+    initialStockfishDepth,
+    openingContext: initialOpeningContext,
+    onBack 
+}: ChessGameProps) {
+    const [game] = useState(() => new Chess(initialFen));
+    const [fen, setFen] = useState(game.fen());
     const [userMove, setUserMove] = useState<Move | null>(null);
     const [computerMove, setComputerMove] = useState<Move | null>(null);
+    const [stockfish, setStockfish] = useState<Stockfish | null>(null);
+    const [isEngineReady, setIsEngineReady] = useState(false);
+    const [evalP0, setEvalP0] = useState<StockfishEvaluation | null>(null);
+    const [evalP2, setEvalP2] = useState<StockfishEvaluation | null>(null);
+    const [openingData, setOpeningData] = useState<OpeningMetadata[]>([]);
+    const [latestMissedTactics, setLatestMissedTactics] = useState<DetectedTactic[]>([]);
+    const [openingContext, setOpeningContext] = useState(initialOpeningContext || null);
     const [isMobileChatOpen, setIsMobileChatOpen] = useState(false);
     const [isMobileBoardExpanded, setIsMobileBoardExpanded] = useState(false);
     const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
@@ -75,26 +71,19 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
     const [viewportOffset, setViewportOffset] = useState<number>(0);
     const [latestCoachMessage, setLatestCoachMessage] = useState<string | null>(null);
 
-    // Track actual visual viewport height and offset for keyboard awareness
+    // Track visual viewport for stable mobile layout
     useEffect(() => {
-        if (typeof window === 'undefined') return;
-
         const updateViewport = () => {
-            const height = window.visualViewport?.height || window.innerHeight;
-            const offset = window.visualViewport?.offsetTop || 0;
-            setViewportHeight(height);
-            setViewportOffset(offset);
-            
-            // Counteract browser auto-scroll
-            if (offset > 0) {
-                window.scrollTo(0, 0);
+            if (window.visualViewport) {
+                setViewportHeight(window.visualViewport.height);
+                setViewportOffset(window.visualViewport.offsetTop);
             }
         };
 
-        updateViewport();
         window.visualViewport?.addEventListener('resize', updateViewport);
         window.visualViewport?.addEventListener('scroll', updateViewport);
         window.addEventListener('resize', updateViewport);
+        updateViewport();
 
         return () => {
             window.visualViewport?.removeEventListener('resize', updateViewport);
@@ -158,15 +147,8 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
         result: string;
         winner: "White" | "Black" | "Draw";
     } | null>(null);
-    const messagesEndRef = useRef<HTMLDivElement>(null);
     const boardAreaRef = useRef<HTMLDivElement>(null);
     const hasRebuiltHistoryRef = useRef(false);
-
-    const handleJumpToBoard = () => {
-        setIsMobileChatOpen(false);
-        setIsMobileBoardExpanded(false);
-        boardAreaRef.current?.scrollIntoView({ behavior: 'smooth' });
-    };
 
     // Chess sounds hook
     const { playMoveSound, playCheck, playVictory, playDefeat } = useChessSounds();
@@ -221,364 +203,186 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
         [game, updateCapturedPieces, playMoveSound]
     );
 
-    const t = useTranslation(language);
-
     // Initialize Stockfish
     useEffect(() => {
         const sf = new Stockfish(() => setIsEngineReady(true));
         setStockfish(sf);
-        return () => sf.terminate();
-    }, []);
 
-    useEffect(() => {
-        hasRebuiltHistoryRef.current = false;
-    }, [initialPgn]);
-
-    useEffect(() => {
-        if (typeof initialStockfishDepth === 'number') {
-            setStockfishDepth(initialStockfishDepth);
-        }
-    }, [initialStockfishDepth]);
-
-    useEffect(() => {
-        if (!initialPgn || !stockfish) return;
-        if (moveHistory.length > 0 || hasRebuiltHistoryRef.current) return;
-
-        let isCancelled = false;
-        hasRebuiltHistoryRef.current = true;
-
-        const rebuildHistoryFromPgn = async () => {
-            try {
-                const setupFen = initialFen || undefined;
-                const parsingGame = new Chess(setupFen);
-                parsingGame.loadPgn(initialPgn);
-                const verboseMoves = parsingGame.history({ verbose: true });
-
-                if (verboseMoves.length === 0) {
-                    setMoveHistory([]);
-                    return;
-                }
-
-                const startFen = verboseMoves[0].before;
-                const replayGame = new Chess(startFen);
-                const playerTurnColor = playerColor === 'white' ? 'w' : 'b';
-                const rebuiltHistory: MoveHistoryItem[] = [];
-
-                for (let i = 0; i < verboseMoves.length; i++) {
-                    const move = verboseMoves[i];
-                    if (move.color !== playerTurnColor) {
-                        try { replayGame.move(move.lan); } catch (e) { break; }
-                        continue;
-                    }
-
-                    const moveNumber = Math.floor(i / 2) + 1;
-                    const fenBeforePlayerMove = replayGame.fen();
-                    const evalBeforePlayerMove = await stockfish.evaluate(fenBeforePlayerMove, stockfishDepth);
-
-                    let playerMoveResult;
-                    try {
-                        playerMoveResult = replayGame.move(move.lan);
-                        if (!playerMoveResult) break;
-                    } catch (e) { break; }
-
-                    const fenAfterPlayerMove = replayGame.fen();
-                    const evalAfterPlayerMove = await stockfish.evaluate(fenAfterPlayerMove, stockfishDepth);
-
-                    let computerMoveSan = '';
-                    let fenAfterComputerMove = fenAfterPlayerMove;
-                    let evalAfterComputerMove = evalAfterPlayerMove;
-
-                    if (i + 1 < verboseMoves.length && verboseMoves[i + 1].color !== move.color) {
-                        const computerMove = verboseMoves[i + 1];
-                        try {
-                            const computerMoveResult = replayGame.move(computerMove.lan);
-                            if (computerMoveResult) {
-                                computerMoveSan = computerMoveResult.san;
-                                fenAfterComputerMove = replayGame.fen();
-                                evalAfterComputerMove = await stockfish.evaluate(fenAfterComputerMove, stockfishDepth);
-                                i++;
-                            }
-                        } catch (e) {}
-                    }
-
-                    const isWhite = playerColor === 'white';
-                    const evalBeforePerspective = isWhite ? evalBeforePlayerMove.score : -evalBeforePlayerMove.score;
-                    const evalAfterPerspective = isWhite ? -evalAfterPlayerMove.score : evalAfterPlayerMove.score;
-                    const cpLoss = evalBeforePerspective - evalAfterPerspective;
-
-                    const bestMoveUci = evalBeforePlayerMove.bestMove;
-                    const bestMoveSan = bestMoveUci ? uciToSan(fenBeforePlayerMove, bestMoveUci) : null;
-                    const missedTactics = bestMoveUci ? detectMissedTactics({
-                        fen: fenBeforePlayerMove,
-                        playerColor,
-                        playerMoveSan: playerMoveResult.san,
-                        bestMoveUci,
-                        cpLoss,
-                    }) : undefined;
-
-                    const currentPgn = replayGame.pgn();
-                    const moveSequence = extractMoveSequenceFromPGN(currentPgn);
-                    const possibleOpenings = lookupPossibleOpenings(moveSequence, 5);
-
-                    rebuiltHistory.push({
-                        moveNumber,
-                        playerMove: playerMoveResult.san,
-                        playerColor,
-                        fenBeforePlayerMove,
-                        evalBeforePlayerMove,
-                        fenAfterPlayerMove,
-                        evalAfterPlayerMove,
-                        computerMove: computerMoveSan || '...',
-                        fenAfterComputerMove,
-                        evalAfterComputerMove,
-                        opening: possibleOpenings.length > 0 ? possibleOpenings[0].name : undefined,
-                        move: playerMoveResult.san,
-                        evalBefore: evalBeforePlayerMove.score,
-                        evalAfter: evalAfterPlayerMove.score,
-                        bestMove: evalBeforePlayerMove.bestMove,
-                        bestMoveSan,
-                        cpLoss,
-                        missedTactics,
-                    });
-                }
-
-                if (!isCancelled) setMoveHistory(rebuiltHistory);
-            } catch (error) {
-                console.error('Failed to rebuild move history from PGN', error);
-                hasRebuiltHistoryRef.current = false;
-            }
-        };
-
-        rebuildHistoryFromPgn();
-        return () => { isCancelled = true; };
-    }, [initialPgn, stockfish, playerColor, stockfishDepth, initialFen]);
-
-    // Load Settings & Initial State
-    useEffect(() => {
         const storedKey = localStorage.getItem("gemini_api_key");
         const storedLang = localStorage.getItem("chess_tutor_language");
-
         if (storedKey) setApiKey(storedKey);
         if (storedLang) setLanguage(storedLang as SupportedLanguage);
 
-        if (initialFen && initialFen !== game.fen()) {
-            try {
-                game.load(initialFen);
-                setFen(initialFen);
-                updateCapturedPieces();
-            } catch (e) {}
-        }
+        return () => {
+            sf.terminate();
+        };
+    }, []);
 
-        if (initialPgn) {
+    // Load initial PGN if provided (for resuming games)
+    useEffect(() => {
+        if (initialPgn && !hasRebuiltHistoryRef.current) {
+            hasRebuiltHistoryRef.current = true;
             try {
                 game.loadPgn(initialPgn);
+                const history = game.history({ verbose: true });
+                
+                const newMoveHistory: MoveHistoryItem[] = [];
+                for (let i = 0; i < history.length; i += 2) {
+                    newMoveHistory.push({
+                        playerMove: history[i].san,
+                        computerMove: history[i+1]?.san || '...'
+                    });
+                }
+                setMoveHistory(newMoveHistory);
                 setFen(game.fen());
                 updateCapturedPieces();
-            } catch (e) {}
-        }
 
-        if (stockfish && game.history().length === 0) {
-            const currentTurn = game.turn();
-            const computerTurn = initialColor === 'white' ? 'b' : 'w';
-
-            if (currentTurn === computerTurn) {
-                setTimeout(() => {
-                    stockfish.evaluate(game.fen(), 10).then(evalResult => {
-                        const computerMoveData = {
-                            from: evalResult.bestMove.substring(0, 2),
-                            to: evalResult.bestMove.substring(2, 4),
-                            promotion: evalResult.bestMove.length > 4 ? evalResult.bestMove.substring(4, 5) : "q"
-                        };
-                        makeAMove(computerMoveData);
-                    }).catch(() => {});
-                }, 1000);
+                const moveSequence = extractMoveSequenceFromPGN(initialPgn);
+                const opening = lookupOpening(moveSequence);
+                if (opening && !openingContext) {
+                    setOpeningContext({ 
+                        openingName: opening.name, 
+                        openingEco: opening.eco,
+                        movesCompleted: Math.floor(history.length / 2),
+                        contextMessage: `You've played the ${opening.name}. Let's continue!`
+                    });
+                }
+            } catch (e) {
+                console.error("Failed to load initial PGN:", e);
             }
         }
-    }, [initialFen, initialColor, stockfish, game, initialPgn, makeAMove, updateCapturedPieces]);
+    }, [initialPgn, game, updateCapturedPieces, openingContext]);
 
-    // Save Game State on Change
-    useEffect(() => {
-        const saveData = {
-            id: gameId,
-            fen,
-            language,
-            selectedPersonality,
-            playerColor,
-            pgn: game.pgn(),
-            updatedAt: Date.now(),
-            evaluation: evalP0 ? {
-                score: evalP0.score,
-                mate: evalP0.mate,
-                depth: evalP0.depth
-            } : null
-        };
-
-        upsertSavedGame(saveData);
-        localStorage.setItem("chess_tutor_save", JSON.stringify(saveData));
-    }, [fen, language, selectedPersonality, playerColor, gameId, evalP0, game]);
-
-    // Game Over Detection
+    // Handle Game Over Check
     useEffect(() => {
         if (game.isGameOver()) {
             let result = "";
             let winner: "White" | "Black" | "Draw" = "Draw";
 
             if (game.isCheckmate()) {
-                if (game.turn() === 'w') {
-                    result = "Checkmate! You lost.";
-                    winner = "Black";
-                    if (playerColor === 'white') playDefeat();
-                    else playVictory();
-                } else {
-                    result = "Checkmate! You won!";
-                    winner = "White";
-                    if (playerColor === 'white') playVictory();
-                    else playDefeat();
-                }
+                result = "Checkmate";
+                winner = game.turn() === "w" ? "Black" : "White";
+                playVictory();
             } else if (game.isDraw()) {
-                result = "Draw!";
-                winner = "Draw";
+                result = "Draw";
             } else if (game.isStalemate()) {
-                result = "Stalemate!";
-                winner = "Draw";
-            } else if (game.inCheck()) {
-                playCheck();
+                result = "Stalemate";
+            } else if (game.isThreefoldRepetition()) {
+                result = "Threefold Repetition";
             }
 
             setGameOverState({ result, winner });
+        } else if (game.inCheck()) {
+            playCheck();
         }
-    }, [fen, playerColor, playDefeat, playVictory, playCheck, game]);
+    }, [fen, game, playCheck, playVictory]);
 
-    // Pre-Analysis (P0)
-    useEffect(() => {
-        const playerTurn = playerColor === 'white' ? 'w' : 'b';
-        if (stockfish && game.turn() === playerTurn && !isAnalyzing && !gameOverState) {
-            stockfish.evaluate(game.fen(), stockfishDepth).then(evalResult => {
-                setEvalP0(evalResult);
-            }).catch(err => console.error("Pre-analysis failed:", err));
-        }
-    }, [playerColor, fen, stockfish, stockfishDepth, isAnalyzing, gameOverState, game]);
+    const checkAndMakeComputerMove = useCallback(async () => {
+        if (!stockfish || game.isGameOver() || game.turn() === (playerColor === 'white' ? 'w' : 'b')) return;
 
-    function onDrop({ sourceSquare, targetSquare }: { sourceSquare: string; targetSquare: string | null }) {
-        if (!targetSquare || !stockfish || gameOverState) return false;
-        const currentTurn = game.turn();
-        const playerTurn = playerColor === 'white' ? 'w' : 'b';
-        if (currentTurn !== playerTurn) return false;
-        if (!evalP0) return false;
-
-        const move = { from: sourceSquare, to: targetSquare, promotion: "q" };
-        const fenP0 = game.fen();
-        const moveResult = makeAMove(move);
-        if (!moveResult) return false;
-
-        setUserMove(moveResult.result);
-        setComputerMove(null);
-        setEvalP2(null);
-        setOpeningData([]);
         setIsAnalyzing(true);
-        const { newFen: fenP1 } = moveResult;
+        const currentFen = game.fen();
+        
+        const p0 = await stockfish.evaluate(currentFen, stockfishDepth);
+        setEvalP0(p0);
 
-        stockfish.evaluate(fenP1, stockfishDepth).then(p1Eval => {
-            const partialHistoryItem = evalP0 ? {
-                moveNumber: game.moveNumber(),
-                playerMove: moveResult.result.san,
-                playerColor: playerColor,
-                fenBeforePlayerMove: fenP0,
-                evalBeforePlayerMove: evalP0,
-                fenAfterPlayerMove: fenP1,
-                evalAfterPlayerMove: p1Eval,
-            } : null;
+        const tactics = await detectMissedTactics({
+            fen: currentFen,
+            playerColor: playerColor,
+            playerMoveSan: userMove?.san || '',
+            bestMoveUci: p0.bestMove,
+        });
+        setLatestMissedTactics(tactics);
 
-            setTimeout(() => {
-                const computerMoveData = {
-                    from: p1Eval.bestMove.substring(0, 2),
-                    to: p1Eval.bestMove.substring(2, 4),
-                    promotion: p1Eval.bestMove.length > 4 ? p1Eval.bestMove.substring(4, 5) : "q"
-                };
+        const bestMove = await stockfish.getBestMove(currentFen, stockfishDepth);
+        const result = makeAMove({
+            from: bestMove.slice(0, 2),
+            to: bestMove.slice(2, 4),
+            promotion: bestMove.length === 5 ? bestMove[4] : undefined
+        });
 
-                const compResult = makeAMove(computerMoveData);
-                if (compResult) {
-                    setComputerMove(compResult.result);
-                    const { newFen: fenP2 } = compResult;
+        if (result) {
+            setComputerMove(result.result);
+            
+            const moveSequence = game.history().join(' ');
+            const possible = lookupPossibleOpenings(moveSequence, 5);
+            setOpeningData(possible);
 
-                    stockfish.evaluate(fenP2, stockfishDepth).then(p2Eval => {
-                        setEvalP2(p2Eval);
-                        const currentPgn = game.pgn();
-                        const moveSequence = extractMoveSequenceFromPGN(currentPgn);
-                        const possibleOpenings = lookupPossibleOpenings(moveSequence, 5);
-                        setOpeningData(possibleOpenings);
+            const p2 = await stockfish.evaluate(result.newFen, stockfishDepth);
+            setEvalP2(p2);
+            
+            setMoveHistory(prev => {
+                const newHistory = [...prev];
+                if (newHistory.length > 0 && newHistory[newHistory.length - 1].computerMove === '...') {
+                    newHistory[newHistory.length - 1].computerMove = result.result.san;
+                }
+                return newHistory;
+            });
 
-                        if (partialHistoryItem && evalP0) {
-                            const isWhite = playerColor === 'white';
-                            const evalBefore = isWhite ? evalP0.score : -evalP0.score;
-                            const evalAfterPlayerMove = isWhite ? -p1Eval.score : p1Eval.score;
-                            const cpLoss = evalBefore - evalAfterPlayerMove;
-                            const bestMoveSan = uciToSan(fenP0, evalP0.bestMove);
-                            const missedTactics = detectMissedTactics({
-                                fen: fenP0,
-                                playerColor,
-                                playerMoveSan: moveResult.result.san,
-                                bestMoveUci: evalP0.bestMove,
-                                cpLoss,
-                            });
+            upsertSavedGame({
+                id: gameId,
+                fen: result.newFen,
+                pgn: game.pgn(),
+                playerColor,
+                selectedPersonality,
+                updatedAt: Date.now(),
+                evaluation: p2,
+                language
+            });
+        }
+        setIsAnalyzing(false);
+    }, [game, gameId, makeAMove, playerColor, stockfish, stockfishDepth, selectedPersonality, language, userMove]);
 
-                            setLatestMissedTactics(missedTactics);
+    // Save Game State on Change
+    useEffect(() => {
+        const saveData = {
+            id: gameId,
+            fen,
+            pgn: game.pgn(),
+            playerColor,
+            selectedPersonality,
+            updatedAt: Date.now(),
+            evaluation: evalP2,
+            language
+        };
+        upsertSavedGame(saveData);
+    }, [gameId, fen, playerColor, selectedPersonality, evalP2, language, game]);
 
-                            const completeHistoryItem: MoveHistoryItem = {
-                                ...partialHistoryItem,
-                                computerMove: compResult.result.san,
-                                fenAfterComputerMove: fenP2,
-                                evalAfterComputerMove: p2Eval,
-                                opening: possibleOpenings.length > 0 ? possibleOpenings[0].name : undefined,
-                                move: moveResult.result.san,
-                                evalBefore: evalP0.score,
-                                evalAfter: p1Eval.score,
-                                bestMove: evalP0.bestMove,
-                                bestMoveSan,
-                                cpLoss,
-                                missedTactics,
-                            };
-                            setMoveHistory(prev => [...prev, completeHistoryItem]);
-                        }
-                        setIsAnalyzing(false);
-                    }).catch(() => setIsAnalyzing(false));
-                } else setIsAnalyzing(false);
-            }, 500);
-        }).catch(() => setIsAnalyzing(false));
+    // Trigger analysis on mount or reset
+    useEffect(() => {
+        if (stockfish && isEngineReady && !gameOverState && !isAnalyzing && moveHistory.length === 0) {
+            const runInitialEval = async () => {
+                setIsAnalyzing(true);
+                try {
+                    const p0 = await stockfish.evaluate(fen, stockfishDepth);
+                    setEvalP0(p0);
+                } catch (e) {}
+                setIsAnalyzing(false);
+            };
+            runInitialEval();
+        }
+    }, [stockfish, isEngineReady, gameOverState, stockfishDepth]);
 
-        return true;
+    async function onDrop({ sourceSquare, targetSquare }: { sourceSquare: string; targetSquare: string }) {
+        if (game.isGameOver() || game.turn() !== (playerColor === 'white' ? 'w' : 'b')) return false;
+
+        const moveData = {
+            from: sourceSquare,
+            to: targetSquare,
+            promotion: "q",
+        };
+
+        const result = makeAMove(moveData);
+        if (result) {
+            setUserMove(result.result);
+            setMoveHistory(prev => [...prev, { playerMove: result.result.san, computerMove: '...' }]);
+            checkAndMakeComputerMove();
+            return true;
+        }
+        return false;
     }
 
-    const checkAndMakeComputerMove = useCallback(() => {
-        if (!stockfish || gameOverState || isAnalyzing) return;
-        const currentTurn = game.turn();
-        const computerTurn = playerColor === 'white' ? 'b' : 'w';
-
-        if (currentTurn === computerTurn) {
-            setIsAnalyzing(true);
-            const currentFen = game.fen();
-            stockfish.evaluate(currentFen, stockfishDepth).then(evalResult => {
-                const computerMoveData = {
-                    from: evalResult.bestMove.substring(0, 2),
-                    to: evalResult.bestMove.substring(2, 4),
-                    promotion: evalResult.bestMove.length > 4 ? evalResult.bestMove.substring(4, 5) : "q"
-                };
-
-                const compResult = makeAMove(computerMoveData);
-                if (compResult) {
-                    setComputerMove(compResult.result);
-                    stockfish.evaluate(compResult.newFen, stockfishDepth).then(p2Eval => {
-                        setEvalP2(p2Eval);
-                        const currentPgn = game.pgn();
-                        const moveSequence = extractMoveSequenceFromPGN(currentPgn);
-                        const possibleOpenings = lookupPossibleOpenings(moveSequence, 5);
-                        setOpeningData(possibleOpenings);
-                        setIsAnalyzing(false);
-                    }).catch(() => setIsAnalyzing(false));
-                } else setIsAnalyzing(false);
-            }).catch(() => setIsAnalyzing(false));
-        }
-    }, [stockfish, gameOverState, isAnalyzing, playerColor, stockfishDepth, makeAMove, game]);
+    const t = useTranslation(language);
 
     const handleNewGame = () => {
         game.reset();
@@ -651,7 +455,7 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
     const handleAnalysisComplete = useCallback(() => setIsAnalyzing(false), []);
 
     return (
-        <>
+        <div className="flex flex-col min-h-screen bg-gray-100 dark:bg-gray-900">
             <BoardViewLayout
                 language={language}
                 onBack={onBack}
@@ -808,20 +612,7 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
                     </>
                 }
                 sidePanel={
-                    <div className="h-full flex flex-col overflow-hidden">
-                        {/* Latest Advice Bubble (Pinned at top on Desktop, integrated into chat on Mobile) */}
-                        {!isMobileChatOpen && latestCoachMessage && (
-                            <div className="p-4 border-b border-gray-100 dark:border-gray-700 bg-purple-50 dark:bg-purple-900/10 shrink-0">
-                                <div className="flex items-center gap-2 mb-2">
-                                    <div className="text-xl leading-none">{selectedPersonality.image}</div>
-                                    <h3 className="text-[10px] font-black uppercase text-purple-600 dark:text-purple-400 tracking-widest">Latest Advice</h3>
-                                </div>
-                                <div className="prose prose-sm dark:prose-invert text-xs md:text-sm leading-snug line-clamp-3">
-                                    <ReactMarkdown>{latestCoachMessage}</ReactMarkdown>
-                                </div>
-                            </div>
-                        )}
-                        
+                    <div className="h-full flex flex-col overflow-hidden bg-white dark:bg-gray-800">
                         <div className="flex-1 overflow-hidden">
                             <Tutor
                                 game={game}
@@ -853,32 +644,32 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
                 }
             />
 
-            {/* Floating Action Button for Mobile Chat */}
+            {/* Unified Mobile Floating Action Button */}
             <button
                 onClick={() => {
                     if (isMobileChatOpen) setIsMobileBoardExpanded(false);
                     setIsMobileChatOpen(!isMobileChatOpen);
                 }}
-                aria-label={isMobileChatOpen ? "Close Chat" : "Open Chat"}
-                className={clsx(
-                    "fixed right-4 z-[110] md:hidden transition-all duration-500 shadow-2xl",
-                    "flex items-center gap-2 px-3 py-2.5 rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800",
-                    isMobileChatOpen ? "bottom-40 scale-90 opacity-90" : "bottom-24 scale-100 opacity-100"
-                )}
-            >
-                {isMobileChatOpen ? (
-                    <>
-                        <X size={18} className="text-red-500 dark:text-red-400" />
-                        <span className="text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-tight">Close</span>
-                    </>
-                ) : (
-                    <>
-                        <div className="text-xl leading-none">{selectedPersonality.image}</div>
-                        <span className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-tight">Coach Chat</span>
-                        <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse" />
-                    </>
-                )}
-            </button>
+                    aria-label={isMobileChatOpen ? "Close Chat" : "Open Chat"}
+                    className={clsx(
+                        "fixed right-4 z-[110] md:hidden transition-all duration-500 shadow-2xl",
+                        "flex items-center gap-2 px-3 py-2.5 rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800",
+                        isMobileChatOpen ? "bottom-40 scale-90 opacity-90" : "bottom-24 scale-100 opacity-100"
+                    )}
+                >
+                    {isMobileChatOpen ? (
+                        <>
+                            <X size={18} className="text-red-500 dark:text-red-400" />
+                            <span className="text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-tight">Close</span>
+                        </>
+                    ) : (
+                        <>
+                            <div className="text-xl leading-none">{selectedPersonality.image}</div>
+                            <span className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-tight">Coach Chat</span>
+                            <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse" />
+                        </>
+                    )}
+                </button>
 
             {/* History Bar - Hidden when chat is open on mobile */}
             {!isMobileChatOpen && (
@@ -986,6 +777,6 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
                     </div>
                 </div>
             )}
-        </>
+        </div>
     );
 }

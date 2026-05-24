@@ -433,19 +433,6 @@ export default function OpeningTrainer({
         }
         sidePanel={
           <div className="h-full flex flex-col overflow-hidden bg-white dark:bg-gray-800">
-            {/* Latest Advice Bubble (Pinned at top on Desktop) */}
-            {!isMobileChatOpen && latestCoachMessage && (
-                <div className="p-4 border-b border-gray-100 dark:border-gray-700 bg-purple-50 dark:bg-purple-900/10 shrink-0">
-                    <div className="flex items-center gap-2 mb-2">
-                        <div className="text-xl leading-none">{personality.image}</div>
-                        <h3 className="text-[10px] font-black uppercase text-purple-600 dark:text-purple-400 tracking-widest">Latest Advice</h3>
-                    </div>
-                    <div className="prose prose-sm dark:prose-invert text-xs md:text-sm leading-snug line-clamp-3">
-                        <ReactMarkdown>{latestCoachMessage}</ReactMarkdown>
-                    </div>
-                </div>
-            )}
-
             <div className="flex-1 overflow-hidden">
                 {apiKey ? (
                     <Tutor
@@ -486,13 +473,12 @@ export default function OpeningTrainer({
           </div>
         }
       />
-
-      {/* Unified Mobile Floating Action Button */}
-      <button
-          onClick={() => {
-              if (isMobileChatOpen) setIsMobileBoardExpanded(false);
-              setIsMobileChatOpen(!isMobileChatOpen);
-          }}
+{/* Unified Mobile Floating Action Button */}
+<button
+    onClick={() => {
+        if (isMobileChatOpen) setIsMobileBoardExpanded(false);
+        setIsMobileChatOpen(!isMobileChatOpen);
+    }}
           aria-label={isMobileChatOpen ? "Close Chat" : "Open Chat"}
           className={clsx(
               "fixed right-4 z-[110] lg:hidden transition-all duration-500 shadow-2xl",

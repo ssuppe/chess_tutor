@@ -40,6 +40,7 @@ jest.mock("@/lib/stockfish", () => ({
         if (onReady) setTimeout(onReady, 0);
         return {
             evaluate: jest.fn().mockResolvedValue({ score: 0, bestMove: "e2e4", depth: 10 }),
+            getBestMove: jest.fn().mockResolvedValue("e2e4"),
             terminate: jest.fn(),
         };
     })

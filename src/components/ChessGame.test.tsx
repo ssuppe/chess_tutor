@@ -34,12 +34,14 @@ jest.mock("../lib/stockfish", () => {
         bestMove: "e7e5",
         depth: 15
     });
+    const getBestMove = jest.fn().mockResolvedValue("e7e5");
     return {
-        __mock: { evaluate },
+        __mock: { evaluate, getBestMove },
         Stockfish: jest.fn().mockImplementation((onReady) => {
             if (onReady) setTimeout(onReady, 0);
             return {
                 evaluate,
+                getBestMove,
                 terminate: jest.fn(),
             };
         }),
@@ -159,7 +161,9 @@ describe("ChessGame Component", () => {
         });
 
         await waitFor(() => {
-            const saved = JSON.parse(localStorage.getItem("chess_tutor_save") || "{}");
+            const savedGames = JSON.parse(localStorage.getItem("chess_tutor_saves") || "[]");
+            const saved = savedGames.find((g: any) => g.id === "restore-game");
+            expect(saved).toBeDefined();
             expect(saved.id).toBe("restore-game");
             expect(saved.pgn).toContain("1. e4 e5");
             expect(saved).not.toHaveProperty("apiKey");

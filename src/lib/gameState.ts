@@ -21,8 +21,9 @@ export type CapturedState = {
     blackLostScore: number;
 };
 
-export function getCapturedState(game: Chess): CapturedState {
-    const history = game.history({ verbose: true });
+export function getCapturedState(gameOrFen: Chess | string): CapturedState {
+    const chess = typeof gameOrFen === 'string' ? new Chess(gameOrFen) : gameOrFen;
+    const history = chess.history({ verbose: true });
     const whitePiecesLost: string[] = [];
     const blackPiecesLost: string[] = [];
     let whiteLostScore = 0;
