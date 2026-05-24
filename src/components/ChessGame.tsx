@@ -147,7 +147,6 @@ export default function ChessGame({
         result: string;
         winner: "White" | "Black" | "Draw";
     } | null>(null);
-    const boardAreaRef = useRef<HTMLDivElement>(null);
     const hasRebuiltHistoryRef = useRef(false);
 
     // Chess sounds hook
@@ -455,7 +454,7 @@ export default function ChessGame({
     const handleAnalysisComplete = useCallback(() => setIsAnalyzing(false), []);
 
     return (
-        <div className="flex flex-col min-h-screen bg-gray-100 dark:bg-gray-900">
+        <>
             <BoardViewLayout
                 language={language}
                 onBack={onBack}
@@ -468,7 +467,7 @@ export default function ChessGame({
                     <>
                         {/* Top Cluster: Opponent Material + Eval Bar (Mobile Chat Mode only) */}
                         {isMobileChatOpen && (
-                            <div className="w-full flex flex-col items-center gap-2 flex-shrink-0 scale-90">
+                            <div className="w-full flex flex-col items-center gap-1.5 flex-shrink-0">
                                 <CapturedPieces 
                                     captured={playerColor === 'white' ? capturedWhitePieces : capturedBlackPieces} 
                                     color={playerColor === 'white' ? 'w' : 'b'} 
@@ -507,15 +506,15 @@ export default function ChessGame({
                         </div>
 
                         <div className={clsx(
-                            "hidden md:block h-[560px]",
+                            "hidden md:block h-full md:h-[560px]",
                             isMobileChatOpen && "md:block"
                         )}>
                             <EvaluationBar score={isAnalyzing ? null : evalP0?.score} mate={isAnalyzing ? null : evalP0?.mate} isPlayerWhite={playerColor === 'white'} orientation="vertical" />
                         </div>
 
                         <div className={clsx(
-                            "flex flex-col gap-1 transition-all duration-300 w-full justify-center items-center",
-                            isMobileChatOpen ? "h-auto flex-shrink" : "flex-1 h-full transition-all duration-300"
+                            "flex flex-col gap-2 transition-all duration-300 w-full h-full",
+                            isMobileChatOpen ? "justify-center items-center h-auto flex-shrink-0" : "flex-1"
                         )}>
                             {!isMobileChatOpen && (
                                 <>
@@ -549,8 +548,8 @@ export default function ChessGame({
                             )}
 
                             <div className={clsx(
-                                "bg-[#779954] p-[2px] rounded-sm relative overflow-hidden",
-                                isMobileChatOpen ? "w-full aspect-square shadow-sm" : "w-full aspect-square transition-all duration-300"
+                                "bg-[#779954] p-[2px] rounded-sm relative overflow-hidden flex-shrink-0",
+                                isMobileChatOpen ? "w-full aspect-square shadow-sm" : "w-full aspect-square max-w-md md:max-w-none transition-all duration-300"
                             )}>
                                 {!isEngineReady && (
                                     <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/40 backdrop-blur-[1.5px] rounded-sm animate-in fade-in duration-500">
@@ -582,7 +581,7 @@ export default function ChessGame({
 
                         {/* Bottom Cluster: Last Move + Player Material (Mobile Chat Mode only) */}
                         {isMobileChatOpen && (
-                            <div className="w-full flex flex-col items-center gap-2 flex-shrink-0 scale-90">
+                            <div className="w-full flex flex-col items-center gap-2 flex-shrink-0">
                                 {moveHistory.length > 0 && (
                                     <div className="text-[10px] text-gray-500 dark:text-gray-400 font-medium italic">
                                         Last move ({
@@ -650,26 +649,25 @@ export default function ChessGame({
                     if (isMobileChatOpen) setIsMobileBoardExpanded(false);
                     setIsMobileChatOpen(!isMobileChatOpen);
                 }}
-                    aria-label={isMobileChatOpen ? "Close Chat" : "Open Chat"}
-                    className={clsx(
-                        "fixed right-4 z-[110] md:hidden transition-all duration-500 shadow-2xl",
-                        "flex items-center gap-2 px-3 py-2.5 rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800",
-                        isMobileChatOpen ? "bottom-40 scale-90 opacity-90" : "bottom-24 scale-100 opacity-100"
-                    )}
-                >
-                    {isMobileChatOpen ? (
-                        <>
-                            <X size={18} className="text-red-500 dark:text-red-400" />
-                            <span className="text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-tight">Close</span>
-                        </>
-                    ) : (
-                        <>
-                            <div className="text-xl leading-none">{selectedPersonality.image}</div>
-                            <span className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-tight">Coach Chat</span>
-                            <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse" />
-                        </>
-                    )}
-                </button>
+                aria-label={isMobileChatOpen ? "Close Chat" : "Open Chat"}
+                className={clsx(
+                    "fixed right-4 z-[110] md:hidden transition-all duration-500 shadow-2xl flex items-center gap-2 px-3 py-2.5 rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800",
+                    isMobileChatOpen ? "bottom-40 scale-90 opacity-90" : "bottom-24 scale-100 opacity-100"
+                )}
+            >
+                {isMobileChatOpen ? (
+                    <>
+                        <X size={18} className="text-red-500 dark:text-red-400" />
+                        <span className="text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-tight">Close</span>
+                    </>
+                ) : (
+                    <>
+                        <div className="text-xl leading-none">{selectedPersonality.image}</div>
+                        <span className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-tight">Coach Chat</span>
+                        <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse" />
+                    </>
+                )}
+            </button>
 
             {/* History Bar - Hidden when chat is open on mobile */}
             {!isMobileChatOpen && (
@@ -777,6 +775,6 @@ export default function ChessGame({
                     </div>
                 </div>
             )}
-        </div>
+        </>
     );
 }
