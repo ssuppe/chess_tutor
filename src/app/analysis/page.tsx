@@ -29,6 +29,7 @@ interface MoveStep {
     fenBefore: string;
     fenAfter: string;
     color: 'w' | 'b';
+    moveNumber: number;
     from?: string;
     to?: string;
 }
@@ -44,7 +45,7 @@ const DEFAULT_START = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
 export default function AnalysisPage() {
     const router = useRouter();
-    const { isDebug } = useDebug();
+    const { isDebug, addEntry } = useDebug();
 
     const [language, setLanguage] = useState<SupportedLanguage>("en");
     const t = useTranslation(language);
@@ -263,7 +264,7 @@ IMPORTANT:
                     if (applied) {
                         nextSteps.push({
                             san: applied.san,
-                            color: applied.color === "w" ? "white" : "black",
+                            color: applied.color,
                             moveNumber: Math.floor(idx / 2) + 1,
                             fenBefore: before,
                             fenAfter: replay.fen(),
@@ -340,12 +341,13 @@ IMPORTANT:
 
         setStepDetails(prev => {
             if (prev[currentIndex]?.evalBefore && prev[currentIndex]?.evalAfter) return prev;
-            const cpLoss = step.color === "white"
+            const isWhite = step.color === "w";
+            const cpLoss = isWhite
                 ? evalBefore.score - evalAfter.score
                 : evalAfter.score - evalBefore.score;
             const missedTactics = detectMissedTactics({
                 fen: step.fenBefore,
-                playerColor: step.color,
+                playerColor: isWhite ? "white" : "black",
                 playerMoveSan: step.san,
                 bestMoveUci: evalBefore.bestMove,
                 cpLoss,

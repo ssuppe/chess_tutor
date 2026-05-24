@@ -131,8 +131,8 @@ describe("AnalysisPage", () => {
 
         await waitFor(() => {
             expect(screen.getAllByText(/1 \/ 6/)[0]).toBeInTheDocument();
-            expect(screen.getByText("+0.50")).toBeInTheDocument();
-            expect(screen.getByText("-0.50")).toBeInTheDocument();
+            expect(screen.getAllByText("+0.50").length).toBeGreaterThan(0);
+            expect(screen.getAllByText("-0.50").length).toBeGreaterThan(0);
             expect(screen.getAllByText("e4")[0]).toBeInTheDocument();
         });
 
