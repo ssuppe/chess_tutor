@@ -392,7 +392,7 @@ const en: Translations = {
         downloadFEN: 'Download Current Position (FEN)',
         downloadTitle: 'Export Game',
         importFromPlatforms: 'Or import from online platforms',
-        };
+    },
     apiKeyInput: {
         title: 'API Key Required',
         description: 'Please enter your Google Gemini API key to continue.',
@@ -629,7 +629,7 @@ const de: Translations = {
         downloadFEN: 'Aktuelle Position herunterladen (FEN)',
         downloadTitle: 'Partie exportieren',
         importFromPlatforms: 'Oder von Online-Plattformen importieren',
-        };
+    },
     apiKeyInput: {
         title: 'API-Schlüssel erforderlich',
         description: 'Bitte geben Sie Ihren Google Gemini API-Schlüssel ein, um fortzufahren.',
@@ -866,7 +866,7 @@ const fr: Translations = {
         downloadFEN: 'Télécharger la position actuelle (FEN)',
         downloadTitle: 'Exporter la partie',
         importFromPlatforms: 'Ou importer depuis des plateformes en ligne',
-        };
+    },
     apiKeyInput: {
         title: 'Clé API requise',
         description: 'Veuillez entrer votre clé API Google Gemini pour continuer.',
@@ -1103,7 +1103,7 @@ const it: Translations = {
         downloadFEN: 'Scarica posizione attuale (FEN)',
         downloadTitle: 'Esporta partita',
         importFromPlatforms: 'O importa da piattaforme online',
-        };
+    },
     apiKeyInput: {
         title: 'Chiave API richiesta',
         description: 'Inserisci la tua chiave API Google Gemini per continuare.',
@@ -1340,7 +1340,7 @@ const pl: Translations = {
         downloadFEN: 'Pobierz aktualną pozycję (FEN)',
         downloadTitle: 'Eksportuj grę',
         importFromPlatforms: 'Lub importuj z platform online',
-        };
+    },
     apiKeyInput: {
         title: 'Wymagany klucz API',
         description: 'Podaj swój klucz Google Gemini, aby kontynuować.',
