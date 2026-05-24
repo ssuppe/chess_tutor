@@ -81,6 +81,7 @@ export default function OpeningTrainer({
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const [viewportHeight, setViewportHeight] = useState<number | null>(null);
   const [viewportOffset, setViewportOffset] = useState<number>(0);
+  const [latestCoachMessage, setLatestCoachMessage] = useState<string | null>(null);
 
   // Tutor message control - track when tutor last spoke
   const [lastTutorMessageMoveIndex, setLastTutorMessageMoveIndex] = useState<number>(-1);
@@ -358,6 +359,19 @@ export default function OpeningTrainer({
                 </div>
             )}
 
+            {/* Mobile Advice Strip (When chat is closed) */}
+            {!isMobileChatOpen && latestCoachMessage && (
+                <div className="lg:hidden w-full px-2 py-1.5 bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800/30 rounded-lg animate-in slide-in-from-top-2 duration-300">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                        <span className="text-sm leading-none">{personality.image}</span>
+                        <span className="text-[8px] font-black uppercase text-purple-600 dark:text-purple-400 tracking-widest">Coach Advice</span>
+                    </div>
+                    <div className="prose prose-sm dark:prose-invert text-[11px] leading-tight line-clamp-2 text-gray-700 dark:text-gray-300">
+                        <ReactMarkdown>{latestCoachMessage}</ReactMarkdown>
+                    </div>
+                </div>
+            )}
+
             {/* Chessboard */}
             <div className={clsx(
               "p-[2px] rounded-sm transition-all duration-300",
@@ -418,41 +432,57 @@ export default function OpeningTrainer({
           </>
         }
         sidePanel={
-          <div className="h-full flex flex-col overflow-hidden">
-            {apiKey ? (
-              <Tutor
-                game={chess}
-                currentFen={currentPosition}
-                userMove={null}
-                computerMove={null}
-                stockfish={stockfish}
-                evalP0={null}
-                evalP2={null}
-                openingData={[]}
-                missedTactics={[]}
-                onAnalysisComplete={() => {}}
-                apiKey={apiKey}
-                personality={personality}
-                language={language}
-                playerColor={userColor}
-                onCheckComputerMove={() => {}}
-                isReviewing={session.currentMoveIndex < session.moveHistory.length}
-                resignationContext={null}
-                openingPracticeMode={openingPracticeMode}
-                onJumpToBoard={() => {
-                    if (isMobileChatOpen) setIsMobileBoardExpanded(false);
-                    setIsMobileChatOpen(false);
-                }}
-                onChatFocus={() => setIsKeyboardVisible(true)}
-                onChatBlur={() => setIsKeyboardVisible(false)}
-              />
-            ) : (
-              <div className="bg-white dark:bg-gray-800 rounded-lg p-6 text-center border border-gray-200 dark:border-gray-700">
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Coach Chat</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 text-xs">Set up your API key to interact with your coach.</p>
-                <button onClick={() => window.location.href = '/onboarding'} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-bold uppercase tracking-wider shadow-sm">Onboarding</button>
-              </div>
+          <div className="h-full flex flex-col overflow-hidden bg-white dark:bg-gray-800">
+            {/* Latest Advice Bubble (Pinned at top on Desktop) */}
+            {!isMobileChatOpen && latestCoachMessage && (
+                <div className="p-4 border-b border-gray-100 dark:border-gray-700 bg-purple-50 dark:bg-purple-900/10 shrink-0">
+                    <div className="flex items-center gap-2 mb-2">
+                        <div className="text-xl leading-none">{personality.image}</div>
+                        <h3 className="text-[10px] font-black uppercase text-purple-600 dark:text-purple-400 tracking-widest">Latest Advice</h3>
+                    </div>
+                    <div className="prose prose-sm dark:prose-invert text-xs md:text-sm leading-snug line-clamp-3">
+                        <ReactMarkdown>{latestCoachMessage}</ReactMarkdown>
+                    </div>
+                </div>
             )}
+
+            <div className="flex-1 overflow-hidden">
+                {apiKey ? (
+                    <Tutor
+                        game={chess}
+                        currentFen={currentPosition}
+                        userMove={null}
+                        computerMove={null}
+                        stockfish={stockfish}
+                        evalP0={null}
+                        evalP2={null}
+                        openingData={[]}
+                        missedTactics={[]}
+                        onAnalysisComplete={() => {}}
+                        apiKey={apiKey}
+                        personality={personality}
+                        language={language}
+                        playerColor={userColor}
+                        onCheckComputerMove={() => {}}
+                        isReviewing={session.currentMoveIndex < session.moveHistory.length}
+                        resignationContext={null}
+                        openingPracticeMode={openingPracticeMode}
+                        onJumpToBoard={() => {
+                            if (isMobileChatOpen) setIsMobileBoardExpanded(false);
+                            setIsMobileChatOpen(false);
+                        }}
+                        onChatFocus={() => setIsKeyboardVisible(true)}
+                        onChatBlur={() => setIsKeyboardVisible(false)}
+                        onLatestMessage={setLatestCoachMessage}
+                    />
+                ) : (
+                    <div className="bg-white dark:bg-gray-800 rounded-lg p-6 text-center border border-gray-200 dark:border-gray-700">
+                        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Coach Chat</h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 text-xs">Set up your API key to interact with your coach.</p>
+                        <button onClick={() => window.location.href = '/onboarding'} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-bold uppercase tracking-wider shadow-sm">Onboarding</button>
+                    </div>
+                )}
+            </div>
           </div>
         }
       />

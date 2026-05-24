@@ -41,6 +41,7 @@ interface TutorProps {
     onJumpToBoard?: () => void;
     onChatFocus?: () => void;
     onChatBlur?: () => void;
+    onLatestMessage?: (message: string) => void;
     isReviewing?: boolean;
     resignationContext?: {
         trigger: number;
@@ -104,10 +105,20 @@ interface Message {
     timestamp: number;
 }
 
-export function Tutor({ game, currentFen, userMove, computerMove, stockfish, evalP0, evalP2, openingData, missedTactics, onAnalysisComplete, apiKey, personality, language, playerColor, onCheckComputerMove, isReviewing, resignationContext, openingContext, tacticalPracticeMode, openingPracticeMode, onJumpToBoard, onChatFocus, onChatBlur }: TutorProps) {
+export function Tutor({ game, currentFen, userMove, computerMove, stockfish, evalP0, evalP2, openingData, missedTactics, onAnalysisComplete, apiKey, personality, language, playerColor, onCheckComputerMove, isReviewing, resignationContext, openingContext, tacticalPracticeMode, openingPracticeMode, onJumpToBoard, onChatFocus, onChatBlur, onLatestMessage }: TutorProps) {
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState("");
     const [isFocused, setIsFocused] = useState(false);
+
+    // Sync latest message to parent
+    useEffect(() => {
+        if (onLatestMessage && messages.length > 0) {
+            const lastModelMessage = [...messages].reverse().find(m => m.role === 'model');
+            if (lastModelMessage) {
+                onLatestMessage(lastModelMessage.text);
+            }
+        }
+    }, [messages, onLatestMessage]);
 
     const handleFocus = () => {
         setIsFocused(true);

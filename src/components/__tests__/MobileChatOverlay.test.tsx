@@ -70,17 +70,16 @@ describe("Mobile Chat Overlay (Bottom Sheet)", () => {
         const toggleButton = screen.getByLabelText(/Open Chat/i);
         const tutorContainer = screen.getByTestId("tutor-container");
         const boardArea = screen.getByTestId("board-area");
-        const mainContainer = boardArea.parentElement;
+        const mainContainer = boardArea.parentElement!;
 
-        // Initially closed
-        expect(tutorContainer).toHaveClass("translate-y-full");
+        // Initially closed (Desktop view or standard mobile grid)
+        expect(mainContainer).not.toHaveClass("fixed");
 
         // Open chat
         fireEvent.click(toggleButton);
-        expect(tutorContainer).not.toHaveClass("translate-y-full");
         
         // Flex split should be active (Side-by-Side)
-        expect(mainContainer).toHaveClass("flex");
+        expect(mainContainer).toHaveClass("fixed");
         expect(mainContainer).toHaveClass("flex-row");
         expect(boardArea).toHaveClass("w-[35%]");
 
@@ -92,7 +91,7 @@ describe("Mobile Chat Overlay (Bottom Sheet)", () => {
         expect(closeButton).toHaveClass("bottom-40");
 
         fireEvent.click(closeButton);
-        expect(tutorContainer).toHaveClass("translate-y-full");
+        expect(mainContainer).not.toHaveClass("fixed");
     });
 
     it("should maintain the horizontal split regardless of keyboard state", () => {
@@ -148,22 +147,22 @@ describe("Mobile Chat Overlay (Bottom Sheet)", () => {
         fireEvent.click(screen.getByLabelText(/Open Chat/i));
         
         const boardArea = screen.getByTestId("board-area");
-        const tutorContainer = screen.getByTestId("tutor-container");
+        const mainContainer = boardArea.parentElement!;
         
         // Initial state: Mini (35%)
         expect(boardArea).toHaveClass("w-[35%]");
-        expect(tutorContainer).not.toHaveClass("translate-y-full");
+        expect(mainContainer).toHaveClass("fixed");
 
         // Click board to expand (Focus mode: 55%)
         fireEvent.click(boardArea);
         expect(boardArea).toHaveClass("w-[55%]");
         expect(boardArea).not.toHaveClass("w-[35%]");
-        expect(tutorContainer).not.toHaveClass("translate-y-full"); // Chat should remain open
+        expect(mainContainer).toHaveClass("fixed"); // Chat should remain open
 
         // Click board again to shrink (Mini mode: 35%)
         fireEvent.click(boardArea);
         expect(boardArea).toHaveClass("w-[35%]");
         expect(boardArea).not.toHaveClass("w-[55%]");
-        expect(tutorContainer).not.toHaveClass("translate-y-full"); // Chat should remain open
+        expect(mainContainer).toHaveClass("fixed"); // Chat should remain open
     });
 });

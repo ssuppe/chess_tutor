@@ -20,6 +20,7 @@ import { upsertSavedGame } from "@/lib/savedGames";
 import { useChessSounds } from "@/lib/hooks/useChessSounds";
 import { TopUtilityLinks } from "./TopUtilityLinks";
 import { BoardViewLayout } from "./BoardViewLayout";
+import ReactMarkdown from "react-markdown";
 
 interface ChessGameProps {
     gameId: string;
@@ -72,6 +73,7 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
     const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
     const [viewportHeight, setViewportHeight] = useState<number | null>(null);
     const [viewportOffset, setViewportOffset] = useState<number>(0);
+    const [latestCoachMessage, setLatestCoachMessage] = useState<string | null>(null);
 
     // Track actual visual viewport height and offset for keyboard awareness
     useEffect(() => {
@@ -650,146 +652,146 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
 
     return (
         <>
-            <div 
-                className={clsx(
-                    "flex-grow transition-all duration-300",
-                    isMobileChatOpen 
-                        ? "fixed top-0 left-0 right-0 z-[100] bg-white dark:bg-gray-900 flex flex-row p-0 m-0 w-full overflow-hidden" 
-                        : "grid grid-cols-1 md:grid-cols-3 gap-1 md:gap-4 w-full max-w-6xl mx-auto p-2 md:p-4 transition-all duration-300"
-                )}
-                style={isMobileChatOpen ? { 
-                    height: viewportHeight ? `${viewportHeight}px` : '100dvh',
-                    top: `${viewportOffset}px`,
-                    willChange: 'height, top'
-                } : {}}
-            >
-
-
-                {/* 1. Slim Navigation Row - Hidden in mobile chat mode */}
-                <div className={clsx(
-                    "md:col-span-3 flex justify-between items-center py-0 px-1",
-                    isMobileChatOpen && "hidden md:flex"
-                )}>
-                    <button
-                        onClick={onBack}
-                        className="flex items-center gap-1 px-2 py-0.5 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md text-xs font-bold transition-all"
-                        aria-label={t.game.backToMenu}
-                    >
-                        &lt; {t.game.backToMenu}
-                    </button>
-                    <TopUtilityLinks language={language} showExternalLinks={false} />
-                </div>
-
-                {/* 2. Board Area (Left Part of Mobile Horizontal Split) */}
-                <div 
-                    data-testid="board-area"
-                    data-keyboard={isKeyboardVisible}
-                    ref={boardAreaRef} 
-                    className={clsx(
-                        "md:col-span-2 bg-white dark:bg-gray-800 p-1 md:p-4 rounded-lg shadow-lg flex flex-col md:flex-row gap-2 md:gap-8 relative overflow-hidden",
-                        isMobileChatOpen 
-                            ? (isMobileBoardExpanded ? "w-[55%]" : "w-[35%]") 
-                            : "md:relative md:h-auto transition-all duration-300",
-                        isMobileChatOpen && "h-full rounded-none border-r border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-900 items-center justify-center gap-4 py-4 px-1"
-                    )}
-                    onClick={() => isMobileChatOpen && setIsMobileBoardExpanded(!isMobileBoardExpanded)}
-                >
-                    {/* Interaction Overlay to catch taps on mobile even over the board */}
-                    {isMobileChatOpen && (
-                        <div className="absolute inset-0 z-10 cursor-pointer" aria-hidden="true" />
-                    )}
-                    {/* Top Cluster: Opponent Material + Eval Bar (Mobile Chat Mode only) */}
-                    {isMobileChatOpen && (
-                        <div className="w-full flex flex-col items-center gap-2 flex-shrink-0 scale-90">
-                            <CapturedPieces 
-                                captured={playerColor === 'white' ? capturedWhitePieces : capturedBlackPieces} 
-                                color={playerColor === 'white' ? 'w' : 'b'} 
-                                score={playerColor === 'white' ? (blackAdvantage > 0 ? blackAdvantage : null) : (whiteAdvantage > 0 ? whiteAdvantage : null)} 
-                            />
-                            
-                            <div className="w-full h-3">
-                                <EvaluationBar 
-                                    score={isAnalyzing ? null : evalP0?.score} 
-                                    mate={isAnalyzing ? null : evalP0?.mate} 
-                                    isPlayerWhite={playerColor === 'white'} 
-                                    orientation="horizontal" 
+            <BoardViewLayout
+                language={language}
+                onBack={onBack}
+                isMobileChatOpen={isMobileChatOpen}
+                isMobileBoardExpanded={isMobileBoardExpanded}
+                setIsMobileBoardExpanded={setIsMobileBoardExpanded}
+                viewportHeight={viewportHeight ?? undefined}
+                viewportOffset={viewportOffset}
+                boardArea={
+                    <>
+                        {/* Top Cluster: Opponent Material + Eval Bar (Mobile Chat Mode only) */}
+                        {isMobileChatOpen && (
+                            <div className="w-full flex flex-col items-center gap-2 flex-shrink-0 scale-90">
+                                <CapturedPieces 
+                                    captured={playerColor === 'white' ? capturedWhitePieces : capturedBlackPieces} 
+                                    color={playerColor === 'white' ? 'w' : 'b'} 
+                                    score={playerColor === 'white' ? (blackAdvantage > 0 ? blackAdvantage : null) : (whiteAdvantage > 0 ? whiteAdvantage : null)} 
                                 />
-                            </div>
-                        </div>
-                    )}
-
-                    <div className={clsx(
-                        "md:hidden w-full transition-opacity duration-200",
-                        isMobileChatOpen ? "hidden" : "block"
-                    )}>
-                        <EvaluationBar score={isAnalyzing ? null : evalP0?.score} mate={isAnalyzing ? null : evalP0?.mate} isPlayerWhite={playerColor === 'white'} orientation="horizontal" />
-                    </div>
-
-                    <div className={clsx(
-                        "hidden md:block h-[560px]",
-                        isMobileChatOpen && "md:block"
-                    )}>
-                        <EvaluationBar score={isAnalyzing ? null : evalP0?.score} mate={isAnalyzing ? null : evalP0?.mate} isPlayerWhite={playerColor === 'white'} orientation="vertical" />
-                    </div>
-
-                    <div className={clsx(
-                        "flex flex-col gap-1 transition-all duration-300 w-full justify-center items-center",
-                        isMobileChatOpen ? "h-auto flex-shrink" : "flex-1 h-full transition-all duration-300"
-                    )}>
-                        {!isMobileChatOpen && (
-                            <>
-                                <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 w-full">
-                                    <div className="flex items-center gap-3">
-                                        <div className="relative">
-                                            <button onClick={() => setShowStrengthSlider(!showStrengthSlider)} className="hover:text-gray-700 dark:hover:text-gray-200 underline decoration-dotted underline-offset-2">
-                                                {t.game.stockfishLevel}: {stockfishDepth}
-                                            </button>
-                                            {showStrengthSlider && (
-                                                <div className="absolute top-full left-0 mt-2 w-48 bg-white dark:bg-gray-700 p-3 rounded shadow-xl border border-gray-200 dark:border-gray-600 z-10">
-                                                    <label className="block text-xs font-bold mb-1 text-gray-700 dark:text-gray-200">{t.game.stockfishStrength} ({t.game.depth}: {stockfishDepth})</label>
-                                                    <input type="range" min="1" max="20" value={stockfishDepth} onChange={(e) => setStockfishDepth(parseInt(e.target.value))} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-600" />
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                        <button onClick={() => { game.undo(); game.undo(); setFen(game.fen()); setUserMove(null); setComputerMove(null); setEvalP0(null); setEvalP2(null); setOpeningData([]); updateCapturedPieces(); }} className="flex items-center gap-1 hover:text-blue-600 dark:hover:text-blue-400 transition-colors" disabled={!!gameOverState}><ArrowLeft size={12} /> {t.game.undoMove}</button>
-                                        <button onClick={handleResignClick} className="flex items-center gap-1 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors" disabled={!!gameOverState}><Flag size={12} /> {t.game.resign}</button>
-                                    </div>
-                                </div>
-                                <div className="h-6 w-full flex justify-start">
-                                    <CapturedPieces 
-                                        captured={playerColor === 'white' ? capturedWhitePieces : capturedBlackPieces} 
-                                        color={playerColor === 'white' ? 'w' : 'b'} 
-                                        score={playerColor === 'white' ? (blackAdvantage > 0 ? blackAdvantage : null) : (whiteAdvantage > 0 ? whiteAdvantage : null)} 
+                                
+                                <div className="w-full h-3">
+                                    <EvaluationBar 
+                                        score={isAnalyzing ? null : evalP0?.score} 
+                                        mate={isAnalyzing ? null : evalP0?.mate} 
+                                        isPlayerWhite={playerColor === 'white'} 
+                                        orientation="horizontal" 
                                     />
                                 </div>
-                            </>
+                            </div>
+                        )}
+
+                        {/* Mobile Advice Strip (When chat is closed) */}
+                        {!isMobileChatOpen && latestCoachMessage && (
+                            <div className="md:hidden w-full px-2 py-1.5 bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800/30 rounded-lg animate-in slide-in-from-top-2 duration-300">
+                                <div className="flex items-center gap-1.5 mb-0.5">
+                                    <span className="text-sm leading-none">{selectedPersonality.image}</span>
+                                    <span className="text-[8px] font-black uppercase text-purple-600 dark:text-purple-400 tracking-widest">Advice</span>
+                                </div>
+                                <div className="prose prose-sm dark:prose-invert text-[11px] leading-tight line-clamp-2 text-gray-700 dark:text-gray-300">
+                                    <ReactMarkdown>{latestCoachMessage}</ReactMarkdown>
+                                </div>
+                            </div>
                         )}
 
                         <div className={clsx(
-                            "bg-[#779954] p-[2px] rounded-sm relative overflow-hidden",
-                            isMobileChatOpen ? "w-full aspect-square shadow-sm" : "w-full aspect-square transition-all duration-300"
+                            "md:hidden w-full transition-opacity duration-200",
+                            isMobileChatOpen ? "hidden" : "block"
                         )}>
-                            {!isEngineReady && (
-                                <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/40 backdrop-blur-[1.5px] rounded-sm animate-in fade-in duration-500">
-                                    <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-2xl flex flex-col items-center gap-4 border border-gray-100 dark:border-gray-700 transform animate-in zoom-in slide-in-from-bottom-4 duration-500">
-                                        <div className="relative">
-                                            <div className="absolute inset-0 bg-blue-400/20 blur-xl rounded-full animate-pulse" />
-                                            <Loader2 className="w-10 h-10 text-blue-600 dark:text-blue-400 animate-spin relative z-10" />
-                                        </div>
-                                        <div className="flex flex-col items-center text-center">
-                                            <span className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-wider">Engine Booting</span>
-                                            <span className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest opacity-80">Stockfish is warming up...</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                            <Chessboard options={{ position: fen, onPieceDrop: ({ sourceSquare, targetSquare }) => onDrop({ sourceSquare, targetSquare }), darkSquareStyle: { backgroundColor: '#779954' }, lightSquareStyle: { backgroundColor: '#e9edcc' }, animationDurationInMs: 200, boardOrientation: playerColor, allowDragging: !isMobileChatOpen && isEngineReady, squareStyles: lastMoveHighlight }} />
+                            <EvaluationBar score={isAnalyzing ? null : evalP0?.score} mate={isAnalyzing ? null : evalP0?.mate} isPlayerWhite={playerColor === 'white'} orientation="horizontal" />
                         </div>
 
-                        {!isMobileChatOpen && (
-                            <div className="h-6 w-full flex justify-start">
+                        <div className={clsx(
+                            "hidden md:block h-[560px]",
+                            isMobileChatOpen && "md:block"
+                        )}>
+                            <EvaluationBar score={isAnalyzing ? null : evalP0?.score} mate={isAnalyzing ? null : evalP0?.mate} isPlayerWhite={playerColor === 'white'} orientation="vertical" />
+                        </div>
+
+                        <div className={clsx(
+                            "flex flex-col gap-1 transition-all duration-300 w-full justify-center items-center",
+                            isMobileChatOpen ? "h-auto flex-shrink" : "flex-1 h-full transition-all duration-300"
+                        )}>
+                            {!isMobileChatOpen && (
+                                <>
+                                    <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 w-full">
+                                        <div className="flex items-center gap-3">
+                                            <div className="relative">
+                                                <button onClick={() => setShowStrengthSlider(!showStrengthSlider)} className="hover:text-gray-700 dark:hover:text-gray-200 underline decoration-dotted underline-offset-2">
+                                                    {t.game.stockfishLevel}: {stockfishDepth}
+                                                </button>
+                                                {showStrengthSlider && (
+                                                    <div className="absolute top-full left-0 mt-2 w-48 bg-white dark:bg-gray-700 p-3 rounded shadow-xl border border-gray-200 dark:border-gray-600 z-10">
+                                                        <label className="block text-xs font-bold mb-1 text-gray-700 dark:text-gray-200">{t.game.stockfishStrength} ({t.game.depth}: {stockfishDepth})</label>
+                                                        <input type="range" min="1" max="20" value={stockfishDepth} onChange={(e) => setStockfishDepth(parseInt(e.target.value))} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-600" />
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <button onClick={() => { game.undo(); game.undo(); setFen(game.fen()); setUserMove(null); setComputerMove(null); setEvalP0(null); setEvalP2(null); setOpeningData([]); updateCapturedPieces(); }} className="flex items-center gap-1 hover:text-blue-600 dark:hover:text-blue-400 transition-colors" disabled={!!gameOverState}><ArrowLeft size={12} /> {t.game.undoMove}</button>
+                                            <button onClick={handleResignClick} className="flex items-center gap-1 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors" disabled={!!gameOverState}><Flag size={12} /> {t.game.resign}</button>
+                                        </div>
+                                    </div>
+                                    <div className="h-6 w-full flex justify-start">
+                                        <CapturedPieces 
+                                            captured={playerColor === 'white' ? capturedWhitePieces : capturedBlackPieces} 
+                                            color={playerColor === 'white' ? 'w' : 'b'} 
+                                            score={playerColor === 'white' ? (blackAdvantage > 0 ? blackAdvantage : null) : (whiteAdvantage > 0 ? whiteAdvantage : null)} 
+                                        />
+                                    </div>
+                                </>
+                            )}
+
+                            <div className={clsx(
+                                "bg-[#779954] p-[2px] rounded-sm relative overflow-hidden",
+                                isMobileChatOpen ? "w-full aspect-square shadow-sm" : "w-full aspect-square transition-all duration-300"
+                            )}>
+                                {!isEngineReady && (
+                                    <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/40 backdrop-blur-[1.5px] rounded-sm animate-in fade-in duration-500">
+                                        <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-2xl flex flex-col items-center gap-4 border border-gray-100 dark:border-gray-700 transform animate-in zoom-in slide-in-from-bottom-4 duration-500">
+                                            <div className="relative">
+                                                <div className="absolute inset-0 bg-blue-400/20 blur-xl rounded-full animate-pulse" />
+                                                <Loader2 className="w-10 h-10 text-blue-600 dark:text-blue-400 animate-spin relative z-10" />
+                                            </div>
+                                            <div className="flex flex-col items-center text-center">
+                                                <span className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-wider">Engine Booting</span>
+                                                <span className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest opacity-80">Stockfish is warming up...</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                                <Chessboard options={{ position: fen, onPieceDrop: ({ sourceSquare, targetSquare }) => onDrop({ sourceSquare, targetSquare }), darkSquareStyle: { backgroundColor: '#779954' }, lightSquareStyle: { backgroundColor: '#e9edcc' }, animationDurationInMs: 200, boardOrientation: playerColor, allowDragging: !isMobileChatOpen && isEngineReady, squareStyles: lastMoveHighlight }} />
+                            </div>
+
+                            {!isMobileChatOpen && (
+                                <div className="h-6 w-full flex justify-start">
+                                    <CapturedPieces 
+                                        captured={playerColor === 'white' ? capturedBlackPieces : capturedWhitePieces} 
+                                        color={playerColor === 'white' ? 'b' : 'w'} 
+                                        score={playerColor === 'white' ? (whiteAdvantage > 0 ? whiteAdvantage : null) : (blackAdvantage > 0 ? blackAdvantage : null)} 
+                                    />
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Bottom Cluster: Last Move + Player Material (Mobile Chat Mode only) */}
+                        {isMobileChatOpen && (
+                            <div className="w-full flex flex-col items-center gap-2 flex-shrink-0 scale-90">
+                                {moveHistory.length > 0 && (
+                                    <div className="text-[10px] text-gray-500 dark:text-gray-400 font-medium italic">
+                                        Last move ({
+                                            moveHistory[moveHistory.length - 1].computerMove !== '...' 
+                                                ? (playerColor === 'white' ? 'Black' : 'White') 
+                                                : (playerColor === 'white' ? 'White' : 'Black')
+                                        }): <span className="font-black not-italic text-gray-800 dark:text-gray-200">{
+                                            moveHistory[moveHistory.length - 1].computerMove !== '...' 
+                                                ? moveHistory[moveHistory.length - 1].computerMove 
+                                                : moveHistory[moveHistory.length - 1].playerMove
+                                        }</span>
+                                    </div>
+                                )}
                                 <CapturedPieces 
                                     captured={playerColor === 'white' ? capturedBlackPieces : capturedWhitePieces} 
                                     color={playerColor === 'white' ? 'b' : 'w'} 
@@ -797,114 +799,103 @@ export default function ChessGame({ gameId, initialFen, initialPgn, initialPerso
                                 />
                             </div>
                         )}
-                    </div>
 
-                    {/* Bottom Cluster: Last Move + Player Material (Mobile Chat Mode only) */}
-                    {isMobileChatOpen && (
-                        <div className="w-full flex flex-col items-center gap-2 flex-shrink-0 scale-90">
-                            {moveHistory.length > 0 && (
-                                <div className="text-[10px] text-gray-500 dark:text-gray-400 font-medium italic">
-                                    Last move ({
-                                        moveHistory[moveHistory.length - 1].computerMove !== '...' 
-                                            ? (playerColor === 'white' ? 'Black' : 'White') 
-                                            : (playerColor === 'white' ? 'White' : 'Black')
-                                    }): <span className="font-black not-italic text-gray-800 dark:text-gray-200">{
-                                        moveHistory[moveHistory.length - 1].computerMove !== '...' 
-                                            ? moveHistory[moveHistory.length - 1].computerMove 
-                                            : moveHistory[moveHistory.length - 1].playerMove
-                                    }</span>
+                        {isMobileChatOpen && !isKeyboardVisible && (
+                            <div className="absolute bottom-1 left-0 right-0 text-center text-[7px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em]">
+                                Live Game
+                            </div>
+                        )}
+                    </>
+                }
+                sidePanel={
+                    <div className="h-full flex flex-col overflow-hidden">
+                        {/* Latest Advice Bubble (Pinned at top on Desktop, integrated into chat on Mobile) */}
+                        {!isMobileChatOpen && latestCoachMessage && (
+                            <div className="p-4 border-b border-gray-100 dark:border-gray-700 bg-purple-50 dark:bg-purple-900/10 shrink-0">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <div className="text-xl leading-none">{selectedPersonality.image}</div>
+                                    <h3 className="text-[10px] font-black uppercase text-purple-600 dark:text-purple-400 tracking-widest">Latest Advice</h3>
                                 </div>
-                            )}
-                            <CapturedPieces 
-                                captured={playerColor === 'white' ? capturedBlackPieces : capturedWhitePieces} 
-                                color={playerColor === 'white' ? 'b' : 'w'} 
-                                score={playerColor === 'white' ? (whiteAdvantage > 0 ? whiteAdvantage : null) : (blackAdvantage > 0 ? blackAdvantage : null)} 
+                                <div className="prose prose-sm dark:prose-invert text-xs md:text-sm leading-snug line-clamp-3">
+                                    <ReactMarkdown>{latestCoachMessage}</ReactMarkdown>
+                                </div>
+                            </div>
+                        )}
+                        
+                        <div className="flex-1 overflow-hidden">
+                            <Tutor
+                                game={game}
+                                currentFen={fen}
+                                userMove={userMove}
+                                computerMove={computerMove}
+                                stockfish={stockfish}
+                                evalP0={evalP0}
+                                evalP2={evalP2}
+                                openingData={openingData}
+                                missedTactics={latestMissedTactics}
+                                onAnalysisComplete={handleAnalysisComplete}
+                                apiKey={apiKey}
+                                personality={selectedPersonality}
+                                language={language}
+                                playerColor={playerColor}
+                                onCheckComputerMove={checkAndMakeComputerMove}
+                                resignationContext={resignationContext}
+                                openingContext={openingContext}
+                                onJumpToBoard={() => setIsMobileChatOpen(false)}
+                                onChatFocus={() => setIsKeyboardVisible(true)}
+                                onChatBlur={() => setIsKeyboardVisible(false)}
+                                onLatestMessage={setLatestCoachMessage}
+                                isResumed={moveHistory.length > 0}
+                                isMobileChatOpen={isMobileChatOpen}
                             />
                         </div>
-                    )}
+                    </div>
+                }
+            />
 
-                    {isMobileChatOpen && !isKeyboardVisible && (
-                        <div className="absolute bottom-1 left-0 right-0 text-center text-[7px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em]">
-                            Live Game
+            {/* Floating Action Button for Mobile Chat */}
+            <button
+                onClick={() => {
+                    if (isMobileChatOpen) setIsMobileBoardExpanded(false);
+                    setIsMobileChatOpen(!isMobileChatOpen);
+                }}
+                aria-label={isMobileChatOpen ? "Close Chat" : "Open Chat"}
+                className={clsx(
+                    "fixed right-4 z-[110] md:hidden transition-all duration-500 shadow-2xl",
+                    "flex items-center gap-2 px-3 py-2.5 rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800",
+                    isMobileChatOpen ? "bottom-40 scale-90 opacity-90" : "bottom-24 scale-100 opacity-100"
+                )}
+            >
+                {isMobileChatOpen ? (
+                    <>
+                        <X size={18} className="text-red-500 dark:text-red-400" />
+                        <span className="text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-tight">Close</span>
+                    </>
+                ) : (
+                    <>
+                        <div className="text-xl leading-none">{selectedPersonality.image}</div>
+                        <span className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-tight">Coach Chat</span>
+                        <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse" />
+                    </>
+                )}
+            </button>
+
+            {/* History Bar - Hidden when chat is open on mobile */}
+            {!isMobileChatOpen && (
+                <div className="max-w-6xl mx-auto px-2 md:p-4 mt-2">
+                    <div className="bg-white dark:bg-gray-800 p-1.5 md:p-2 px-3 md:px-4 rounded-lg shadow-lg flex flex-col transition-all duration-300">
+                        <div className="flex items-center justify-between">
+                            <button
+                                onClick={() => setIsHistoryExpanded(!isHistoryExpanded)}
+                                className="flex items-center gap-1 hover:bg-gray-100 dark:hover:bg-gray-700/50 p-0.5 px-1 rounded-md transition-colors"
+                            >
+                                {isHistoryExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                                <h3 className="text-xs font-medium text-gray-700 dark:text-gray-300">{t.game.gameHistory}</h3>
+                            </button>
                         </div>
-                    )}
-                </div>
-
-                {/* 3. Tutor (Right Part of Mobile Horizontal Split) */}
-                <div 
-                    data-testid="tutor-container"
-                    className={clsx(
-                        "md:col-span-1 md:h-auto z-40 overflow-hidden flex flex-col",
-                        isMobileChatOpen ? "flex-1 h-full" : "translate-y-full md:translate-y-0 fixed inset-x-0 bottom-0 md:relative md:inset-auto transition-all duration-300",
-                    )}
-                >
-                    <Tutor
-                        game={game}
-                        currentFen={fen}
-                        userMove={userMove}
-                        computerMove={computerMove}
-                        stockfish={stockfish}
-                        evalP0={evalP0}
-                        evalP2={evalP2}
-                        openingData={openingData}
-                        missedTactics={latestMissedTactics}
-                        onAnalysisComplete={handleAnalysisComplete}
-                        apiKey={apiKey}
-                        personality={selectedPersonality}
-                        language={language}
-                        playerColor={playerColor}
-                        onCheckComputerMove={checkAndMakeComputerMove}
-                        resignationContext={resignationContext}
-                        openingContext={openingContext}
-                        onJumpToBoard={() => setIsMobileChatOpen(false)}
-                        onChatFocus={() => setIsKeyboardVisible(true)}
-                        onChatBlur={() => setIsKeyboardVisible(false)}
-                    />
-                </div>
-
-                {/* Unified Mobile Floating Action Button */}
-                <button
-                    onClick={() => {
-                        if (isMobileChatOpen) setIsMobileBoardExpanded(false);
-                        setIsMobileChatOpen(!isMobileChatOpen);
-                    }}
-                    aria-label={isMobileChatOpen ? "Close Chat" : "Open Chat"}
-                    className={clsx(
-                        "fixed right-4 z-[110] md:hidden transition-all duration-500 shadow-2xl",
-                        "flex items-center gap-2 px-3 py-2.5 rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800",
-                        isMobileChatOpen ? "bottom-40 scale-90 opacity-90" : "bottom-24 scale-100 opacity-100"
-                    )}
-                >
-                    {isMobileChatOpen ? (
-                        <>
-                            <X size={18} className="text-red-500 dark:text-red-400" />
-                            <span className="text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-tight">Close</span>
-                        </>
-                    ) : (
-                        <>
-                            <div className="text-xl leading-none">{selectedPersonality.image}</div>
-                            <span className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-tight">Coach Chat</span>
-                            <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse" />
-                        </>
-                    )}
-                </button>
-
-                {/* 4. History (Col 1-3) - Full width at bottom */}
-                <div className={clsx(
-                    "md:col-span-3 bg-white dark:bg-gray-800 p-1.5 md:p-2 px-3 md:px-4 rounded-lg shadow-lg flex flex-col transition-all duration-300",
-                    isMobileChatOpen && "hidden md:flex"
-                )}>
-                    <div className="flex items-center justify-between">
-                        <button
-                            onClick={() => setIsHistoryExpanded(!isHistoryExpanded)}
-                            className="flex items-center gap-1 hover:bg-gray-100 dark:hover:bg-gray-700/50 p-0.5 px-1 rounded-md transition-colors"
-                        >
-                            {isHistoryExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                            <h3 className="text-xs font-medium text-gray-700 dark:text-gray-300">{t.game.gameHistory}</h3>
-                        </button>
                     </div>
                 </div>
-            </div>
+            )}
 
             {showAnalysisModal && (
                 <GameAnalysisModal fen={fen} stockfish={stockfish} apiKey={apiKey} language={language} onClose={() => setShowAnalysisModal(false)} />
