@@ -20,6 +20,7 @@ import { GameImportModal } from "@/components/GameImportModal";
 import { EvaluationBar } from "@/components/EvaluationBar";
 import { OpeningsModal } from "@/components/OpeningsModal";
 import { TopUtilityLinks } from "@/components/TopUtilityLinks";
+import { CapturedPieces } from "@/components/CapturedPieces";
 import { BoardViewLayout } from "@/components/BoardViewLayout";
 import { generateHumanReadableBoard, getCapturedState } from "@/lib/gameState";
 import clsx from "clsx";
