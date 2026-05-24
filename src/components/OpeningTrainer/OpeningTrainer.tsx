@@ -367,7 +367,10 @@ export default function OpeningTrainer({
             data-testid="board-area"
             className={clsx(
                 "bg-white dark:bg-gray-800 p-1 lg:p-4 rounded-lg shadow-lg flex flex-col items-center relative overflow-hidden transition-all duration-500",
-                isMobileChatOpen ? "w-[35%] h-full rounded-none border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 justify-center gap-4 py-4 px-1" : "lg:col-span-2 space-y-4"
+                isMobileChatOpen 
+                    ? (isMobileBoardExpanded ? "w-[55%]" : "w-[35%]")
+                    : "lg:col-span-2 space-y-4",
+                isMobileChatOpen && "h-full rounded-none border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 justify-center gap-4 py-4 px-1"
             )}
             onClick={() => isMobileChatOpen && setIsMobileBoardExpanded(!isMobileBoardExpanded)}
         >

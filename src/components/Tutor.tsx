@@ -881,27 +881,14 @@ IMPORTANT CONTEXT:
                     }
                 }
 
-                // Get FEN before user's move (need to undo both moves)
-                // We need to use the game object which has the full move history
-                const history = game.history({ verbose: true });
+            // Extract FENs directly from the move objects for robust grounding
+            const fenBeforeUserMove = userMove.before;
+            const fenAfterUserMove = userMove.after;
+            const fenAfterTutorReply = computerMove.after;
 
-                // Current position is after both user and computer moves
-                // To get FEN after user move, we need to undo the computer move
-                const tempGame1 = new Chess();
-                tempGame1.loadPgn(game.pgn());
-                tempGame1.undo(); // Undo computer move
-                const fenAfterUserMove = tempGame1.fen();
+            const currentPieceList = generateHumanReadableBoard(currentFen);
 
-                // To get FEN before user move, we need to undo both moves
-                const tempGame2 = new Chess();
-                tempGame2.loadPgn(game.pgn());
-                tempGame2.undo(); // Undo computer move
-                tempGame2.undo(); // Undo user move
-                const fenBeforeUserMove = tempGame2.fen();
-                
-                const currentPieceList = generateHumanReadableBoard(currentFen);
-
-                const prompt = `
+            const prompt = `
 [SYSTEM TRIGGER: move_exchange]
 User (${playerColorName}) Move: ${userMove.san}
 My (${tutorColorName}) Reply: ${computerMove.san}
@@ -909,7 +896,7 @@ My (${tutorColorName}) Reply: ${computerMove.san}
 Position Context:
 - FEN before user's move: ${fenBeforeUserMove}
 - FEN after user's move: ${fenAfterUserMove}
-- FEN after my reply (current position): ${currentFen}
+- FEN after my reply (current position): ${fenAfterTutorReply}
 - CURRENT PIECE POSITIONS: ${currentPieceList}
 
 My Internal Thoughts (Data):
