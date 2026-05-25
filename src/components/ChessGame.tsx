@@ -13,7 +13,7 @@ import { SupportedLanguage } from "@/lib/i18n/translations";
 import { lookupOpening, lookupPossibleOpenings, extractMoveSequenceFromPGN, OpeningMetadata } from "@/lib/openings";
 import { GameAnalysisModal } from "./GameAnalysisModal";
 import { GameOverModal, MoveHistoryItem } from "./GameOverModal";
-import { Brain, ArrowLeft, Download, Flag, AlertTriangle, X, ChevronRight, ChevronDown, MessageCircle, Loader2 } from "lucide-react";
+import { Brain, ArrowLeft, Download, Flag, AlertTriangle, X, ChevronRight, ChevronDown, MessageCircle, Loader2, RefreshCw } from "lucide-react";
 import { CapturedPieces } from "./CapturedPieces";
 import { detectMissedTactics, uciToSan, DetectedTactic } from "@/lib/tacticDetection";
 import { upsertSavedGame } from "@/lib/savedGames";
@@ -21,6 +21,7 @@ import { getCapturedState } from "@/lib/gameState";
 import { useChessSounds } from "@/lib/hooks/useChessSounds";
 import { TopUtilityLinks } from "./TopUtilityLinks";
 import { BoardViewLayout } from "./BoardViewLayout";
+import { MOVE_HIGHLIGHT_STYLE } from "@/lib/chessStyles";
 import ReactMarkdown from "react-markdown";
 
 interface ChessGameProps {
@@ -118,14 +119,15 @@ export default function ChessGame({
     }, [isMobileChatOpen]);
 
     const lastMoveHighlight = useMemo(() => {
+        // We use fen in dependencies to trigger re-calculation when board changes
         const history = game.history({ verbose: true });
         if (history.length === 0) return {};
         const lastMove = history[history.length - 1];
         return {
-            [lastMove.from]: { boxShadow: 'inset 0 0 0 4px rgba(255, 255, 0, 0.75)' },
-            [lastMove.to]: { boxShadow: 'inset 0 0 0 4px rgba(255, 255, 0, 0.75)' }
+            [lastMove.from]: MOVE_HIGHLIGHT_STYLE,
+            [lastMove.to]: MOVE_HIGHLIGHT_STYLE
         };
-    }, [game, fen]);
+    }, [fen, game]);
 
     // Settings
     const [language, setLanguage] = useState<SupportedLanguage>('en');
@@ -176,10 +178,24 @@ export default function ChessGame({
         [game, playMoveSound]
     );
 
+    const [isEngineError, setIsEngineError] = useState(false);
+
     // Initialize Stockfish
     useEffect(() => {
-        const sf = new Stockfish(() => setIsEngineReady(true));
+        let timeoutId: NodeJS.Timeout;
+        const sf = new Stockfish(() => {
+            setIsEngineReady(true);
+            setIsEngineError(false);
+            if (timeoutId) clearTimeout(timeoutId);
+        });
         setStockfish(sf);
+
+        // Fail if engine takes too long
+        timeoutId = setTimeout(() => {
+            if (!isEngineReady) {
+                setIsEngineError(true);
+            }
+        }, 10000);
 
         const storedKey = localStorage.getItem("gemini_api_key");
         const storedLang = localStorage.getItem("chess_tutor_language");
@@ -187,8 +203,18 @@ export default function ChessGame({
         if (storedLang) setLanguage(storedLang as SupportedLanguage);
 
         return () => {
+            if (timeoutId) clearTimeout(timeoutId);
             sf.terminate();
         };
+    }, [gameId]); // Re-init if gameId changes (e.g. New Game)
+
+    const handleRetryEngine = useCallback(() => {
+        setIsEngineError(false);
+        const sf = new Stockfish(() => {
+            setIsEngineReady(true);
+            setIsEngineError(false);
+        });
+        setStockfish(sf);
     }, []);
 
     // Load initial PGN if provided (for resuming games)
@@ -281,65 +307,70 @@ export default function ChessGame({
         if (!stockfish || game.isGameOver() || isAnalyzing || game.turn() === (playerColor === 'white' ? 'w' : 'b')) return;
 
         setIsAnalyzing(true);
-        const currentFen = game.fen();
-        
-        const p0 = await stockfish.evaluate(currentFen, stockfishDepth);
-        setEvalP0(p0);
-
-        const tactics = await detectMissedTactics({
-            fen: currentFen,
-            playerColor: playerColor,
-            playerMoveSan: lastPlayerMove?.san || userMove?.san || '',
-            bestMoveUci: p0.bestMove,
-        });
-        setLatestMissedTactics(tactics);
-
-        const bestMove = p0.bestMove;
-        const result = makeAMove({
-            from: bestMove.slice(0, 2),
-            to: bestMove.slice(2, 4),
-            promotion: bestMove.length === 5 ? bestMove[4] : undefined
-        });
-
-        if (result) {
-            setComputerMove(result.result);
+        try {
+            const currentFen = game.fen();
             
-            const moveSequence = game.history().join(' ');
-            const possible = lookupPossibleOpenings(moveSequence, 5);
-            setOpeningData(possible);
+            const p0 = await stockfish.evaluate(currentFen, stockfishDepth);
+            setEvalP0(p0);
 
-            const p2 = await stockfish.evaluate(result.newFen, stockfishDepth);
-            setEvalP2(p2);
-            
-            setMoveHistory(prev => {
-                const newHistory = [...prev];
-                if (newHistory.length > 0 && newHistory[newHistory.length - 1].computerMove === '...') {
-                    newHistory[newHistory.length - 1].computerMove = result.result.san;
-                } else {
-                    // Handle the case where the computer moves first (e.g. human is Black)
-                    newHistory.push({
-                        playerMove: '',
-                        computerMove: result.result.san,
-                        playerColor: playerColor,
-                        moveNumber: 1
-                    });
-                }
-                return newHistory;
+            const tactics = await detectMissedTactics({
+                fen: currentFen,
+                playerColor: playerColor,
+                playerMoveSan: lastPlayerMove?.san || userMove?.san || '',
+                bestMoveUci: p0.bestMove,
+            });
+            setLatestMissedTactics(tactics);
+
+            const bestMove = p0.bestMove;
+            const result = makeAMove({
+                from: bestMove.slice(0, 2),
+                to: bestMove.slice(2, 4),
+                promotion: bestMove.length === 5 ? bestMove[4] : undefined
             });
 
-            upsertSavedGame({
-                id: gameId,
-                fen: result.newFen,
-                pgn: game.pgn(),
-                playerColor,
-                selectedPersonality,
-                updatedAt: Date.now(),
-                evaluation: p2,
-                language
-            });
-        }
+            if (result) {
+                setComputerMove(result.result);
+                
+                const moveSequence = game.history().join(' ');
+                const possible = lookupPossibleOpenings(moveSequence, 5);
+                setOpeningData(possible);
+
+                const p2 = await stockfish.evaluate(result.newFen, stockfishDepth);
+                setEvalP2(p2);
+                
+                setMoveHistory(prev => {
+                    const newHistory = [...prev];
+                    const lastItem = newHistory[newHistory.length - 1];
+
+                    if (lastItem && lastItem.computerMove === '...') {
+                        // Normal case: Human (White) moved, now completing with Computer (Black)
+                        lastItem.computerMove = result.result.san;
+                    } else if (playerColor === 'black') {
+                        // Special case for human as Black: Computer (White) moves first in the pair
+                        newHistory.push({
+                            playerMove: '',
+                            computerMove: result.result.san,
+                            playerColor: playerColor,
+                            moveNumber: Math.ceil(game.history().length / 2)
+                        });
+                    }
+                    return newHistory;
+                });
+
+                upsertSavedGame({
+                    id: gameId,
+                    fen: result.newFen,
+                    pgn: game.pgn(),
+                    playerColor,
+                    selectedPersonality,
+                    updatedAt: Date.now(),
+                    evaluation: p2,
+                    language
+                });
+            }
+        } catch (e) {}
         setIsAnalyzing(false);
-    }, [game, gameId, makeAMove, playerColor, stockfish, stockfishDepth, selectedPersonality, language, userMove]);
+    }, [game, gameId, makeAMove, playerColor, stockfish, stockfishDepth, selectedPersonality, language, userMove, isAnalyzing]);
 
     // Save Game State on Change
     useEffect(() => {
@@ -356,26 +387,31 @@ export default function ChessGame({
         upsertSavedGame(saveData);
     }, [gameId, fen, playerColor, selectedPersonality, evalP2, language, game]);
 
+    const hasInitializedEvalRef = useRef(false);
+
     // Trigger analysis on mount or reset
     useEffect(() => {
-        if (stockfish && isEngineReady && !gameOverState && !isAnalyzing && moveHistory.length === 0) {
-            const runInitialEval = async () => {
-                setIsAnalyzing(true);
-                try {
-                    const p0 = await stockfish.evaluate(fen, stockfishDepth);
-                    setEvalP0(p0);
-
-                    // If it's not the player's turn at the very beginning (e.g. human is Black),
-                    // trigger the computer move.
-                    if (game.turn() !== (playerColor === 'white' ? 'w' : 'b')) {
-                        checkAndMakeComputerMove();
-                    }
-                } catch (e) {}
-                setIsAnalyzing(false);
-            };
-            runInitialEval();
+        if (stockfish && isEngineReady && !gameOverState && !isAnalyzing) {
+            const isComputerTurn = game.turn() !== (playerColor === 'white' ? 'w' : 'b');
+            
+            // If it's the computer's turn, trigger the actual move directly.
+            if (isComputerTurn) {
+                checkAndMakeComputerMove();
+            } else if (moveHistory.length === 0 && !hasInitializedEvalRef.current) {
+                // Only run initial evaluation if it's the player's turn and no moves have been made yet.
+                hasInitializedEvalRef.current = true;
+                const runInitialEval = async () => {
+                    setIsAnalyzing(true);
+                    try {
+                        const p0 = await stockfish.evaluate(fen, stockfishDepth);
+                        setEvalP0(p0);
+                    } catch (e) {}
+                    setIsAnalyzing(false);
+                };
+                runInitialEval();
+            }
         }
-    }, [stockfish, isEngineReady, gameOverState, stockfishDepth, fen, playerColor, game, checkAndMakeComputerMove]);
+    }, [stockfish, isEngineReady, gameOverState, stockfishDepth, fen, playerColor, game, moveHistory.length]);
 
     async function onDrop({ sourceSquare, targetSquare }: { sourceSquare: string; targetSquare: string }) {
         if (game.isGameOver() || game.turn() !== (playerColor === 'white' ? 'w' : 'b')) return false;
@@ -389,12 +425,25 @@ export default function ChessGame({
         const result = makeAMove(moveData);
         if (result) {
             setUserMove(result.result);
-            setMoveHistory(prev => [...prev, { 
-                playerMove: result.result.san, 
-                computerMove: '...',
-                playerColor: playerColor,
-                moveNumber: Math.ceil((game.history().length + 1) / 2)
-            }]);
+            setMoveHistory(prev => {
+                const newHistory = [...prev];
+                const lastItem = newHistory[newHistory.length - 1];
+                
+                // If human is Black and the last item has a computer move but no player move,
+                // it means we are completing the turn pair.
+                if (playerColor === 'black' && lastItem && lastItem.playerMove === '') {
+                    lastItem.playerMove = result.result.san;
+                } else {
+                    newHistory.push({ 
+                        playerMove: result.result.san, 
+                        computerMove: '...',
+                        playerColor: playerColor,
+                        moveNumber: Math.ceil((game.history().length + 1) / 2)
+                    });
+                }
+                return newHistory;
+            });
+            
             checkAndMakeComputerMove(result.result);
             return true;
         }
@@ -561,14 +610,35 @@ export default function ChessGame({
                                 {!isEngineReady && (
                                     <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/40 backdrop-blur-[1.5px] rounded-sm animate-in fade-in duration-500">
                                         <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-2xl flex flex-col items-center gap-4 border border-gray-100 dark:border-gray-700 transform animate-in zoom-in slide-in-from-bottom-4 duration-500">
-                                            <div className="relative">
-                                                <div className="absolute inset-0 bg-blue-400/20 blur-xl rounded-full animate-pulse" />
-                                                <Loader2 className="w-10 h-10 text-blue-600 dark:text-blue-400 animate-spin relative z-10" />
-                                            </div>
-                                            <div className="flex flex-col items-center text-center">
-                                                <span className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-wider">Engine Booting</span>
-                                                <span className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest opacity-80">Stockfish is warming up...</span>
-                                            </div>
+                                            {isEngineError ? (
+                                                <>
+                                                    <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-full">
+                                                        <AlertTriangle className="w-8 h-8 text-red-600 dark:text-red-400" />
+                                                    </div>
+                                                    <div className="flex flex-col items-center text-center">
+                                                        <span className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-wider">Engine Error</span>
+                                                        <span className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest opacity-80">Initialisation timed out</span>
+                                                    </div>
+                                                    <button 
+                                                        onClick={handleRetryEngine}
+                                                        className="mt-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2"
+                                                    >
+                                                        <RefreshCw className="w-3 h-3" />
+                                                        Retry Engine
+                                                    </button>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <div className="relative">
+                                                        <div className="absolute inset-0 bg-blue-400/20 blur-xl rounded-full animate-pulse" />
+                                                        <Loader2 className="w-10 h-10 text-blue-600 dark:text-blue-400 animate-spin relative z-10" />
+                                                    </div>
+                                                    <div className="flex flex-col items-center text-center">
+                                                        <span className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-wider">Engine Booting</span>
+                                                        <span className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest opacity-80">Stockfish is warming up...</span>
+                                                    </div>
+                                                </>
+                                            )}
                                         </div>
                                     </div>
                                 )}
@@ -641,14 +711,13 @@ export default function ChessGame({
                                 playerColor={playerColor}
                                 onCheckComputerMove={checkAndMakeComputerMove}
                                 resignationContext={resignationContext}
-                                openingContext={openingContext}
+                                isMobileChatOpen={isMobileChatOpen}
                                 onJumpToBoard={() => setIsMobileChatOpen(false)}
                                 onChatFocus={() => setIsKeyboardVisible(true)}
                                 onChatBlur={() => setIsKeyboardVisible(false)}
                                 onLatestMessage={setLatestCoachMessage}
                                 isResumed={moveHistory.length > 0}
-                                isMobileChatOpen={isMobileChatOpen}
-                            />
+                                />
                         </div>
                     </div>
                 }

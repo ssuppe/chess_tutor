@@ -43,6 +43,7 @@ interface TutorProps {
     onChatBlur?: () => void;
     onLatestMessage?: (message: string) => void;
     isReviewing?: boolean;
+    isMobileChatOpen?: boolean;
     resignationContext?: {
         trigger: number;
         fen: string;
@@ -105,7 +106,7 @@ interface Message {
     timestamp: number;
 }
 
-export function Tutor({ game, currentFen, userMove, computerMove, stockfish, evalP0, evalP2, openingData, missedTactics, onAnalysisComplete, apiKey, personality, language, playerColor, onCheckComputerMove, isReviewing, resignationContext, openingContext, tacticalPracticeMode, openingPracticeMode, onJumpToBoard, onChatFocus, onChatBlur, onLatestMessage }: TutorProps) {
+export function Tutor({ game, currentFen, userMove, computerMove, stockfish, evalP0, evalP2, openingData, missedTactics, onAnalysisComplete, apiKey, personality, language, playerColor, onCheckComputerMove, isReviewing, isMobileChatOpen, resignationContext, openingContext, tacticalPracticeMode, openingPracticeMode, onJumpToBoard, onChatFocus, onChatBlur, onLatestMessage }: TutorProps) {
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState("");
     const [isFocused, setIsFocused] = useState(false);
@@ -563,12 +564,16 @@ ${isInTheory
         isReviewing
     ]);
 
-    // Scroll chat container to bottom (not the whole page)
+    // Scroll chat container to bottom (or top if reversed in mobile)
     useEffect(() => {
         if (messagesContainerRef.current) {
-            messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+            if (isMobileChatOpen) {
+                messagesContainerRef.current.scrollTop = 0;
+            } else {
+                messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+            }
         }
-    }, [messages]);
+    }, [messages, isMobileChatOpen]);
 
     const lastAnalyzedMoveRef = useRef<string | null>(null);
 
@@ -1083,8 +1088,16 @@ INSTRUCTIONS:
 
             {/* Messages Area */}
             <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-2 pb-24 md:p-4 space-y-3">
-                {messages.map((msg, idx) => (
-                    <div key={idx} className={clsx("flex gap-2 max-w-[92%]", msg.role === "user" ? "ml-auto flex-row-reverse" : "")}>
+                {isMobileChatOpen && <div ref={messagesEndRef} />}
+                {isMobileChatOpen && isLoading && (
+                    <div className="flex gap-2">
+                        <div className="bg-gray-100 dark:bg-gray-700 p-2 px-3 rounded-lg rounded-tl-none flex items-center">
+                            <Loader2 className="animate-spin text-gray-500" size={14} />
+                        </div>
+                    </div>
+                )}
+                {(isMobileChatOpen ? [...messages].reverse() : messages).map((msg, idx) => (
+                    <div key={`${msg.role}-${msg.timestamp}-${idx}`} className={clsx("flex gap-2 max-w-[92%]", msg.role === "user" ? "ml-auto flex-row-reverse" : "")}>
                         {msg.role === "user" && (
                             <div className="w-3 h-3 rounded-full bg-blue-600 text-white flex items-center justify-center flex-shrink-0 text-[6px]">
                                 <UserIcon size={8} />
@@ -1101,14 +1114,14 @@ INSTRUCTIONS:
                         </div>
                     </div>
                 ))}
-                {isLoading && (
+                {!isMobileChatOpen && isLoading && (
                     <div className="flex gap-2">
                         <div className="bg-gray-100 dark:bg-gray-700 p-2 px-3 rounded-lg rounded-tl-none flex items-center">
                             <Loader2 className="animate-spin text-gray-500" size={14} />
                         </div>
                     </div>
                 )}
-                <div ref={messagesEndRef} />
+                {!isMobileChatOpen && <div ref={messagesEndRef} />}
             </div>
 
             {/* Quick Actions - Hidden when typing */}

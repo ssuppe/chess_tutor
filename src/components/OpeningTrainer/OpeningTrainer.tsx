@@ -448,8 +448,8 @@ export default function OpeningTrainer({
                         onChatFocus={() => setIsKeyboardVisible(true)}
                         onChatBlur={() => setIsKeyboardVisible(false)}
                         onLatestMessage={setLatestCoachMessage}
-                    />
-                ) : (
+                        isMobileChatOpen={isMobileChatOpen}
+                        />                ) : (
                     <div className="bg-white dark:bg-gray-800 rounded-lg p-6 text-center border border-gray-200 dark:border-gray-700">
                         <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Coach Chat</h3>
                         <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 text-xs">Set up your API key to interact with your coach.</p>

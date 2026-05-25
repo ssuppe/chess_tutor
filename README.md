@@ -10,8 +10,8 @@ This repository is a community fork of the excellent [AI Chess Tutor](https://gi
 - **UI Optimization**: High-density mobile-first layout with **Adaptive Board Resizing** (35% to 55% toggle). Built on a standardized **BoardViewLayout** engine for 100% visual consistency and reclaimed screen real-estate.
 - **Game Management**: Enhanced start screen with persistent game history, analysis shortcuts, and secure **Game Deletion with confirmation**.
 - **Architectural Unification**: Complete standardization of core logic (Move History, Captured Pieces, Engine Analysis) across all functional modes, reducing code duplication and improving state reliability.
-- **Hardened Engine Integration**: Robust Stockfish worker management with race condition protection and comprehensive error handling for low-end devices.
-- **Test Suite**: Extensive unit and integration testing (Jest) covering 85%+ of core components and 100% of game state logic.
+- **Hardened Engine Integration**: Robust Stockfish worker management with **10s initialization timeout**, interactive **Retry logic**, race condition protection, and comprehensive error handling for low-end devices.
+- **Test Suite**: Extensive unit and integration testing (Jest) covering 85%+ of core components and 100% of game state logic. Includes dedicated suites for **Engine Resilience**, **Race Condition Safety**, and **Move History Alignment**.
 - **Expanded Support**: Full Polish language translation and comprehensive UI string refinements for a cleaner look.
 
 > **Branch Structure Note**: All enhancements are consolidated on the `enhanced` branch. The `main` branch is kept identical to the [original upstream repository](https://github.com/stefan-kp/chess_tutor) to ensure clean synchronization and atomic Pull Requests.
