@@ -73,14 +73,7 @@ __pycache__/
 /ios/
 /android/
 
-# Gemini CLI
-.gemini/
-.geminiignore
-
 # Local Deployment
 /justfile
 /deploy-artifacts/
 .env.production
-
-# Gemini Personal Commands
-.gemini/commands
