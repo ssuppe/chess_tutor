@@ -44,6 +44,7 @@ interface TutorProps {
     onLatestMessage?: (message: string) => void;
     isReviewing?: boolean;
     isMobileChatOpen?: boolean;
+    reverseChronological?: boolean;
     resignationContext?: {
         trigger: number;
         fen: string;
@@ -106,7 +107,8 @@ interface Message {
     timestamp: number;
 }
 
-export function Tutor({ game, currentFen, userMove, computerMove, stockfish, evalP0, evalP2, openingData, missedTactics, onAnalysisComplete, apiKey, personality, language, playerColor, onCheckComputerMove, isReviewing, isMobileChatOpen, resignationContext, openingContext, tacticalPracticeMode, openingPracticeMode, onJumpToBoard, onChatFocus, onChatBlur, onLatestMessage }: TutorProps) {
+export function Tutor({ game, currentFen, userMove, computerMove, stockfish, evalP0, evalP2, openingData, missedTactics, onAnalysisComplete, apiKey, personality, language, playerColor, onCheckComputerMove, isReviewing, isMobileChatOpen, reverseChronological, resignationContext, openingContext, tacticalPracticeMode, openingPracticeMode, onJumpToBoard, onChatFocus, onChatBlur, onLatestMessage }: TutorProps) {
+    const shouldReverse = reverseChronological ?? true;
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState("");
     const [isFocused, setIsFocused] = useState(false);
@@ -567,13 +569,13 @@ ${isInTheory
     // Scroll chat container to bottom (or top if reversed in mobile)
     useEffect(() => {
         if (messagesContainerRef.current) {
-            if (isMobileChatOpen) {
+            if (shouldReverse) {
                 messagesContainerRef.current.scrollTop = 0;
             } else {
                 messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
             }
         }
-    }, [messages, isMobileChatOpen]);
+    }, [messages, shouldReverse]);
 
     const lastAnalyzedMoveRef = useRef<string | null>(null);
 
@@ -1071,7 +1073,7 @@ INSTRUCTIONS:
     if (!apiKey) return null;
 
     return (
-        <div className="bg-white dark:bg-gray-800 md:rounded-lg shadow-lg border-x-0 md:border border-gray-200 dark:border-gray-700 h-full md:h-[600px] flex flex-col relative overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 md:rounded-lg shadow-lg border-x-0 md:border border-gray-200 dark:border-gray-700 h-full flex flex-col relative overflow-hidden">
             {/* Mobile Drag Handle */}
             <div className="md:hidden flex justify-center pt-2 pb-1">
                 <div className="w-10 h-1 bg-gray-300 dark:bg-gray-600 rounded-full" />
@@ -1087,16 +1089,20 @@ INSTRUCTIONS:
             </div>
 
             {/* Messages Area */}
-            <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-2 pb-24 md:p-4 space-y-3">
-                {isMobileChatOpen && <div ref={messagesEndRef} />}
-                {isMobileChatOpen && isLoading && (
+            <div 
+                ref={messagesContainerRef} 
+                className="flex-1 overflow-y-auto p-2 pb-24 md:p-4 space-y-3 min-h-[300px] md:min-h-0"
+                style={{ scrollBehavior: 'smooth' }}
+            >
+                {shouldReverse && <div ref={messagesEndRef} />}
+                {shouldReverse && isLoading && (
                     <div className="flex gap-2">
                         <div className="bg-gray-100 dark:bg-gray-700 p-2 px-3 rounded-lg rounded-tl-none flex items-center">
                             <Loader2 className="animate-spin text-gray-500" size={14} />
                         </div>
                     </div>
                 )}
-                {(isMobileChatOpen ? [...messages].reverse() : messages).map((msg, idx) => (
+                {(shouldReverse ? [...messages].reverse() : messages).map((msg, idx) => (
                     <div key={`${msg.role}-${msg.timestamp}-${idx}`} className={clsx("flex gap-2 max-w-[92%]", msg.role === "user" ? "ml-auto flex-row-reverse" : "")}>
                         {msg.role === "user" && (
                             <div className="w-3 h-3 rounded-full bg-blue-600 text-white flex items-center justify-center flex-shrink-0 text-[6px]">
@@ -1114,14 +1120,14 @@ INSTRUCTIONS:
                         </div>
                     </div>
                 ))}
-                {!isMobileChatOpen && isLoading && (
+                {!shouldReverse && isLoading && (
                     <div className="flex gap-2">
                         <div className="bg-gray-100 dark:bg-gray-700 p-2 px-3 rounded-lg rounded-tl-none flex items-center">
                             <Loader2 className="animate-spin text-gray-500" size={14} />
                         </div>
                     </div>
                 )}
-                {!isMobileChatOpen && <div ref={messagesEndRef} />}
+                {!shouldReverse && <div ref={messagesEndRef} />}
             </div>
 
             {/* Quick Actions - Hidden when typing */}

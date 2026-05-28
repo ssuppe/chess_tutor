@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ArrowRight, CheckCircle2, KeyRound, Languages, Sparkles, Cpu } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, KeyRound, Languages, Sparkles, Cpu, Loader2, RefreshCw } from "lucide-react";
 import Header from "@/components/Header";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { TopUtilityLinks } from "@/components/TopUtilityLinks";
@@ -18,9 +18,23 @@ export default function OnboardingPage() {
     const [apiKey, setApiKey] = useState("");
     const [modelId, setModelId] = useState(DEFAULT_MODEL_ID);
     const [availableModels, setAvailableModels] = useState<string[]>([]);
+    const [isModelsLoading, setIsModelsLoading] = useState(false);
     const [mounted, setMounted] = useState(false);
     const [error, setError] = useState("");
     const [consentGiven, setConsentGiven] = useState(false);
+
+    const fetchModels = async () => {
+        setIsModelsLoading(true);
+        try {
+            const effectiveKey = apiKey && apiKey.length >= 20 ? apiKey : undefined;
+            const models = await getAvailableModels(effectiveKey);
+            setAvailableModels(models);
+        } catch (error) {
+            console.error("Failed to fetch models:", error);
+        } finally {
+            setIsModelsLoading(false);
+        }
+    };
 
     useEffect(() => {
         const storedKey = localStorage.getItem("gemini_api_key");
@@ -44,6 +58,13 @@ export default function OnboardingPage() {
 
         setMounted(true);
     }, [router]);
+
+    useEffect(() => {
+        if (!mounted) return;
+
+        const timer = setTimeout(fetchModels, 800);
+        return () => clearTimeout(timer);
+    }, [apiKey, mounted]);
 
     const t = useTranslation(language);
 
@@ -234,20 +255,38 @@ export default function OnboardingPage() {
                                             <Cpu size={12} className="text-blue-600" />
                                             {t.start.geminiModel}
                                         </label>
-                                        <select
-                                            value={modelId}
-                                            onChange={(e) => setModelId(e.target.value)}
-                                            className="w-full p-2 rounded-lg border dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none text-xs"
-                                        >
-                                            {availableModels.map((m) => (
-                                                <option key={m} value={m}>
-                                                    {m} {m === DEFAULT_MODEL_ID ? `(${t.common.loading === 'Loading...' ? 'Recommended' : 'Empfohlen'})` : ''}
-                                                </option>
-                                            ))}
-                                            {!availableModels.includes(modelId) && (
-                                                <option value={modelId}>{modelId}</option>
-                                            )}
-                                        </select>
+                                        <div className="flex gap-2">
+                                            <div className="relative flex-grow">
+                                                <select
+                                                    value={modelId}
+                                                    onChange={(e) => setModelId(e.target.value)}
+                                                    disabled={isModelsLoading}
+                                                    className="w-full p-2 rounded-lg border dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none text-xs disabled:opacity-50"
+                                                >
+                                                    {availableModels.map((m) => (
+                                                        <option key={m} value={m}>
+                                                            {m} {m === DEFAULT_MODEL_ID ? `(${t.common.loading === 'Loading...' ? 'Recommended' : 'Empfohlen'})` : ''}
+                                                        </option>
+                                                    ))}
+                                                    {!availableModels.includes(modelId) && (
+                                                        <option value={modelId}>{modelId}</option>
+                                                    )}
+                                                </select>
+                                                {isModelsLoading && (
+                                                    <div className="absolute right-7 top-1/2 -translate-y-1/2">
+                                                        <Loader2 size={14} className="animate-spin text-blue-600" />
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <button
+                                                onClick={(e) => { e.preventDefault(); fetchModels(); }}
+                                                disabled={isModelsLoading}
+                                                title="Refresh models"
+                                                className="p-1.5 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all disabled:opacity-50 border border-gray-200 dark:border-gray-600 shadow-sm"
+                                            >
+                                                <RefreshCw size={14} className={isModelsLoading ? "animate-spin" : ""} />
+                                            </button>
+                                        </div>
                                     </div>
 
                                     {/* Consent Checkbox */}

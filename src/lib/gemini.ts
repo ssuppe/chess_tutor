@@ -2,13 +2,49 @@ import { GoogleGenerativeAI, SchemaType, FunctionDeclaration } from "@google/gen
 
 export const DEFAULT_MODEL_ID = process.env.NEXT_PUBLIC_GEMINI_MODEL_ID || "gemini-3.1-flash-lite-preview";
 
-export async function getAvailableModels(): Promise<string[]> {
-    return [
+export async function getAvailableModels(apiKey?: string): Promise<string[]> {
+    const fallbackModels = [
         "gemini-3.1-flash-lite-preview",
         "gemini-2.0-flash-exp",
         "gemini-1.5-flash",
-        "gemini-1.5-pro"
+        "gemini-1.5-pro",
+        "gemini-1.0-pro"
     ];
+
+    // Try to get API key from various sources
+    const key = apiKey || 
+                (typeof window !== "undefined" ? localStorage.getItem("gemini_api_key") : null) || 
+                process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+    
+    if (!key || key === "your-api-key-here") {
+        return fallbackModels;
+    }
+
+    try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${key}`;
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+            throw new Error(`Failed to fetch models: ${response.status} ${response.statusText}`);
+        }
+
+        const result = await response.json();
+        
+        // Filter models that support content generation
+        const models = (result.models || [])
+            .filter((m: any) => m.supportedGenerationMethods && m.supportedGenerationMethods.includes("generateContent"))
+            .map((m: any) => m.name.replace("models/", ""))
+            // Filter out experimental or tuning models to keep the list clean
+            .filter((name: string) => !name.includes("tunedModels/") && !name.startsWith("aqa"));
+        
+        if (models && models.length > 0) {
+            return models.sort();
+        }
+    } catch (error) {
+        console.error("Error fetching models from Gemini API:", error);
+    }
+
+    return fallbackModels;
 }
 
 /**

@@ -102,7 +102,9 @@ export const BoardViewLayout: React.FC<BoardViewLayoutProps> = ({
                 data-testid="tutor-container"
                 className={clsx(
                 "md:col-span-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden flex flex-col transition-all duration-300",
-                isMobileChatOpen ? "flex-1 h-full rounded-none" : "min-h-[400px] md:h-[560px]"
+                isMobileChatOpen 
+                    ? "flex-1 h-full rounded-none" 
+                    : "hidden md:flex md:h-[560px]"
             )}>
                 {sidePanel}
             </div>

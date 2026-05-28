@@ -413,7 +413,7 @@ export default function ChessGame({
         }
     }, [stockfish, isEngineReady, gameOverState, stockfishDepth, fen, playerColor, game, moveHistory.length]);
 
-    async function onDrop({ sourceSquare, targetSquare }: { sourceSquare: string; targetSquare: string }) {
+    function onDrop({ sourceSquare, targetSquare }: { sourceSquare: string; targetSquare: string }) {
         if (game.isGameOver() || game.turn() !== (playerColor === 'white' ? 'w' : 'b')) return false;
 
         const moveData = {
@@ -642,8 +642,42 @@ export default function ChessGame({
                                         </div>
                                     </div>
                                 )}
-                                <Chessboard options={{ position: fen, onPieceDrop: ({ sourceSquare, targetSquare }) => onDrop({ sourceSquare, targetSquare }), darkSquareStyle: { backgroundColor: '#779954' }, lightSquareStyle: { backgroundColor: '#e9edcc' }, animationDurationInMs: 200, boardOrientation: playerColor, allowDragging: !isMobileChatOpen && isEngineReady, squareStyles: lastMoveHighlight }} />
+                                <Chessboard options={{ position: fen, onPieceDrop: ({ sourceSquare, targetSquare }) => {
+                                    if (!targetSquare) return false;
+                                    return onDrop({ sourceSquare, targetSquare });
+                                }, darkSquareStyle: { backgroundColor: '#779954' }, lightSquareStyle: { backgroundColor: '#e9edcc' }, animationDurationInMs: 200, boardOrientation: playerColor, allowDragging: !isMobileChatOpen && isEngineReady, squareStyles: lastMoveHighlight }} />
                             </div>
+
+                            {/* Coach Advice HUD (Last Message Only) */}
+                            {!isMobileChatOpen && latestCoachMessage && (
+                                <div className="w-full animate-in slide-in-from-bottom-2 duration-500 mt-2">
+                                    <div className="bg-white dark:bg-gray-800 border-l-4 border-blue-600 rounded-lg shadow-md p-3 relative overflow-hidden group">
+                                        <div className="flex items-start gap-3">
+                                            <div className="text-xl flex-shrink-0 mt-0.5" title={selectedPersonality.name}>
+                                                {selectedPersonality.image}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center justify-between mb-1">
+                                                    <span className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest flex items-center gap-1.5">
+                                                        <MessageCircle size={10} />
+                                                        Coach Advice
+                                                    </span>
+                                                </div>
+                                                <div className="text-sm text-gray-800 dark:text-gray-100 prose prose-sm dark:prose-invert max-w-none transition-all duration-300">
+                                                    <ReactMarkdown>{latestCoachMessage}</ReactMarkdown>
+                                                </div>
+                                            </div>
+                                            <button 
+                                                onClick={() => setIsMobileChatOpen(true)}
+                                                className="md:hidden flex-shrink-0 p-1.5 text-gray-400 hover:text-blue-600 transition-colors"
+                                                title="Open full conversation"
+                                            >
+                                                <ChevronRight size={16} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
 
                             {!isMobileChatOpen && (
                                 <div className="h-6 w-full flex justify-start">
@@ -712,11 +746,11 @@ export default function ChessGame({
                                 onCheckComputerMove={checkAndMakeComputerMove}
                                 resignationContext={resignationContext}
                                 isMobileChatOpen={isMobileChatOpen}
+                                reverseChronological={true}
                                 onJumpToBoard={() => setIsMobileChatOpen(false)}
                                 onChatFocus={() => setIsKeyboardVisible(true)}
                                 onChatBlur={() => setIsKeyboardVisible(false)}
                                 onLatestMessage={setLatestCoachMessage}
-                                isResumed={moveHistory.length > 0}
                                 />
                         </div>
                     </div>

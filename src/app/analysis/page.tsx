@@ -7,6 +7,7 @@ import { Brain, ChevronLeft, ChevronRight, Loader2, ArrowLeft, Download, PlayCir
 import { useRouter } from "next/navigation";
 import { useDebug } from "@/contexts/DebugContext";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import { SupportedLanguage } from "@/lib/i18n/translations";
 import { Personality, PERSONALITIES } from "@/lib/personalities";
 import { Stockfish, StockfishEvaluation } from "@/lib/stockfish";
 import { detectChessFormat, ChessFormat } from "@/lib/chessFormatDetector";
@@ -47,7 +48,7 @@ const DEFAULT_START = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
 export default function AnalysisPage() {
     const router = useRouter();
-    const { isDebug, addEntry } = useDebug();
+    const { isDebugMode, addEntry } = useDebug();
 
     const [language, setLanguage] = useState<SupportedLanguage>("en");
     const t = useTranslation(language);
@@ -192,7 +193,12 @@ IMPORTANT:
 
     const possibleOpenings = useMemo(() => {
         if (currentIndex === 0) return [];
-        const moveSequence = buildMoveSequenceFromSteps(steps, currentIndex);
+        const mappedSteps = steps.map(s => ({
+            san: s.san,
+            color: s.color === 'w' ? 'white' as const : 'black' as const,
+            moveNumber: s.moveNumber
+        }));
+        const moveSequence = buildMoveSequenceFromSteps(mappedSteps, currentIndex);
         return lookupPossibleOpenings(moveSequence, 5);
     }, [currentIndex, steps]);
 

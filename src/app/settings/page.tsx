@@ -17,6 +17,7 @@ export default function SettingsPage() {
     const [apiKey, setApiKey] = useState(() => typeof window === "undefined" ? "" : localStorage.getItem("gemini_api_key") || "");
     const [modelId, setModelId] = useState(() => typeof window === "undefined" ? DEFAULT_MODEL_ID : localStorage.getItem("gemini_model_id") || DEFAULT_MODEL_ID);
     const [availableModels, setAvailableModels] = useState<string[]>([]);
+    const [isModelsLoading, setIsModelsLoading] = useState(false);
     const [language, setLanguage] = useState<SupportedLanguage>(() => {
         if (typeof window === "undefined") {
             return "en";
@@ -31,9 +32,24 @@ export default function SettingsPage() {
     const [isRebuilding, setIsRebuilding] = useState(false);
     const hasHydrated = useHasHydrated();
 
+    const fetchModels = async () => {
+        setIsModelsLoading(true);
+        try {
+            // If API key is short/invalid, use fallback (passing undefined/null will use local storage or env)
+            const effectiveKey = apiKey && apiKey.length >= 20 ? apiKey : undefined;
+            const models = await getAvailableModels(effectiveKey);
+            setAvailableModels(models);
+        } catch (error) {
+            console.error("Failed to fetch models:", error);
+        } finally {
+            setIsModelsLoading(false);
+        }
+    };
+
     useEffect(() => {
-        getAvailableModels().then(setAvailableModels);
-    }, []);
+        const timer = setTimeout(fetchModels, 800);
+        return () => clearTimeout(timer);
+    }, [apiKey]);
 
     const t = useTranslation(language);
 
@@ -255,20 +271,38 @@ export default function SettingsPage() {
                                     {t.start.geminiModel}
                                 </label>
                                 <div className="space-y-2">
-                                    <select
-                                        value={modelId}
-                                        onChange={(e) => setModelId(e.target.value)}
-                                        className="w-full p-2.5 border rounded-lg dark:bg-gray-700 dark:border-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none text-sm transition-all"
-                                    >
-                                        {availableModels.map((m) => (
-                                            <option key={m} value={m}>
-                                                {m} {m === DEFAULT_MODEL_ID ? `(${t.common.loading === 'Loading...' ? 'Recommended' : 'Empfohlen'})` : ''}
-                                            </option>
-                                        ))}
-                                        {!availableModels.includes(modelId) && (
-                                            <option value={modelId}>{modelId}</option>
-                                        )}
-                                    </select>
+                                    <div className="flex gap-2">
+                                        <div className="relative flex-grow">
+                                            <select
+                                                value={modelId}
+                                                onChange={(e) => setModelId(e.target.value)}
+                                                disabled={isModelsLoading}
+                                                className="w-full p-2.5 border rounded-lg dark:bg-gray-700 dark:border-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none text-sm transition-all disabled:opacity-50"
+                                            >
+                                                {availableModels.map((m) => (
+                                                    <option key={m} value={m}>
+                                                        {m} {m === DEFAULT_MODEL_ID ? `(${t.common.loading === 'Loading...' ? 'Recommended' : 'Empfohlen'})` : ''}
+                                                    </option>
+                                                ))}
+                                                {!availableModels.includes(modelId) && (
+                                                    <option value={modelId}>{modelId}</option>
+                                                )}
+                                            </select>
+                                            {isModelsLoading && (
+                                                <div className="absolute right-8 top-1/2 -translate-y-1/2">
+                                                    <Loader2 size={16} className="animate-spin text-blue-600" />
+                                                </div>
+                                            )}
+                                        </div>
+                                        <button
+                                            onClick={(e) => { e.preventDefault(); fetchModels(); }}
+                                            disabled={isModelsLoading}
+                                            title="Refresh models"
+                                            className="p-2.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-all disabled:opacity-50 border border-gray-200 dark:border-gray-600"
+                                        >
+                                            <RefreshCw size={18} className={isModelsLoading ? "animate-spin" : ""} />
+                                        </button>
+                                    </div>
                                     <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-tight">
                                         {t.start.geminiModelDescription}
                                     </p>

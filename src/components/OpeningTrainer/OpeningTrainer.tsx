@@ -28,6 +28,7 @@ import { ArrowLeft, ChevronLeft, ChevronRight, MessageCircle, X } from 'lucide-r
 import clsx from 'clsx';
 import { CapturedPieces } from '@/components/CapturedPieces';
 import { getCapturedState } from '@/lib/gameState';
+import ReactMarkdown from 'react-markdown';
 import { EvaluationBar } from '@/components/EvaluationBar';
 import { TopUtilityLinks } from '@/components/TopUtilityLinks';
 import { BoardViewLayout } from '@/components/BoardViewLayout';
@@ -382,6 +383,37 @@ export default function OpeningTrainer({
               />
             </div>
 
+            {/* Coach Advice HUD (Last Message Only) */}
+            {!isMobileChatOpen && latestCoachMessage && (
+                <div className="w-full animate-in slide-in-from-bottom-2 duration-500 mt-2">
+                    <div className="bg-white dark:bg-gray-800 border-l-4 border-blue-600 rounded-lg shadow-md p-3 relative overflow-hidden group">
+                        <div className="flex items-start gap-3">
+                            <div className="text-xl flex-shrink-0 mt-0.5" title={personality.name}>
+                                {personality.image}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between mb-1">
+                                    <span className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest flex items-center gap-1.5">
+                                        <MessageCircle size={10} />
+                                        Coach Advice
+                                    </span>
+                                </div>
+                                <div className="text-sm text-gray-800 dark:text-gray-100 prose prose-sm dark:prose-invert max-w-none transition-all duration-300">
+                                    <ReactMarkdown>{latestCoachMessage}</ReactMarkdown>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={() => setIsMobileChatOpen(true)}
+                                className="lg:hidden flex-shrink-0 p-1.5 text-gray-400 hover:text-blue-600 transition-colors"
+                                title="Open full conversation"
+                            >
+                                <ChevronRight size={16} />
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Bottom Cluster (Mobile only) */}
             {isMobileChatOpen && (
                 <div className="w-full flex flex-col items-center gap-2 flex-shrink-0 scale-90">
@@ -449,6 +481,7 @@ export default function OpeningTrainer({
                         onChatBlur={() => setIsKeyboardVisible(false)}
                         onLatestMessage={setLatestCoachMessage}
                         isMobileChatOpen={isMobileChatOpen}
+                        reverseChronological={true}
                         />                ) : (
                     <div className="bg-white dark:bg-gray-800 rounded-lg p-6 text-center border border-gray-200 dark:border-gray-700">
                         <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Coach Chat</h3>
