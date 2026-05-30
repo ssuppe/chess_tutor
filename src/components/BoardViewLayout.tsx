@@ -29,6 +29,9 @@ interface BoardViewLayoutProps {
     
     // Custom container classes
     containerClassName?: string;
+
+    // Control sidebar visibility on mobile
+    mobileHideSidebar?: boolean;
 }
 
 export const BoardViewLayout: React.FC<BoardViewLayoutProps> = ({
@@ -42,7 +45,8 @@ export const BoardViewLayout: React.FC<BoardViewLayoutProps> = ({
     boardArea,
     sidePanel,
     headerActions,
-    containerClassName
+    containerClassName,
+    mobileHideSidebar = false
 }) => {
     const t = useTranslation(language);
 
@@ -104,7 +108,7 @@ export const BoardViewLayout: React.FC<BoardViewLayoutProps> = ({
                 "md:col-span-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden flex flex-col transition-all duration-300",
                 isMobileChatOpen 
                     ? "flex-1 h-full rounded-none" 
-                    : "hidden md:flex md:h-[560px]"
+                    : (mobileHideSidebar ? "hidden md:flex md:h-[560px]" : "flex md:h-[560px]")
             )}>
                 {sidePanel}
             </div>

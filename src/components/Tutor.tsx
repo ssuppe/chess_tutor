@@ -108,7 +108,7 @@ interface Message {
 }
 
 export function Tutor({ game, currentFen, userMove, computerMove, stockfish, evalP0, evalP2, openingData, missedTactics, onAnalysisComplete, apiKey, personality, language, playerColor, onCheckComputerMove, isReviewing, isMobileChatOpen, reverseChronological, resignationContext, openingContext, tacticalPracticeMode, openingPracticeMode, onJumpToBoard, onChatFocus, onChatBlur, onLatestMessage }: TutorProps) {
-    const shouldReverse = reverseChronological ?? true;
+    const shouldReverse = reverseChronological ?? (isMobileChatOpen || false);
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState("");
     const [isFocused, setIsFocused] = useState(false);

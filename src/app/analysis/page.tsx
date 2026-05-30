@@ -83,6 +83,7 @@ export default function AnalysisPage() {
     const [isMobileBoardExpanded, setIsMobileBoardExpanded] = useState(false);
     const [viewportHeight, setViewportHeight] = useState<number | null>(null);
     const [viewportOffset, setViewportOffset] = useState<number>(0);
+    const [latestCoachMessage, setLatestCoachMessage] = useState<string | null>(null);
 
     useEffect(() => {
         const updateViewport = () => {
@@ -303,6 +304,7 @@ IMPORTANT:
         evaluationCache.current = {};
         setEvaluationVersion(v => v + 1);
         setError(null);
+        setLatestCoachMessage(null);
     };
 
     const handleStartGameFromPosition = () => {
@@ -409,6 +411,7 @@ INSTRUCTIONS:
 
                 if (!cancelled) {
                     setComments(prev => ({ ...prev, [currentIndex]: responseText }));
+                    setLatestCoachMessage(responseText);
                     addEntry({
                         type: 'analysis',
                         action: `Move ${step.moveNumber} Analysis (${step.color})`,
@@ -534,7 +537,14 @@ INSTRUCTIONS:
                                     {/* Navigation Arrows in Strip */}
                                     <div className="flex items-center gap-4 mt-2">
                                         <button
-                                            onClick={(e) => { e.stopPropagation(); setCurrentIndex(i => Math.max(0, i - 1)); }}
+                                            onClick={(e) => { 
+                                                e.stopPropagation(); 
+                                                setCurrentIndex(i => {
+                                                    const next = Math.max(0, i - 1);
+                                                    if (next !== i) setLatestCoachMessage(null);
+                                                    return next;
+                                                }); 
+                                            }}
                                             disabled={currentIndex === 0}
                                             className="p-1.5 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm disabled:opacity-20"
                                             aria-label={t.analysis.previous}
@@ -543,7 +553,14 @@ INSTRUCTIONS:
                                         </button>
                                         <div className="text-[10px] font-black tabular-nums">{currentIndex}</div>
                                         <button
-                                            onClick={(e) => { e.stopPropagation(); setCurrentIndex(i => Math.min(steps.length, i + 1)); }}
+                                            onClick={(e) => { 
+                                                e.stopPropagation(); 
+                                                setCurrentIndex(i => {
+                                                    const next = Math.min(steps.length, i + 1);
+                                                    if (next !== i) setLatestCoachMessage(null);
+                                                    return next;
+                                                }); 
+                                            }}
                                             disabled={currentIndex >= steps.length}
                                             className="p-1.5 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm disabled:opacity-20"
                                             aria-label={t.analysis.next}
@@ -558,7 +575,11 @@ INSTRUCTIONS:
                             {!isMobileChatOpen && (
                                 <div className="flex items-center gap-4 mt-4">
                                     <button
-                                        onClick={() => setCurrentIndex(i => Math.max(0, i - 1))}
+                                        onClick={() => setCurrentIndex(i => {
+                                            const next = Math.max(0, i - 1);
+                                            if (next !== i) setLatestCoachMessage(null);
+                                            return next;
+                                        })}
                                         className="p-2 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 disabled:opacity-30"
                                         disabled={currentIndex === 0}
                                         aria-label={t.analysis.previous}
@@ -567,7 +588,11 @@ INSTRUCTIONS:
                                     </button>
                                     <div className="text-xs font-black tabular-nums">{currentIndex} / {steps.length}</div>
                                     <button
-                                        onClick={() => setCurrentIndex(i => Math.min(steps.length, i + 1))}
+                                        onClick={() => setCurrentIndex(i => {
+                                            const next = Math.min(steps.length, i + 1);
+                                            if (next !== i) setLatestCoachMessage(null);
+                                            return next;
+                                        })}
                                         className="p-2 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 disabled:opacity-30"
                                         disabled={currentIndex >= steps.length}
                                         aria-label={t.analysis.next}
@@ -663,6 +688,38 @@ INSTRUCTIONS:
                                             <p className="text-xs text-gray-400 text-center py-4 italic font-bold uppercase tracking-wider">{t.analysis.coachPending}</p>
                                         )}
                                     </div>
+
+                                    {/* Coach Advice HUD (Last Message Only) */}
+                                    {!isMobileChatOpen && latestCoachMessage && (
+                                        <div className="w-full animate-in slide-in-from-bottom-2 duration-500 mt-2 md:hidden">
+                                            <div className="bg-white dark:bg-gray-800 border-l-4 border-blue-600 rounded-lg shadow-md p-3 relative overflow-hidden group">
+                                                <div className="flex items-start gap-3">
+                                                    <div className="text-xl flex-shrink-0 mt-0.5" title={selectedPersonality.name}>
+                                                        {selectedPersonality.image}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400 mb-1 flex items-center justify-between">
+                                                            <span>Coach Advice</span>
+                                                            <div className="flex gap-1 items-center">
+                                                                <div className="w-1 h-1 bg-blue-600 rounded-full animate-pulse" />
+                                                                <div className="w-1 h-1 bg-blue-600 rounded-full animate-pulse delay-75" />
+                                                                <div className="w-1 h-1 bg-blue-600 rounded-full animate-pulse delay-150" />
+                                                            </div>
+                                                        </div>
+                                                        <div className="prose dark:prose-invert prose-xs line-clamp-3 text-gray-700 dark:text-gray-300 leading-relaxed font-medium">
+                                                            <ReactMarkdown>{latestCoachMessage}</ReactMarkdown>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <button 
+                                                    onClick={() => setIsMobileChatOpen(true)}
+                                                    className="absolute inset-0 w-full h-full bg-blue-600/0 hover:bg-blue-600/5 transition-colors cursor-pointer flex items-center justify-end pr-2 opacity-0 group-hover:opacity-100"
+                                                >
+                                                    <ChevronRight className="text-blue-600" size={20} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
 
                                     {/* Tech Stats Section */}
                                     {currentIndex > 0 && (

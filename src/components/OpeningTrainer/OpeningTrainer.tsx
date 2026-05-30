@@ -208,6 +208,7 @@ export default function OpeningTrainer({
     setIsInitializing(true);
     setError(null);
     setShowRecoveryDialog(false);
+    setLatestCoachMessage(null);
 
     try {
       await initializeSession(opening, forceNew);
@@ -266,6 +267,16 @@ export default function OpeningTrainer({
 
   const handleContinueExploring = () => setShowDeviationDialog(false);
   const handleTutorMessageSent = () => setLastTutorMessageMoveIndex(moveCount);
+
+  // Highlighting current move
+  const lastMoveHighlight = useMemo(() => {
+    if (!session || session.moveHistory.length === 0) return {};
+    const last = session.moveHistory[session.moveHistory.length - 1];
+    return {
+      [last.uci.substring(0, 2)]: { boxShadow: 'inset 0 0 0 4px rgba(255, 255, 0, 0.75)' },
+      [last.uci.substring(2, 4)]: { boxShadow: 'inset 0 0 0 4px rgba(255, 255, 0, 0.75)' }
+    };
+  }, [session]);
 
   const variationPositionInfo = useMemo(() => {
     if (!isFamilyMode || !variationTree || !session) return null;
@@ -328,16 +339,6 @@ export default function OpeningTrainer({
 
   const capturedState = getCapturedState(chess);
 
-  // Highlighting current move
-  const lastMoveHighlight = useMemo(() => {
-    if (session.moveHistory.length === 0) return {};
-    const last = session.moveHistory[session.moveHistory.length - 1];
-    return {
-      [last.uci.substring(0, 2)]: { boxShadow: 'inset 0 0 0 4px rgba(255, 255, 0, 0.75)' },
-      [last.uci.substring(2, 4)]: { boxShadow: 'inset 0 0 0 4px rgba(255, 255, 0, 0.75)' }
-    };
-  }, [session.moveHistory]);
-
   return (
     <div className="flex flex-col min-h-screen bg-gray-100 dark:bg-gray-900">
       <BoardViewLayout
@@ -348,6 +349,7 @@ export default function OpeningTrainer({
         setIsMobileBoardExpanded={setIsMobileBoardExpanded}
         viewportHeight={viewportHeight ?? undefined}
         viewportOffset={viewportOffset}
+        mobileHideSidebar={true}
         boardArea={
           <>
             {/* Interaction Overlay */}
@@ -385,7 +387,7 @@ export default function OpeningTrainer({
 
             {/* Coach Advice HUD (Last Message Only) */}
             {!isMobileChatOpen && latestCoachMessage && (
-                <div className="w-full animate-in slide-in-from-bottom-2 duration-500 mt-2">
+                <div className="w-full animate-in slide-in-from-bottom-2 duration-500 mt-2 lg:hidden">
                     <div className="bg-white dark:bg-gray-800 border-l-4 border-blue-600 rounded-lg shadow-md p-3 relative overflow-hidden group">
                         <div className="flex items-start gap-3">
                             <div className="text-xl flex-shrink-0 mt-0.5" title={personality.name}>

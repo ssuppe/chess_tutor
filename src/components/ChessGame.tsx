@@ -463,6 +463,7 @@ export default function ChessGame({
         setEvalP2(null);
         setOpeningData([]);
         setResignationContext(null);
+        setLatestCoachMessage(null);
     };
 
     const handleResignClick = useCallback(() => {
@@ -528,6 +529,7 @@ export default function ChessGame({
                 setIsMobileBoardExpanded={setIsMobileBoardExpanded}
                 viewportHeight={viewportHeight ?? undefined}
                 viewportOffset={viewportOffset}
+                mobileHideSidebar={true}
                 boardArea={
                     <>
                         {/* Top Cluster: Opponent Material + Eval Bar (Mobile Chat Mode only) */}
@@ -650,7 +652,7 @@ export default function ChessGame({
 
                             {/* Coach Advice HUD (Last Message Only) */}
                             {!isMobileChatOpen && latestCoachMessage && (
-                                <div className="w-full animate-in slide-in-from-bottom-2 duration-500 mt-2">
+                                <div className="w-full animate-in slide-in-from-bottom-2 duration-500 mt-2 md:hidden">
                                     <div className="bg-white dark:bg-gray-800 border-l-4 border-blue-600 rounded-lg shadow-md p-3 relative overflow-hidden group">
                                         <div className="flex items-start gap-3">
                                             <div className="text-xl flex-shrink-0 mt-0.5" title={selectedPersonality.name}>
