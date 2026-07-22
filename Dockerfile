@@ -86,7 +86,7 @@ ENV HOSTNAME="0.0.0.0"
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3050/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})" || exit 1
+  CMD node -e "const bp = process.env.NEXT_PUBLIC_BASE_PATH || ''; require('http').get('http://localhost:3050' + bp + '/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})" || exit 1
 
 # Use entrypoint for initialization
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
