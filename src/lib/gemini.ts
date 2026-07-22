@@ -22,13 +22,38 @@ export async function getAvailableModels(apiKey?: string): Promise<string[]> {
 
     try {
         const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${key}`;
-        const response = await fetch(url);
-        
-        if (!response.ok) {
-            throw new Error(`Failed to fetch models: ${response.status} ${response.statusText}`);
-        }
+        let result: any;
 
-        const result = await response.json();
+        // Check if running on Capacitor native platform
+        const isNative = typeof window !== "undefined" && 
+                          (window as any).Capacitor && 
+                          (window as any).Capacitor.isNativePlatform && 
+                          (window as any).Capacitor.isNativePlatform();
+
+        if (isNative) {
+            try {
+                const { CapacitorHttp } = require("@capacitor/core");
+                const response = await CapacitorHttp.get({ url });
+                if (response.status === 200) {
+                    result = typeof response.data === "string" ? JSON.parse(response.data) : response.data;
+                } else {
+                    throw new Error(`CapacitorHttp failed with status ${response.status}`);
+                }
+            } catch (err) {
+                console.error("CapacitorHttp error, trying fallback fetch:", err);
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch models: ${response.status} ${response.statusText}`);
+                }
+                result = await response.json();
+            }
+        } else {
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`Failed to fetch models: ${response.status} ${response.statusText}`);
+            }
+            result = await response.json();
+        }
         
         // Filter models that support content generation
         const models = (result.models || [])
