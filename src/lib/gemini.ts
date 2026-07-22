@@ -1,9 +1,10 @@
 import { GoogleGenerativeAI, SchemaType, FunctionDeclaration } from "@google/generative-ai";
 
-export const DEFAULT_MODEL_ID = process.env.NEXT_PUBLIC_GEMINI_MODEL_ID || "gemini-3.1-flash-lite-preview";
+export const DEFAULT_MODEL_ID = process.env.NEXT_PUBLIC_GEMINI_MODEL_ID || "gemini-3.5-flash";
 
 export async function getAvailableModels(apiKey?: string): Promise<string[]> {
     const fallbackModels = [
+        "gemini-3.5-flash",
         "gemini-3.1-flash-lite-preview",
         "gemini-2.0-flash-exp",
         "gemini-1.5-flash",
