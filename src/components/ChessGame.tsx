@@ -606,7 +606,7 @@ export default function ChessGame({
                             )}
 
                             <div className={clsx(
-                                "bg-[#779954] p-[2px] rounded-sm relative overflow-hidden flex-shrink-0",
+                                "bg-[#779954] p-[2px] rounded-sm relative overflow-hidden flex-shrink-0 self-center",
                                 isMobileChatOpen ? "w-full aspect-square shadow-sm" : "w-full aspect-square max-w-md md:max-w-none transition-all duration-300"
                             )}>
                                 {!isEngineReady && (

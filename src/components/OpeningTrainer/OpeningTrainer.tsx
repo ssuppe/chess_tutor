@@ -364,8 +364,8 @@ export default function OpeningTrainer({
 
             {/* Chessboard */}
             <div className={clsx(
-              "p-[2px] rounded-sm transition-all duration-300",
-              isMobileChatOpen ? "w-full aspect-square shadow-sm bg-[#779954]" : "w-full bg-white dark:bg-gray-800"
+              "p-[2px] rounded-sm transition-all duration-300 self-center flex-shrink-0",
+              isMobileChatOpen ? "w-full aspect-square shadow-sm bg-[#779954]" : "w-full aspect-square max-w-md bg-white dark:bg-gray-800"
             )}>
               <Chessboard
                 key={currentPosition}

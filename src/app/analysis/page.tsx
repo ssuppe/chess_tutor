@@ -518,7 +518,7 @@ INSTRUCTIONS:
 
                             {/* Board Container */}
                             <div className={clsx(
-                                "bg-[#779954] p-[1px] rounded-sm relative overflow-hidden",
+                                "bg-[#779954] p-[1px] rounded-sm relative overflow-hidden self-center flex-shrink-0",
                                 isMobileChatOpen ? "w-full aspect-square shadow-sm" : "w-full aspect-square max-w-md transition-all duration-300"
                             )}>
                                 <Chessboard options={{ position: currentFen, boardOrientation: orientation, allowDragging: false, darkSquareStyle: { backgroundColor: '#779954' }, lightSquareStyle: { backgroundColor: '#e9edcc' }, animationDurationInMs: 200, squareStyles: lastMoveHighlight }} />
