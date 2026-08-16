@@ -34,6 +34,6 @@ describe("resolveModelId", () => {
 
   it("returns DEFAULT_MODEL_ID as absolute fallback", () => {
     expect(resolveModelId()).toBe(DEFAULT_MODEL_ID);
-    expect(DEFAULT_MODEL_ID).toBe("gemini-3.5-flash");
+    expect(DEFAULT_MODEL_ID).toBe("gemini-2.5-flash");
   });
 });

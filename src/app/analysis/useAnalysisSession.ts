@@ -8,6 +8,7 @@ import { useDebug } from "@/contexts/DebugContext";
 import { buildMoveCommentaryPrompt } from "@/lib/analysisPrompts";
 import { detectChessFormat, ChessFormat } from "@/lib/chessFormatDetector";
 import { getGenAIModel } from "@/lib/gemini";
+import { getApiKeyInfo } from "@/lib/apiKeyHelper";
 import { SupportedLanguage } from "@/lib/i18n/translations";
 import { lookupPossibleOpenings, buildMoveSequenceFromSteps } from "@/lib/openings";
 import { Personality, PERSONALITIES } from "@/lib/personalities";
@@ -57,9 +58,9 @@ export function useAnalysisSession({ importError }: UseAnalysisSessionArgs) {
     const evaluationCache = useRef<Record<string, StockfishEvaluation>>({});
 
     useEffect(() => {
-        const storedKey = localStorage.getItem("gemini_api_key");
+        const keyInfo = getApiKeyInfo();
         const storedLang = localStorage.getItem("chess_tutor_language");
-        if (storedKey) setApiKey(storedKey);
+        if (keyInfo.key) setApiKey(keyInfo.key);
         if (storedLang) setLanguage(storedLang as SupportedLanguage);
     }, []);
 
@@ -113,12 +114,40 @@ IMPORTANT:
     }, [currentIndex, steps]);
 
     const ensureEvaluation = useCallback(async (fen: string) => {
-        if (!stockfish) return null;
+        if (!fen) return null;
         if (evaluationCache.current[fen]) return evaluationCache.current[fen];
-        const result = await stockfish.evaluate(fen, 14);
-        evaluationCache.current[fen] = result;
-        setEvaluationVersion((value) => value + 1);
-        return result;
+        try {
+            let result: StockfishEvaluation | null = null;
+            if (stockfish) {
+                try {
+                    result = await stockfish.evaluate(fen, 14);
+                } catch (err) {
+                    console.warn("Client Stockfish worker failed, trying server API:", err);
+                }
+            }
+            if (!result) {
+                const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
+                const response = await fetch(`${basePath}/api/v1/stockfish`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ fen, depth: 14 }),
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.evaluation) {
+                        result = data.evaluation;
+                    }
+                }
+            }
+            if (result) {
+                evaluationCache.current[fen] = result;
+                setEvaluationVersion((value) => value + 1);
+                return result;
+            }
+        } catch (err) {
+            console.error("Evaluation failed:", err);
+        }
+        return null;
     }, [stockfish]);
 
     const loadGameFromPgnOrFen = useCallback((notation: string) => {

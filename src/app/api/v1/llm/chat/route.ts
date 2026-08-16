@@ -39,7 +39,11 @@ export async function POST(request: NextRequest) {
       modelName,
     } = body ?? {};
 
-    if (!apiKey || typeof apiKey !== "string") {
+    const effectiveApiKey = (apiKey && typeof apiKey === "string" && apiKey.trim())
+      ? apiKey
+      : (process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || "");
+
+    if (!effectiveApiKey) {
       return NextResponse.json({ error: "Missing apiKey" }, { status: 400 });
     }
     if (!personalityId || typeof personalityId !== "string") {
@@ -60,7 +64,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unknown personality" }, { status: 400 });
     }
 
-    const model = getGenAIModel(apiKey, modelName);
+    const model = getGenAIModel(effectiveApiKey, modelName);
     const systemHistory = buildTutorSystemHistory(personality, language, playerColor);
     const chat = model.startChat({
       history: [...systemHistory, ...normalizeHistory(history)],

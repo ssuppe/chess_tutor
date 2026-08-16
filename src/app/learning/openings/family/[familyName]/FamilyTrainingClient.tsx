@@ -13,6 +13,7 @@ import { OpeningTrainerErrorBoundary } from '@/components/OpeningTrainer/ErrorBo
 import { getOpeningsByFamily } from '@/lib/openingTrainer/openingLoader';
 import { buildVariationTree, VariationTree } from '@/lib/openingTrainer/gameLogic';
 import { Personality, PERSONALITIES } from '@/lib/personalities';
+import { getApiKeyInfo } from '@/lib/apiKeyHelper';
 
 /**
  * Family Training Page Client Component
@@ -41,7 +42,7 @@ export default function FamilyTrainingClient() {
   });
   const [apiKey, setApiKey] = useState<string>(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('gemini_api_key') || '';
+      return getApiKeyInfo().key || '';
     }
     return '';
   });

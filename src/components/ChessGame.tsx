@@ -22,6 +22,7 @@ import { useChessSounds } from "@/lib/hooks/useChessSounds";
 import { TopUtilityLinks } from "./TopUtilityLinks";
 import { BoardViewLayout } from "./BoardViewLayout";
 import { MOVE_HIGHLIGHT_STYLE } from "@/lib/chessStyles";
+import { getApiKeyInfo } from "@/lib/apiKeyHelper";
 import ReactMarkdown from "react-markdown";
 
 interface ChessGameProps {
@@ -197,9 +198,9 @@ export default function ChessGame({
             }
         }, 10000);
 
-        const storedKey = localStorage.getItem("gemini_api_key");
+        const keyInfo = getApiKeyInfo();
         const storedLang = localStorage.getItem("chess_tutor_language");
-        if (storedKey) setApiKey(storedKey);
+        if (keyInfo.key) setApiKey(keyInfo.key);
         if (storedLang) setLanguage(storedLang as SupportedLanguage);
 
         return () => {

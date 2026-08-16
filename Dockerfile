@@ -68,11 +68,9 @@ COPY scripts/docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 # Create directories for user-generated data
-RUN mkdir -p /app/fixtures/tactics /app/downloads && \
-    chown -R nextjs:nodejs /app/fixtures /app/downloads
-
-# Set ownership to non-root user
-RUN chown -R nextjs:nodejs /app
+RUN mkdir -p /app/fixtures/tactics /app/downloads /app/public/wikipedia && \
+    chown -R nextjs:nodejs /app && \
+    chmod -R 777 /app/public /app/fixtures /app/downloads
 
 # Switch to non-root user
 USER nextjs

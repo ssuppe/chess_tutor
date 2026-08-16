@@ -24,8 +24,17 @@ function setupModelMock(replyText: string) {
 }
 
 describe("POST /api/v1/llm/chat", () => {
+  const OLD_ENV = process.env;
+
   beforeEach(() => {
     jest.clearAllMocks();
+    process.env = { ...OLD_ENV };
+    delete process.env.GEMINI_API_KEY;
+    delete process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+  });
+
+  afterAll(() => {
+    process.env = OLD_ENV;
   });
 
   it("returns 400 when required fields are missing", async () => {

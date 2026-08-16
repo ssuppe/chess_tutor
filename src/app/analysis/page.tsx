@@ -14,6 +14,7 @@ import { detectChessFormat, ChessFormat } from "@/lib/chessFormatDetector";
 import { detectMissedTactics, DetectedTactic, uciToSan, filterMeaningfulTactics } from "@/lib/tacticDetection";
 import { lookupPossibleOpenings, buildMoveSequenceFromSteps, OpeningMetadata } from "@/lib/openings";
 import { getGenAIModel } from "@/lib/gemini";
+import { getApiKeyInfo } from "@/lib/apiKeyHelper";
 import { ChatSession } from "@google/generative-ai";
 import ReactMarkdown from "react-markdown";
 
@@ -126,9 +127,9 @@ export default function AnalysisPage() {
     }, [isMobileChatOpen]);
 
     useEffect(() => {
-        const storedKey = localStorage.getItem("gemini_api_key");
+        const keyInfo = getApiKeyInfo();
         const storedLang = localStorage.getItem("chess_tutor_language");
-        if (storedKey) setApiKey(storedKey);
+        if (keyInfo.key) setApiKey(keyInfo.key);
         if (storedLang) setLanguage(storedLang as SupportedLanguage);
 
         // Check for pending analysis from saved game
@@ -209,12 +210,40 @@ IMPORTANT:
     };
 
     const ensureEvaluation = useCallback(async (fen: string) => {
-        if (!stockfish) return null;
+        if (!fen) return null;
         if (evaluationCache.current[fen]) return evaluationCache.current[fen];
-        const result = await stockfish.evaluate(fen, 14);
-        evaluationCache.current[fen] = result;
-        setEvaluationVersion(v => v + 1);
-        return result;
+        try {
+            let result: StockfishEvaluation | null = null;
+            if (stockfish) {
+                try {
+                    result = await stockfish.evaluate(fen, 14);
+                } catch (err) {
+                    console.warn("Client Stockfish worker failed, trying server API:", err);
+                }
+            }
+            if (!result) {
+                const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
+                const response = await fetch(`${basePath}/api/v1/stockfish`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ fen, depth: 14 }),
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.evaluation) {
+                        result = data.evaluation;
+                    }
+                }
+            }
+            if (result) {
+                evaluationCache.current[fen] = result;
+                setEvaluationVersion(v => v + 1);
+                return result;
+            }
+        } catch (err) {
+            console.error("Evaluation failed:", err);
+        }
+        return null;
     }, [stockfish]);
 
     const handleLoadGame = () => {
@@ -233,16 +262,17 @@ IMPORTANT:
         const trimmed = notation.trim();
         const format = detectChessFormat(trimmed);
         const chess = new Chess();
+        let startFen = DEFAULT_START;
 
         try {
             if (format === "fen") {
                 chess.load(trimmed);
+                startFen = trimmed;
                 setInitialFen(trimmed);
                 setSteps([]);
             } else if (format === "pgn") {
                 chess.loadPgn(trimmed);
                 const headers = chess.header();
-                let startFen = DEFAULT_START;
                 if (headers.FEN) {
                     const base = new Chess();
                     base.load(headers.FEN);
@@ -279,7 +309,7 @@ IMPORTANT:
             setStepDetails({});
             setComments({});
             setError(null);
-            ensureEvaluation(initialFen);
+            ensureEvaluation(startFen);
         } catch (e) {
             console.error("Failed to load game", e);
             setError(t.analysis.importError);

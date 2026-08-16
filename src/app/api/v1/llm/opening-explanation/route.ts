@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check for API key
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY;
     if (!apiKey) {
       console.warn('GEMINI_API_KEY not configured, using fallback explanation');
       const fallback = generateFallbackExplanation(

@@ -17,6 +17,7 @@ import {
 } from "@/lib/tacticalLibrary";
 import pinFixtures from "../../../../../fixtures/tactics/pin.json";
 import { getMoveHighlight, CHESSBOARD_THEME } from "@/lib/chessStyles";
+import { getApiKeyInfo } from "@/lib/apiKeyHelper";
 
 type FeedbackState = 'none' | 'correct' | 'incorrect';
 
@@ -80,9 +81,9 @@ export default function TacticalPracticePage() {
         const storedLang = localStorage.getItem("chess_tutor_language");
         if (storedLang) setLanguage(storedLang as SupportedLanguage);
 
-        // Load API key from the correct localStorage key
-        const storedApiKey = localStorage.getItem("gemini_api_key");
-        if (storedApiKey) setApiKey(storedApiKey);
+        // Load API key using helper (falls back to process.env.NEXT_PUBLIC_GEMINI_API_KEY)
+        const keyInfo = getApiKeyInfo();
+        if (keyInfo.key) setApiKey(keyInfo.key);
 
         const storedPersonalityId = localStorage.getItem("chess_tutor_personality");
         if (storedPersonalityId) {

@@ -11,6 +11,7 @@ import { buildMoveHistoryItem, getCapturedState } from "@/lib/gameState";
 import { Stockfish, StockfishEvaluation } from "@/lib/stockfish";
 import { upsertSavedGame } from "@/lib/savedGames";
 import { MoveHistoryItem } from "./GameOverModal";
+import { getApiKeyInfo } from "@/lib/apiKeyHelper";
 
 const START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
@@ -76,7 +77,7 @@ export function useChessGame({
             return null;
         }
 
-        return localStorage.getItem("gemini_api_key");
+        return getApiKeyInfo().key;
     });
     const [stockfishDepth, setStockfishDepth] = useState(initialStockfishDepth ?? 15);
     const [language] = useState<SupportedLanguage>(() => {

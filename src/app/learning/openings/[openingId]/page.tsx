@@ -12,6 +12,7 @@ import OpeningTrainer from '@/components/OpeningTrainer/OpeningTrainer';
 import { OpeningTrainerErrorBoundary } from '@/components/OpeningTrainer/ErrorBoundary';
 import { getOpeningByEco } from '@/lib/openingTrainer/openingLoader';
 import { Personality, PERSONALITIES } from '@/lib/personalities';
+import { getApiKeyInfo } from '@/lib/apiKeyHelper';
 
 export default function OpeningTrainingPage() {
   const params = useParams();
@@ -36,7 +37,7 @@ export default function OpeningTrainingPage() {
   });
   const [apiKey, setApiKey] = useState<string>(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('gemini_api_key') || '';
+      return getApiKeyInfo().key || '';
     }
     return '';
   });

@@ -3,12 +3,14 @@
 
 SERVER_IP := "34.46.45.86"
 ARTIFACT_DIR := "./deploy-artifacts"
+GEMINI_KEY := `grep NEXT_PUBLIC_GEMINI_API_KEY .env 2>/dev/null | cut -d= -f2 || echo ""`
 
 # Build the production image with the correct subpath
 build:
     @echo "Building Chess Tutor Docker image with basePath=/chess..."
     docker build \
         --build-arg NEXT_PUBLIC_BASE_PATH=/chess \
+        --build-arg NEXT_PUBLIC_GEMINI_API_KEY="{{GEMINI_KEY}}" \
         -t chess-tutor:latest .
 
 # Package the image for transport
