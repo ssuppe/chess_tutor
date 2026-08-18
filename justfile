@@ -1,5 +1,5 @@
 # file: justfile
-# Independent deployment for Chess Tutor to goodnumbers.net/chess
+# Independent deployment for Chess Tutor to suppeinthelife.com/chess
 
 SERVER_IP := "34.46.45.86"
 ARTIFACT_DIR := "./deploy-artifacts"
@@ -28,11 +28,14 @@ push:
 # Deploy on the server (load image and restart service)
 deploy: build package push
     @echo "Finalizing Chess Tutor deployment on the VM..."
-    ssh -t ssuppe@{{SERVER_IP}} "cd app && \
+    ssh -t ssuppe@{{SERVER_IP}} "\
         echo '--- Loading Chess Image ---' && \
-        ((pv deploy-artifacts/chess.tar.gz 2>/dev/null || cat deploy-artifacts/chess.tar.gz) | docker load) && \
-        echo '--- Restarting Chess Service ---' && \
-        docker compose up -d chess && \
+        ((pv app/deploy-artifacts/chess.tar.gz 2>/dev/null || cat app/deploy-artifacts/chess.tar.gz) | docker load) && \
+        docker network create caddy-proxy 2>/dev/null || true && \
+        docker stop chess-tutor 2>/dev/null || true && \
+        docker rm chess-tutor 2>/dev/null || true && \
+        docker run -d --name chess-tutor --restart unless-stopped --network caddy-proxy -e PORT=3050 -e NEXT_PUBLIC_BASE_PATH=/chess chess-tutor:latest && \
         echo '--- Cleaning up ---' && \
-        rm deploy-artifacts/chess.tar.gz && \
+        rm -f app/deploy-artifacts/chess.tar.gz && \
         docker image prune -f"
+

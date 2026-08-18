@@ -34,7 +34,11 @@ services:
 
     networks:
       - chess-tutor-network
+      - caddy-proxy
 
 networks:
   chess-tutor-network:
     driver: bridge
+  caddy-proxy:
+    external: true
+
