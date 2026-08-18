@@ -23,6 +23,7 @@ import { EvaluationBar } from "@/components/EvaluationBar";
 import { OpeningsModal } from "@/components/OpeningsModal";
 import { TopUtilityLinks } from "@/components/TopUtilityLinks";
 import { CapturedPieces } from "@/components/CapturedPieces";
+import { Tutor } from "@/components/Tutor";
 import { BoardViewLayout } from "@/components/BoardViewLayout";
 import { generateHumanReadableBoard, getCapturedState } from "@/lib/gameState";
 import clsx from "clsx";
@@ -85,6 +86,7 @@ export default function AnalysisPage() {
     const [viewportHeight, setViewportHeight] = useState<number | null>(null);
     const [viewportOffset, setViewportOffset] = useState<number>(0);
     const [latestCoachMessage, setLatestCoachMessage] = useState<string | null>(null);
+    const [activeTab, setActiveTab] = useState<'chat' | 'analysis'>('analysis');
 
     useEffect(() => {
         const updateViewport = () => {
@@ -192,6 +194,14 @@ IMPORTANT:
         if (currentIndex === 0) return initialFen;
         return steps[currentIndex - 1]?.fenAfter || initialFen;
     }, [currentIndex, steps, initialFen]);
+
+    const analysisGame = useMemo(() => {
+        try {
+            return new Chess(currentFen);
+        } catch {
+            return new Chess();
+        }
+    }, [currentFen]);
 
     const possibleOpenings = useMemo(() => {
         if (currentIndex === 0) return [];
@@ -689,10 +699,31 @@ INSTRUCTIONS:
                             /* Analysis Content Slot */
                             <div className="flex-1 flex flex-col overflow-hidden">
                                 {/* Header Controls */}
-                                <div className="p-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex items-center justify-between gap-2">
+                                <div className="p-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex items-center justify-between gap-2 flex-shrink-0">
                                     <div className="flex items-center gap-1.5 overflow-hidden">
                                         <div className="text-sm shrink-0">{selectedPersonality.image}</div>
-                                        <h2 className="font-bold text-[10px] text-blue-600 dark:text-blue-400 uppercase tracking-widest truncate">Coach Analysis</h2>
+                                        <div className="flex bg-gray-200 dark:bg-gray-700 p-0.5 rounded-lg text-[10px] font-bold">
+                                            <button
+                                                onClick={() => setActiveTab('chat')}
+                                                className={clsx(
+                                                    "px-2 py-0.5 rounded-md transition-all flex items-center gap-1",
+                                                    activeTab === 'chat' ? "bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 shadow-sm" : "text-gray-500 dark:text-gray-400 hover:text-gray-800"
+                                                )}
+                                            >
+                                                <MessageCircle size={12} />
+                                                <span>Chat</span>
+                                            </button>
+                                            <button
+                                                onClick={() => setActiveTab('analysis')}
+                                                className={clsx(
+                                                    "px-2 py-0.5 rounded-md transition-all flex items-center gap-1",
+                                                    activeTab === 'analysis' ? "bg-white dark:bg-gray-800 text-purple-600 dark:text-purple-400 shadow-sm" : "text-gray-500 dark:text-gray-400 hover:text-gray-800"
+                                                )}
+                                            >
+                                                <Brain size={12} />
+                                                <span>Details</span>
+                                            </button>
+                                        </div>
                                     </div>
                                     <div className="flex items-center gap-1">
                                         <button onClick={handleResetAnalysis} className="p-1.5 text-gray-500 hover:text-purple-600 transition-colors" title={t.analysis.loadNewGame}><RotateCcw size={14} /></button>
@@ -701,8 +732,32 @@ INSTRUCTIONS:
                                     </div>
                                 </div>
 
-                                {/* Content Scroll Area */}
-                                <div className="flex-1 overflow-y-auto p-4 space-y-6 pb-32">
+                                {activeTab === 'chat' ? (
+                                    <div className="flex-1 overflow-hidden">
+                                        <Tutor
+                                            game={analysisGame}
+                                            currentFen={currentFen}
+                                            userMove={steps[currentIndex - 1] ? ({ san: steps[currentIndex - 1].san, from: steps[currentIndex - 1].from, to: steps[currentIndex - 1].to, color: steps[currentIndex - 1].color, before: steps[currentIndex - 1].fenBefore, after: steps[currentIndex - 1].fenAfter } as any) : null}
+                                            computerMove={null}
+                                            stockfish={stockfish}
+                                            evalP0={(stepDetails[currentIndex] as any)?.evalBefore || null}
+                                            evalP2={(stepDetails[currentIndex] as any)?.evalAfter || null}
+
+                                            openingData={possibleOpenings}
+                                            missedTactics={steps[currentIndex - 1]?.tactics || null}
+                                            onAnalysisComplete={() => {}}
+                                            apiKey={apiKey}
+                                            personality={selectedPersonality}
+                                            language={language}
+                                            playerColor={orientation}
+                                            isMobileChatOpen={isMobileChatOpen}
+                                            reverseChronological={true}
+                                            onLatestMessage={setLatestCoachMessage}
+                                        />
+                                    </div>
+                                ) : (
+                                    /* Content Scroll Area */
+                                    <div className="flex-1 overflow-y-auto p-4 space-y-6 pb-32">
                                     {/* Evaluation Strip (Non-chat mobile/Desktop only) */}
                                     {!isMobileChatOpen && currentIndex > 0 && currentDetails?.evalAfter && (
                                         <div className="w-full h-3 flex-shrink-0"><EvaluationBar score={currentDetails.evalAfter.score} mate={currentDetails.evalAfter.mate} isPlayerWhite={orientation === 'white'} orientation="horizontal" /></div>
@@ -782,10 +837,11 @@ INSTRUCTIONS:
                                         </div>
                                     )}
                                 </div>
-                            </div>
-                        )}
-                    </div>
-                }
+                            )}
+                        </div>
+                    )}
+                </div>
+            }
             />
 
             {/* Unified Mobile Floating Action Button */}
