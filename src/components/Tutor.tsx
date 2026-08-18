@@ -966,7 +966,8 @@ React to this exchange as the player.
         // Safety check: Ensure computer makes a move if it's their turn
         // This handles race conditions where the player moved before evalP0 was ready
         setTimeout(() => {
-            onCheckComputerMove();
+            onCheckComputerMove?.();
+
         }, 100);
     };
 
