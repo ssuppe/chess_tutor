@@ -744,7 +744,8 @@ INSTRUCTIONS:
                                             evalP2={(stepDetails[currentIndex] as any)?.evalAfter || null}
 
                                             openingData={possibleOpenings}
-                                            missedTactics={steps[currentIndex - 1]?.tactics || null}
+                                            missedTactics={(steps[currentIndex - 1] as any)?.tactics || null}
+
                                             onAnalysisComplete={() => {}}
                                             apiKey={apiKey}
                                             personality={selectedPersonality}
