@@ -25,19 +25,19 @@ import { getApiKeyInfo } from '@/lib/apiKeyHelper';
 interface TutorProps {
     game: Chess;
     currentFen: string;
-    userMove: Move | null;
-    computerMove: Move | null;
-    stockfish: ChessEngine | null;
-    evalP0: StockfishEvaluation | null;
-    evalP2: StockfishEvaluation | null;
-    openingData: OpeningMetadata[];
-    missedTactics: DetectedTactic[] | null;
-    onAnalysisComplete: () => void;
+    userMove?: Move | null;
+    computerMove?: Move | null;
+    stockfish?: ChessEngine | null;
+    evalP0?: StockfishEvaluation | null;
+    evalP2?: StockfishEvaluation | null;
+    openingData?: OpeningMetadata[];
+    missedTactics?: DetectedTactic[] | null;
+    onAnalysisComplete?: () => void;
     apiKey: string | null;
     personality: Personality;
     language: SupportedLanguage;
     playerColor: 'white' | 'black';
-    onCheckComputerMove: () => void;
+    onCheckComputerMove?: () => void;
     onJumpToBoard?: () => void;
     onChatFocus?: () => void;
     onChatBlur?: () => void;
@@ -162,10 +162,13 @@ export function Tutor({ game, currentFen, userMove, computerMove, stockfish, eva
     const lastUserMoveRef = useRef<string | null>(null);
     const lastTutorMoveRef = useRef<string | null>(null);
 
+    const keyInfo = getApiKeyInfo();
+    const activeKey = apiKey || keyInfo.key;
+
     // Initialize chat session with Personality System Prompt (only once per pattern type)
     useEffect(() => {
-        if (apiKey) {
-            const model = getGenAIModel(apiKey);
+        if (activeKey) {
+            const model = getGenAIModel(activeKey);
 
             // Build system prompt based on mode
             const systemPrompt = openingName ? `
@@ -357,7 +360,7 @@ Keep your response to 3-4 sentences, be engaging, and respond in ${language}.`
                 setMessages([{ role: "model", text: fallbackText, timestamp: Date.now() }]);
             });
         }
-    }, [apiKey, personality, language, playerColor, patternName, openingName, wikipediaSummary]);
+    }, [activeKey, personality, language, playerColor, patternName, openingName, wikipediaSummary]);
     // NOTE: Removed solutionMoveKey from dependencies - we don't want to reset chat when puzzle changes
 
     // Notify tutor about new puzzle (without resetting chat)
@@ -940,7 +943,8 @@ React to this exchange as the player.
             console.error(e);
         } finally {
             setIsLoading(false);
-            onAnalysisComplete();
+            onAnalysisComplete?.();
+
         }
     }, [chatSession, userMove, computerMove, evalP0, evalP2, exchangeKey, sendMessageToChat, onAnalysisComplete, playerColor, currentFen, language, openingData, missedTactics]);
 
@@ -1070,7 +1074,25 @@ INSTRUCTIONS:
         handleOpeningContextMessage();
     }, [chatSession, openingContext, stockfish, currentFen, language, personality.name]);
 
-    if (!apiKey) return null;
+    if (!activeKey) {
+        return (
+            <div className="bg-white dark:bg-gray-800 md:rounded-lg shadow-lg border-x-0 md:border border-gray-200 dark:border-gray-700 h-full flex flex-col items-center justify-center p-6 text-center">
+                <div className="text-3xl mb-3">🔑</div>
+                <h3 className="text-base font-bold text-gray-900 dark:text-white mb-2">
+                    API Key Required
+                </h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-4 leading-relaxed max-w-xs">
+                    To chat with your coach ({personality.name}), please configure your Gemini API key in settings or environment.
+                </p>
+                <a
+                    href="/settings"
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow transition-colors"
+                >
+                    Configure API Key
+                </a>
+            </div>
+        );
+    }
 
     return (
         <div className="bg-white dark:bg-gray-800 md:rounded-lg shadow-lg border-x-0 md:border border-gray-200 dark:border-gray-700 h-full flex flex-col relative overflow-hidden">
